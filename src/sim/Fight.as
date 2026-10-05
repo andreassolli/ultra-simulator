@@ -26,6 +26,7 @@ package sim
 
         public static const ZONE_ROLES:Object = {1: "dps", 2: "lr", 3: "ap", 4: "loo"};
         public static const ROLES:Array = ["ap", "lr", "loo", "dps"];
+        public static const ROLE_NAMES:Object = {ap: "Arch Paladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS"};
 
         private static const TIMINGS:Object = {auto: 2000, truth: 7000, listen: 12000, zone: 16000};
         private static const CAST:Object = {auto: 1200, truth: 2000, listen: 2000, zone: 3000};
@@ -96,6 +97,7 @@ package sim
         public var lrEmpowerUntil:Number = 0;
         public var lrEmpowerReady:Number = 0;
         public var apReduction:String = null; // null | seal | eden
+        public var apReductionUntil:Number = 0;
         public var cd:Array = [0, 0, 0, 0, 0, 0, 0];
         public var counters:Object = {harmony: 0, ordinance: 0, axiom: 0, seal: 0, quix: 0, notBroken: 0};
         public var ruleIdx:int = 0; // current position in PATTERN
@@ -237,7 +239,7 @@ package sim
             host.floater(role, "-" + fmt(dmg), kind);
             if (hp[role] <= 0)
             {
-                end("lose", role.toUpperCase() + " died (" + why + ")");
+                end("lose", ROLE_NAMES[role] + " died (" + why + ")");
             }
         }
 
@@ -378,7 +380,7 @@ package sim
             last["zone"] = t;
             var role:String = ZONE_ROLES[n];
             host.announce("All stand equal beneath the eyes of the Eternal.");
-            host.log("Equal - zone " + n + ": " + role.toUpperCase() + " must stand inside", "bad");
+            host.log("Equal - zone " + n + ": " + ROLE_NAMES[role] + " must stand inside", "bad");
             after(100, function():void {
                 host.bossAnim("ChargeA", false);
                 host.zone(true, role);
@@ -403,7 +405,7 @@ package sim
                 {
                     somber[role] = 0;
                     armor[role] = 0.8;
-                    host.log(role.toUpperCase() + " cleansed (Somber/armor reset)", "good");
+                    host.log(ROLE_NAMES[role] + " cleansed (Somber/armor reset)", "good");
                 }
                 host.zone(false, "");
             });
@@ -488,6 +490,7 @@ package sim
                     tok = ++sealToken;
                     after(250, function():void {
                         apReduction = "seal";
+                        apReductionUntil = t + 7000;
                         host.castFx("seal", actor);
                     });
                     if (!manual)
@@ -515,6 +518,7 @@ package sim
                     tok = ++edenToken;
                     after(250, function():void {
                         apReduction = "eden";
+                        apReductionUntil = t + 25000;
                         host.castFx("eden", actor);
                     });
                     after(25250, function():void {

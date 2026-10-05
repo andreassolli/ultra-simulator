@@ -77,7 +77,7 @@ between our frame and the party frames (`src/_assets/buffs/*.png`). Healing
 src/_assets/ui.swf`), and `src/ui/*.as` embed them like the other recovered classes. Portraits are filled the way the
 game's `showPortraitBox()` does it: the boss's `mcHeadUltraMalg` into the target ring, the equipped armor's head and the
 helm into the player ring. `Loader3.swf` only downloads the game from the AQ servers, so it is not needed here. The
-stage is the game's 960x550 and scales to the window / full screen (`StageScaleMode.SHOW_ALL`).
+stage is the game's 960x500 and scales to the window / full screen (`StageScaleMode.SHOW_ALL`).
 The four players are `AvatarMC` instances (the recovered character), each with a health bar over its head. Rules (`src/sim/Fight.as`) are a port of the web simulator: the boss rotation (auto / Truth / Listen /
 Equal), Somber + armor, Seal / Quix / taunt requirements, and the Lord of Order, Arch Paladin and Legion Revenant
 skills. Pick your class with the buttons top right; the other roles are scripted.

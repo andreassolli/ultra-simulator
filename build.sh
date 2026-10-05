@@ -12,7 +12,7 @@ OUT="$PROJECT_DIR/bin"
 # ./build.sh test   -> bin/character_test.swf  (original character test, src/TestMain.as)
 case "${1:-sim}" in
     test) MAIN="$SRC/TestMain.as"; OUTPUT="$OUT/character_test.swf"; WIDTH=1280; HEIGHT=720; FPS=30 ;;
-    *)    MAIN="$SRC/UltraSim.as"; OUTPUT="$OUT/ultra_sim.swf";       WIDTH=960;  HEIGHT=550; FPS=24 ;;
+    *)    MAIN="$SRC/UltraSim.as"; OUTPUT="$OUT/ultra_sim.swf";       WIDTH=960;  HEIGHT=500; FPS=24 ;;
 esac
 
 if [ ! -x "$MXMLC" ] && [ ! -f "$MXMLC" ]; then

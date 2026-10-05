@@ -54,7 +54,7 @@ package
      * Document class must extend MovieClip: the loaded SWFs do MovieClip(stage.getChildAt(0)).world
      * so `world` below is a small stand-in for the game client they expect.
      */
-    [SWF(width="960", height="550", frameRate="24", backgroundColor="#000000")]
+    [SWF(width="960", height="500", frameRate="24", backgroundColor="#000000")]
     public dynamic class UltraSim extends MovieClip implements IFightHost
     {
         // ---- geometry (twips/20 from the map's Boss frame, see README) ------------------
@@ -65,8 +65,10 @@ package
         private static const WALK:Object = {x0: 24, x1: 936, y0: 240, y1: 488};
         private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0]};
         private static const CHAR_SCALE:Number = 0.65;
-        private static const BOSS_SCALE:Number = 0.3;
+        private static const BOSS_SCALE:Number = 0.38;
         private static const STAGE_W:Number = 960;
+        private static const STAGE_H:Number = 500;
+        private static const NEXT_NAMES:Object = {auto: "Auto attack", truth: "Truth", listen: "Listen", zone: "Equal (zone)"};
         private static const BUFFS_PER_ROW:int = 4;
         private static const BOSS_NAME:String = "Ultra Speaker";
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
@@ -75,7 +77,7 @@ package
         private static const PORTRAIT_SIZE:Number = 58;
 
         private static const ROLE_COLOR:Object = {ap: 0xE8D9A0, lr: 0xE0507A, loo: 0xE0B84A, dps: 0x5AA86A};
-        private static const ROLE_SHORT:Object = {ap: "AP", lr: "LR", loo: "LoO", dps: "DPS"};
+        private static const ROLE_FULL:Object = {ap: "Arch Paladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS"};
         private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "Arch Paladin", lr: "Legion Revenant"};
 
         // skill bar: slot -> [label, icon class in Assets.swf]. The SWF ships aa + 4 numbered icons per class.
@@ -88,7 +90,7 @@ package
         private static const BOSS_FRAMES:Object = {ChargeALoop: [154, 172], PowerLoop: [95, 111], ChargeBLoop: [209, 228]};
 
         // skin / hair / eye tones applied to the colour-keyed layers of the equipped items
-        private static const COLORS:Object = {intColorSkin: 0xF0C9A0, intColorHair: 0xB9B9C4, intColorEye: 0x4A90D9};
+        private static const COLORS:Object = {intColorSkin: 0xF0C9A0, intColorHair: 0xEBCB7A, intColorEye: 0x4A90D9};
 
         // ---- stand-in game client for the loaded SWFs --------------------------------------
         public var world:Object;
@@ -206,7 +208,7 @@ package
         {
             removeEventListener(Event.ADDED_TO_STAGE, init);
             stage.frameRate = 24;
-            // scale the whole 960x550 game to the window / full screen, keeping the aspect ratio
+            // scale the whole 960x500 game to the window / full screen, keeping the aspect ratio
             stage.scaleMode = StageScaleMode.SHOW_ALL;
             stage.align = "";
             var p:Object = loaderInfo.parameters;
@@ -354,6 +356,7 @@ package
             actorLayer.addChild(bossMC);
             targetRing.graphics.lineStyle(2, 0xFFD24A, 0.9);
             targetRing.graphics.drawEllipse(-120, -10, 240, 28);
+            targetRing.scaleX = targetRing.scaleY = BOSS_SCALE / 0.3;
             targetRing.x = BOSS_PAD.x;
             targetRing.y = BOSS_PAD.y;
             actorLayer.addChildAt(targetRing, 0);
@@ -408,7 +411,7 @@ package
                 mc.x = p.x;
                 mc.y = p.y;
                 mc.scale(CHAR_SCALE);
-                mc.pname.ti.text = ROLE_SHORT[r] + (r == role ? " (you)" : "");
+                mc.pname.ti.text = ROLE_FULL[r] + (r == role ? " (you)" : "");
                 mc.mouseEnabled = false;
                 mc.mouseChildren = false;
                 actorLayer.addChild(mc);
@@ -534,9 +537,11 @@ package
             clockText.x = 854;
             clockText.y = 78;
             g.addChild(clockText);
-            nextText = Hud.label("", 11, 0x8A95AB, false, "right", 140);
-            nextText.x = 814;
-            nextText.y = 98;
+            nextText = Hud.label("", 15, 0xFFFFFF, true, "right", 270);
+            nextText.background = true;
+            nextText.backgroundColor = 0x080a12;
+            nextText.x = 684;
+            nextText.y = 100;
             g.addChild(nextText);
             bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 960);
             bannerText.x = 0;
@@ -572,7 +577,7 @@ package
             // centre the six round slots on the stage
             actBar.x = 0;
             actBar.x = STAGE_W / 2 - (actBar["blank0"].getBounds(actBar).left + actBar["blank5"].getBounds(actBar).right) / 2;
-            actBar.y = 494;
+            actBar.y = STAGE_H - actBar["blank0"].getBounds(actBar).bottom - 6; // on the map, no black strip below
             g.addChild(actBar);
             buildButtons();
         }
@@ -625,6 +630,10 @@ package
                 icon.x = size / 2 - (ib.x + ib.width / 2) * ik;
                 icon.y = size / 2 - (ib.y + ib.height / 2) * ik;
                 slot.addChild(icon);
+                var ov:Shape = new Shape();
+                ov.x = size / 2;
+                ov.y = size / 2;
+                slot.addChild(ov);
                 var cnt:TextField = Hud.label("", d.boss ? 10 : 9, 0xFFFFFF, true, "right", size);
                 cnt.x = 0;
                 cnt.y = size - (d.boss ? 15 : 14);
@@ -633,7 +642,7 @@ package
                 slot.mouseChildren = false;
                 slot.visible = false;
                 hudLayer.addChild(slot);
-                buffIcons[d.name] = {sp: slot, cnt: cnt, size: size, boss: d.boss};
+                buffIcons[d.name] = {sp: slot, cnt: cnt, ov: ov, size: size, boss: d.boss};
             }
         }
 
@@ -650,6 +659,7 @@ package
             {
                 var ic:Object = buffIcons[a.name];
                 ic.cnt.text = a.count;
+                Hud.pie(ic.ov, ic.size * 0.46, a.frac >= 0 ? a.frac : 0); // dark overlay clears clockwise as it runs out
                 ic.sp.visible = true;
                 var n:int = ic.boss ? bossN++ : meN++;
                 var col:int = n % BUFFS_PER_ROW;
@@ -694,7 +704,7 @@ package
                 p.x = 10;
                 p.y = y;
                 p.baseY = y;
-                p["strName"].text = (r == "dps" ? "DPS" : CLASS_NAMES[r]);
+                p["strName"].text = ROLE_FULL[r];
                 hudLayer.addChild(p);
                 partyPanels[r] = p;
                 y += p.height + 4;
@@ -930,7 +940,7 @@ package
             if (on && fight)
             {
                 var mine:Boolean = (r == role);
-                setBanner(mine ? "EQUAL - zone " + zoneNumber(r) + ": STAND INSIDE THE BOX" : "EQUAL - " + ROLE_SHORT[r] + " inside; step OUTSIDE the box (right)", mine ? 0x6FD98A : 0xFFD24A, 3400);
+                setBanner(mine ? "EQUAL - zone " + zoneNumber(r) + ": STAND INSIDE THE BOX" : "EQUAL - " + ROLE_FULL[r] + " inside; step OUTSIDE the box (right)", mine ? 0x6FD98A : 0xFFD24A, 3400);
             }
         }
 
@@ -1031,16 +1041,21 @@ package
 
         public function castFx(kind:String, r:String):void
         {
-            // healing (Ordinance, Heal) plays no cast effect; the heal numbers are enough
-            if (kind != "ordinance" && kind != "heal")
+            // healing plays its effect only when the player casts it themselves, on everyone it heals;
+            // heals cast by the scripted party members show only their numbers
+            var heals:Boolean = (kind == "ordinance" || kind == "heal");
+            if (!heals || r == role)
             {
                 var C:Class = assetsDomain.getDefinition("Assets_20260702_fla.Symbol3aaaaa_loo_757") as Class;
-                var clip:MovieClip = new C() as MovieClip;
-                clip.mouseEnabled = false;
-                clip.x = actors[r].mc.x;
-                clip.y = actors[r].mc.y - 50;
-                fxLayer.addChild(clip);
-                fxClips.push(clip);
+                for each (var who:String in (heals ? Fight.ROLES : [r]))
+                {
+                    var clip:MovieClip = new C() as MovieClip;
+                    clip.mouseEnabled = false;
+                    clip.x = actors[who].mc.x;
+                    clip.y = actors[who].mc.y - 50;
+                    fxLayer.addChild(clip);
+                    fxClips.push(clip);
+                }
             }
             if (kind != "taunt")
             {
@@ -1076,7 +1091,7 @@ package
             var mine:Boolean = (holder == role);
             if (holder != null && label != "")
             {
-                setBanner(mine ? "TAUNT NOW - " + label + " on YOU (6)" : ROLE_SHORT[holder] + " holds the boss - " + label, mine ? 0xFF5B5B : 0xFFD24A, 2400);
+                setBanner(mine ? "TAUNT NOW - " + label + " on YOU (6)" : ROLE_FULL[holder] + " holds the boss - " + label, mine ? 0xFF5B5B : 0xFFD24A, 2400);
             }
             if (ability == "truth")
             {
@@ -1406,62 +1421,63 @@ package
                 setBar(partyPanels[r], "HP", "intHPbar", "strIntHP", f.hp[r] / f.maxHp(r), Fight.fmt(f.hp[r]));
                 setBar(partyPanels[r], "MP", "intMPbar", "strIntMP", 1, "");
                 var sm:int = f.somber[r];
-                partyPanels[r]["strName"].text = ROLE_SHORT[r] + " - " + (r == "dps" ? "DPS" : CLASS_NAMES[r]) + (sm > 0 ? "  x" + sm : "");
+                partyPanels[r]["strName"].text = ROLE_FULL[r] + (sm > 0 ? "  x" + sm : "");
             }
             // buff chips
             var chips:Array = [];
             var t:Number = f.t;
             var active:Array = [];
             var remain:Function = function(until:Number):String { return String(Math.ceil((until - t) / 1000)); };
+            var frac:Function = function(until:Number, total:Number):Number { return Math.max(0, Math.min(1, (until - t) / total)); };
             // on the boss
             if (f.currentTaunt() != null)
             {
-                active.push({name: "taunt", count: ROLE_SHORT[f.currentTaunt()]});
+                active.push({name: "taunt", count: "", frac: frac(f.tauntUntil, 6000)});
             }
             if (f.apReduction == "seal")
             {
-                active.push({name: "seal", count: ""});
+                active.push({name: "seal", count: remain(f.apReductionUntil), frac: frac(f.apReductionUntil, 7000)});
             }
             else if (f.apReduction == "eden")
             {
-                active.push({name: "eden", count: ""});
+                active.push({name: "eden", count: remain(f.apReductionUntil), frac: frac(f.apReductionUntil, 25000)});
             }
             if (t < f.quixUntil)
             {
-                active.push({name: "quix", count: remain(f.quixUntil)});
+                active.push({name: "quix", count: remain(f.quixUntil), frac: frac(f.quixUntil, 4000)});
             }
             // on us
             if (f.stunned())
             {
-                active.push({name: "stasis", count: remain(f.stunUntil)});
+                active.push({name: "stasis", count: remain(f.stunUntil), frac: frac(f.stunUntil, 6000)});
             }
             if (f.somber[role] > 0)
             {
-                active.push({name: "somber", count: String(f.somber[role])});
+                active.push({name: "somber", count: String(f.somber[role]), frac: -1}); // stacks, no timer
             }
             if (t < f.magiaBurnUntil)
             {
-                active.push({name: "magiaBurn", count: remain(f.magiaBurnUntil)});
+                active.push({name: "magiaBurn", count: remain(f.magiaBurnUntil), frac: frac(f.magiaBurnUntil, 18000)});
             }
             if (role == "lr" && t < f.lrEmpowerUntil)
             {
-                active.push({name: "empowerment", count: remain(f.lrEmpowerUntil)});
+                active.push({name: "empowerment", count: remain(f.lrEmpowerUntil), frac: frac(f.lrEmpowerUntil, 12000)});
             }
             if (f.apHealBuff)
             {
-                active.push({name: "heal", count: remain(f.apHealUntil)});
+                active.push({name: "heal", count: remain(f.apHealUntil), frac: frac(f.apHealUntil, 15000)});
             }
             if (f.harmonyBuff)
             {
-                active.push({name: "harmony", count: remain(f.harmonyUntil)});
+                active.push({name: "harmony", count: remain(f.harmonyUntil), frac: frac(f.harmonyUntil, 10000)});
             }
             if (t < f.axiomUntil)
             {
-                active.push({name: "axiom", count: remain(f.axiomUntil)});
+                active.push({name: "axiom", count: remain(f.axiomUntil), frac: frac(f.axiomUntil, 10000)});
             }
             if (t < f.ordinanceUntil)
             {
-                active.push({name: "ordinance", count: remain(f.ordinanceUntil)});
+                active.push({name: "ordinance", count: remain(f.ordinanceUntil), frac: frac(f.ordinanceUntil, 12000)});
             }
             showBuffs(active);
             for (var c:int = 0; c < chipTexts.length; c++)
@@ -1475,7 +1491,8 @@ package
             var secs:Number = f.t / 1000;
             clockText.text = int(secs / 60) + ":" + (int(secs % 60) < 10 ? "0" : "") + int(secs % 60);
             // with hints off nothing says whose zone it is, who must taunt, or what is coming next
-            nextText.text = hintsOn ? "Next: " + Fight.PATTERN[f.ruleIdx] : "";
+            nextText.text = hintsOn ? "Next: " + NEXT_NAMES[Fight.PATTERN[f.ruleIdx]] + " " : "";
+            nextText.visible = hintsOn;
             logText.visible = hintsOn;
             logPanel.visible = hintsOn;
             bannerText.text = (hintsOn && banner != "" && f.t < bannerUntil) ? banner : "";
@@ -1489,13 +1506,8 @@ package
                 var name:String = f.skillName(k);
                 var left:Number = k == 1 ? 0 : Math.max(0, f.cd[k] - f.t);
                 var len:Number = name != null ? Fight.SKILL_CD[name] : 1;
-                slot.cd.graphics.clear();
-                if (left > 0)
-                {
-                    slot.cd.graphics.beginFill(0x000000, 0.6);
-                    slot.cd.graphics.drawCircle(0, 0, slot.r);
-                    slot.cd.graphics.endFill();
-                }
+                // dark overlay that clears clockwise as the skill comes off cooldown
+                Hud.pie(slot.cd, slot.r * 0.92, left > 0 ? Math.min(1, left / Math.max(len, left)) : 0);
                 if (slot.txt)
                 {
                     slot.txt.text = left > 50 ? (left / 1000).toFixed(left > 9950 ? 0 : 1) : "";
