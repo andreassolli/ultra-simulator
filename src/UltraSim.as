@@ -78,7 +78,7 @@ package
                 mapSwf: "runtime/town-ultraspeaker.swf", bossSwf: "runtime/monster-UltraMalg.swf", bossClass: "UltraMalg", headClass: "mcHeadUltraMalg",
                 roles: ["ap", "lr", "loo", "dps"], pad: new Point(492.5, 315.7), home: new Point(470, 420), scale: 0.38,
                 loops: {ChargeALoop: [154, 172], PowerLoop: [95, 111], ChargeBLoop: [209, 228]}},
-            {id: "dage", name: "Ultra Dage", classes: ["ca", "cn"],
+            {id: "dage", name: "Ultra Dage", classes: ["ca"],
                 mapSwf: "runtime/town-ultradage.swf", bossSwf: "runtime/monster-UltraDage.swf", bossClass: "UltraDage", headClass: "mcHeadUltraDage",
                 roles: ["ca", "cn", "da", "db"], pad: new Point(480, 300), home: new Point(480, 410), scale: 0.6,
                 loops: {PowerLoop: [351, 363], ChargeLoop: [193, 208]}}
@@ -2031,7 +2031,7 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\"}";
+                ",\"gear\":\"" + gearState() + "\",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
         }
 
         private function hpJson():String

@@ -28,15 +28,15 @@ package sim
         };
         /**
          * The guide expects a Flux for every Decaying Strike (they come 9 s apart) although Flux lists 15 s, so the
-         * players' haste / cooldown reduction is taken as 50 %.
+         * players' haste / cooldown reduction is taken as 60 %.
          */
-        private static const HASTE:Number = 0.5;
+        private static const HASTE:Number = 0.4;
 
         private static const CAST:Object = {auto: 500, decay: 500, zone: 3000, regen: 10000};
         private static const SLOT:Object = {auto: 2250, decay: 2250, zone: 4500, regen: 11500};
         private static const START_AT:int = 2500;
 
-        private static const START_HP:Object = {ca: 16000, cn: 9500, da: 10000, db: 10000};
+        private static const START_HP:Object = {ca: 4800, cn: 3600, da: 3600, db: 3600};
         private static const FOCUS_MS:int = 4000;
         private static const AETERNA_MS:int = 11000;
         private static const DECAY_MS:int = 11000;
@@ -68,6 +68,7 @@ package sim
         private var zoneCount:int = 0;
         private var nextAt:Number = START_AT;
         private var regenAt:Number = 60000;
+        private var queue:Array = [];     // abilities that come before the pattern resumes
         private var tauntDue:int = 0;     // autos still to be tanked after a Decaying Strike
         private var hpTickAt:Number = 1000;
         private var partyAt:Number = 600;
@@ -199,7 +200,7 @@ package sim
         {
             if (!isTank(r))
             {
-                return 1;
+                return 0.35; // the others' armour; the listed damage is before it
             }
             var m:Number = 0.65; // Death Defiant
             if (playerClass != "ca" || t < bulwarkUntil)
@@ -488,6 +489,7 @@ package sim
         private function mages():void
         {
             host2.announce("I possess the full power of the Legion at my disposal.");
+            tauntDue = 0; // a Decaying Strike's autos that the Legion Mages cut short no longer count
             mightUntil = t + 120000;
             legionUntil = t + 14000;
             legionTickAt = t + 1000;
@@ -495,13 +497,20 @@ package sim
             host2.bossAnim("Charge", false);
             later(3500, function():void { host2.bossAnim("ChargeLoop", true); });
             later(8000, function():void { host2.bossAnim("DageNuke", false); });
+            later(6000, function():void { host2.mechanic("ca", "regen", 0, 0); }); // tauntable: taunt now
             npcTank(8200);
             var picked:Array = null;
             later(CAST.regen, function():void {
                 picked = targets();
                 var tauntedNow:Boolean = currentTaunt() != null;
-                // tauntable, but the Flux is needed for the Decaying Strike that follows it, so it is optional
-                if (tauntedNow)
+                if (playerClass == "ca" && !tauntedNow)
+                {
+                    casts.missedTaunt++;
+                    host2.floater("ca", "Missed Taunt", "bad");
+                    finish("lose", "Missed Taunt (Summon Legion Mages)");
+                    return;
+                }
+                else if (tauntedNow)
                 {
                     casts.taunted++;
                 }
@@ -759,12 +768,19 @@ package sim
             if (t >= nextAt)
             {
                 var ability:String = abilityAt(seqIdx);
-                if (regenDue(ability))
+                if (queue.length > 0)
+                {
+                    var q1:String = queue.shift();
+                    fire(q1);
+                    nextAt = t + SLOT[q1];
+                }
+                else if (regenDue(ability))
                 {
                     if (t >= regenAt)
                     {
                         fire("regen");
                         nextAt = t + SLOT.regen;
+                        queue = ["decay", "auto", "auto"]; // as in the guide: Legion Mages, Decaying Strike, 2 autos
                         regenAt += 60000;
                     }
                 }
