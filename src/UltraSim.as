@@ -566,11 +566,20 @@ package
          */
         private function buildBuffIcons():void
         {
+            // skill-icon buffs reuse the class skill icons from Assets.swf (the same pictures as on the action bar)
             var defs:Array = [
                 {name: "taunt", icon: BuffTaunt, boss: true},
+                {name: "seal", icon: "apal3", boss: true},
+                {name: "eden", icon: "apal4", boss: true}, // "Broken Seal"
+                {name: "quix", icon: "LoO4", boss: true},
                 {name: "stasis", icon: BuffStasis, boss: false},
                 {name: "somber", icon: BuffSomber, boss: false},
-                {name: "magiaBurn", icon: BuffMagiaBurn, boss: false}
+                {name: "magiaBurn", icon: BuffMagiaBurn, boss: false},
+                {name: "empowerment", icon: "LR3", boss: false},
+                {name: "heal", icon: "apal2", boss: false},
+                {name: "harmony", icon: "LoO1", boss: false},
+                {name: "axiom", icon: "LoO3", boss: false},
+                {name: "ordinance", icon: "LoO2", boss: false}
             ];
             for each (var d:Object in defs)
             {
@@ -583,11 +592,21 @@ package
                 bg.x = -bb.x * k;
                 bg.y = -bb.y * k;
                 slot.addChild(bg);
-                var icon:Bitmap = new d.icon() as Bitmap;
-                var ik:Number = (size * 0.64) / icon.width;
+                var icon:DisplayObject;
+                if (d.icon is String)
+                {
+                    var AC:Class = assetsDomain.getDefinition(d.icon) as Class;
+                    icon = new AC() as DisplayObject;
+                }
+                else
+                {
+                    icon = new d.icon() as DisplayObject;
+                }
+                var ib:Rectangle = icon.getBounds(icon);
+                var ik:Number = (size * (d.icon is String ? 0.8 : 0.64)) / Math.max(ib.width, ib.height);
                 icon.scaleX = icon.scaleY = ik;
-                icon.x = (size - icon.width) / 2;
-                icon.y = (size - icon.height) / 2;
+                icon.x = size / 2 - (ib.x + ib.width / 2) * ik;
+                icon.y = size / 2 - (ib.y + ib.height / 2) * ik;
                 slot.addChild(icon);
                 var cnt:TextField = Hud.label("", d.boss ? 10 : 9, 0xFFFFFF, true, "right", size);
                 cnt.x = 0;
@@ -1356,13 +1375,28 @@ package
             var chips:Array = [];
             var t:Number = f.t;
             var active:Array = [];
+            var remain:Function = function(until:Number):String { return String(Math.ceil((until - t) / 1000)); };
+            // on the boss
             if (f.currentTaunt() != null)
             {
                 active.push({name: "taunt", count: ROLE_SHORT[f.currentTaunt()]});
             }
+            if (f.apReduction == "seal")
+            {
+                active.push({name: "seal", count: ""});
+            }
+            else if (f.apReduction == "eden")
+            {
+                active.push({name: "eden", count: ""});
+            }
+            if (t < f.quixUntil)
+            {
+                active.push({name: "quix", count: remain(f.quixUntil)});
+            }
+            // on us
             if (f.stunned())
             {
-                active.push({name: "stasis", count: ""});
+                active.push({name: "stasis", count: remain(f.stunUntil)});
             }
             if (f.somber[role] > 0)
             {
@@ -1370,33 +1404,29 @@ package
             }
             if (t < f.magiaBurnUntil)
             {
-                active.push({name: "magiaBurn", count: ""});
+                active.push({name: "magiaBurn", count: remain(f.magiaBurnUntil)});
             }
-            showBuffs(active);
-            if (t < f.ordinanceUntil)
+            if (role == "lr" && t < f.lrEmpowerUntil)
             {
-                chips.push("Ordinance " + Math.round((f.ordinanceUntil - t) / 1000) + "s");
+                active.push({name: "empowerment", count: remain(f.lrEmpowerUntil)});
+            }
+            if (f.apHealBuff)
+            {
+                active.push({name: "heal", count: remain(f.apHealUntil)});
             }
             if (f.harmonyBuff)
             {
-                chips.push("Harmony " + Math.round((f.harmonyUntil - t) / 1000) + "s");
+                active.push({name: "harmony", count: remain(f.harmonyUntil)});
             }
             if (t < f.axiomUntil)
             {
-                chips.push("Axiom " + Math.round((f.axiomUntil - t) / 1000) + "s");
+                active.push({name: "axiom", count: remain(f.axiomUntil)});
             }
-            if (t < f.quixUntil)
+            if (t < f.ordinanceUntil)
             {
-                chips.push("Quix " + ((f.quixUntil - t) / 1000).toFixed(1) + "s");
+                active.push({name: "ordinance", count: remain(f.ordinanceUntil)});
             }
-            if (f.apReduction != null)
-            {
-                chips.push("AP " + (f.apReduction == "seal" ? "Seal" : "Eden"));
-            }
-            if (t < f.lrEmpowerUntil)
-            {
-                chips.push("LR Empowerment " + Math.round((f.lrEmpowerUntil - t) / 1000) + "s");
-            }
+            showBuffs(active);
             for (var c:int = 0; c < chipTexts.length; c++)
             {
                 chipTexts[c].visible = c < chips.length;

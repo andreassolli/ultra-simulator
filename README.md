@@ -107,3 +107,30 @@ small stubs in `UltraSim.as`.
 
 Assumptions: boss HP and the raid's damage are the web simulator's numbers, not data from the SWFs; the order of
 the class icons (`LoO1`–`LoO4` = Harmony … Quix, etc.) and which boss animation belongs to which ability are guesses.
+
+### Developing: change the ActionScript, rebuild, reload
+
+```sh
+export FLEX_SDK="$HOME/Downloads/apache-flex-sdk-4.16.1-bin"   # your Apache Flex SDK (build.sh also uses its air-config.xml)
+# edit src/*.as, then:
+./build.sh            # -> bin/ultra_sim.swf
+./build.sh test       # -> bin/character_test.swf (the original character test)
+cd bin && python3 -m http.server 8000     # open http://localhost:8000/ and refresh after each build
+```
+
+Compile errors from `mxmlc` print in the terminal with file and line. If `mxmlc` complains about
+`{playerglobalHome}` or `{airHome}`, point `PLAYERGLOBAL_HOME` (folder with `32.0/playerglobal.swc`) or `AIR_HOME` (an AIR
+SDK / the Flex SDK with `frameworks/libs/air/airglobal.swc`) at your install.
+
+| What to change | Where |
+| --- | --- |
+| Scene, loading, input, HUD layout, auto-pilot, which icon goes on which skill (`SKILLS`) | `src/UltraSim.as` |
+| Fight rules: rotation, damage numbers, class skills and cooldowns, buff durations | `src/sim/Fight.as` |
+| Bars / text helpers, the interface between rules and scene | `src/sim/Hud.as`, `src/sim/IFightHost.as` |
+| HUD artwork classes and buff icons | `src/ui/*.as` (art in `src/_assets/ui.swf` and `src/_assets/buffs/*.png`) |
+| The recovered character | `src/AQWorlds/AvatarMC.as` |
+| Map, boss, skill icons, gear (loaded at runtime, no recompile) | `bin/runtime/*.swf` |
+| New HUD pieces from `Spider.swf` | add the symbol id to `ROOTS` in `tools/extract_ui.py`, regenerate `src/_assets/ui.swf` (see above), add a class in `src/ui/` |
+
+Buff icons: Taunt, Stasis, Somber and Magia Burn use `src/_assets/buffs/*.png`; the others (Seal, Broken Seal, Quix on the
+boss; Empowerment, Heal, Harmony, Axiom, Ordinance on us) reuse the class skill icons from `Assets.swf` (`buildBuffIcons()`).
