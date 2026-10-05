@@ -67,6 +67,7 @@ package sim
         private var seqIdx:int = 0;       // position in the intro / loop
         private var zoneCount:int = 0;
         private var nextAt:Number = START_AT;
+        private var regenAt:Number = 60000;
         private var tauntDue:int = 0;     // autos still to be tanked after a Decaying Strike
         private var hpTickAt:Number = 1000;
         private var partyAt:Number = 600;
@@ -312,15 +313,20 @@ package sim
             {
                 return loop[k];
             }
-            // after every 3rd zone the standard auto is the Legion Mages instead
-            var zonesSoFar:int = int((i - intro.length) / loop.length) + 1;
-            return zonesSoFar % 3 == 0 ? "regen" : "auto";
+            return "auto"; // Summon Legion Mages is on the clock instead, see regenDue()
+        }
+
+        /** Summon Legion Mages always starts at 1:00 (and every minute after): the next ability waits for it if it would run into it. */
+        private function regenDue(ability:String):Boolean
+        {
+            return nextAt + SLOT[ability] > regenAt;
         }
 
         override public function nextLabel():String
         {
             var names:Object = {auto: "Auto attack", decay: "Decaying Strike", zone: "Summon Brute Undead (plate)", regen: "Summon Legion Mages"};
-            return names[abilityAt(seqIdx)];
+            var a:String = abilityAt(seqIdx);
+            return names[regenDue(a) ? "regen" : a];
         }
 
         private function fire(ability:String):void
@@ -443,10 +449,11 @@ package sim
             host2.announce("Cower behind your meager protection spells!");
             var id:String = Math.random() < 0.5 ? "a" : "b";
             plateId = id;
-            host2.bossAnim("Charge", false);
+            host2.bossAnim("Powerup", false);
             host2.log("Summon Brute Undead - the " + (id == "a" ? "left" : "right") + " plate lights up", "bad");
             later(100, function():void { host2.plate(id); });
-            later(2300, function():void { host2.bossAnim("DageNuke", false); });
+            later(800, function():void { host2.bossAnim("PowerLoop", true); });
+            later(1900, function():void { host2.bossAnim("Aoe", false); });
             var missedBefore:int = casts.missedPlate;
             later(CAST.zone, function():void {
                 for each (var r:String in DAGE_ROLES)
@@ -485,9 +492,9 @@ package sim
             legionUntil = t + 14000;
             legionTickAt = t + 1000;
             host2.log("Might of the Legion: Dage hits twice as hard for 120 s and heals", "bad");
-            host2.bossAnim("Powerup", false);
-            later(3900, function():void { host2.bossAnim("PowerLoop", true); });
-            later(8000, function():void { host2.bossAnim("Aoe", false); });
+            host2.bossAnim("Charge", false);
+            later(3500, function():void { host2.bossAnim("ChargeLoop", true); });
+            later(8000, function():void { host2.bossAnim("DageNuke", false); });
             npcTank(8200);
             var picked:Array = null;
             later(CAST.regen, function():void {
@@ -752,9 +759,21 @@ package sim
             if (t >= nextAt)
             {
                 var ability:String = abilityAt(seqIdx);
-                fire(ability);
-                nextAt = t + SLOT[ability];
-                seqIdx++;
+                if (regenDue(ability))
+                {
+                    if (t >= regenAt)
+                    {
+                        fire("regen");
+                        nextAt = t + SLOT.regen;
+                        regenAt += 60000;
+                    }
+                }
+                else
+                {
+                    fire(ability);
+                    nextAt = t + SLOT[ability];
+                    seqIdx++;
+                }
             }
             for each (var r:String in DAGE_ROLES)
             {

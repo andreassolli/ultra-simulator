@@ -81,7 +81,7 @@ package
             {id: "dage", name: "Ultra Dage", classes: ["ca", "cn"],
                 mapSwf: "runtime/town-ultradage.swf", bossSwf: "runtime/monster-UltraDage.swf", bossClass: "UltraDage", headClass: "mcHeadUltraDage",
                 roles: ["ca", "cn", "da", "db"], pad: new Point(480, 300), home: new Point(480, 410), scale: 0.6,
-                loops: {PowerLoop: [351, 363]}}
+                loops: {PowerLoop: [351, 363], ChargeLoop: [193, 208]}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
         private static const PORTRAIT_CX:Number = 50;
