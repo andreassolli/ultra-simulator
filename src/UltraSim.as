@@ -551,13 +551,13 @@ package
             logText.multiline = true;
             logText.wordWrap = true;
             logText.height = 90;
-            logText.x = 596;
+            logText.x = 660;
             logText.y = 396;
             logText.autoSize = "none";
             g.addChild(logText);
             buildBuffIcons();
             actBar = ui("UI_ActBar");
-            actBar.x = 347;
+            actBar.x = 220;
             actBar.y = 494;
             g.addChild(actBar);
             buildButtons();
@@ -672,7 +672,7 @@ package
                 var p:MovieClip = ui("UI_PartyPanel");
                 p.x = 10;
                 p.y = y;
-                p["strName"].text = ROLE_SHORT[r] + " - " + (r == "dps" ? "DPS" : CLASS_NAMES[r]);
+                p["strName"].text = (r == "dps" ? "DPS" : CLASS_NAMES[r]);
                 hudLayer.addChild(p);
                 partyPanels[r] = p;
                 y += p.height + 4;
@@ -728,7 +728,6 @@ package
             button("Restart", 676, 76, 60, function():void { newFight(role); });
             button("Auto-pilot", 740, 76, 70, function():void { botOn = !botOn; });
             button("Pause", 814, 76, 50, function():void { paused = !paused; });
-            button("1x/2x/4x", 868, 76, 86, function():void { simSpeed = simSpeed >= 4 ? 1 : simSpeed * 2; });
             hintsLabel = button("", 676, 100, 150, toggleHints);
             hintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
             button("Fullscreen (F)", 836, 100, 118, toggleFullscreen);
