@@ -17,7 +17,6 @@
         <select id="selSpeed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
       </label>
       <label class="chk"><input type="checkbox" id="chkBot"> Auto-pilot</label>
-      <label class="chk"><input type="checkbox" id="chkMana"> Infinite MP</label>
     </div>
   </header>
 
@@ -27,24 +26,24 @@
 
   <section class="panels">
     <div class="panel">
-      <h2>Skill set</h2>
-      <p class="hint">Effects and icons are the <code>sp_*</code> clips from <code>Assets_20260731.swf</code>. Pick a set to fill slots, or choose a clip per slot.</p>
-      <select id="selSet"></select>
-      <div id="slotPickers"></div>
-    </div>
-    <div class="panel">
-      <h2>Mechanics</h2>
+      <h2>You are the Lord of Order</h2>
       <ul class="hint">
-        <li><b>Charge A</b> (zone A): the red rune lights and <code>safe1</code> glows — stay <em>inside</em> the glowing box.</li>
-        <li><b>Charge B</b> (zone B): rune lit, box dark — stay <em>outside</em> the box.</li>
-        <li><b>PowerUp</b>: raid blast on release (<code>Attack2</code>) — keep HP high.</li>
-        <li>Shadowflame circles are telegraphed; melee swings hit near the boss.</li>
+        <li><b>Taunt (6)</b> before every cast marked <code>LoO</code> in the rotation banner — a missed taunt is a wipe.</li>
+        <li><b>Quix (5)</b> on Truth #5 and #9 of a cycle; the other Truths need the Arch Paladin's Seal (scripted).</li>
+        <li><b>Equal</b> (zone): only the named role stands <em>inside</em> the glowing box. You are zone <b>4</b>; for zones 1–3 get outside, then back in.</li>
+        <li><b>Ordinance (3)</b> heals the party; <b>Harmony (2)</b> raises max HP; keep <b>Axiom (4)</b> rolling.</li>
+        <li><b>Listen</b> stuns whoever is holding the boss for 6 s (you cannot use skills 2–6).</li>
       </ul>
-      <p class="hint">Move: WASD / arrows / click ground · Target: click boss · Skills: 1–5 · Potion: 6 · Tab: auto-attack.</p>
+      <p class="hint">Move: WASD / arrows / click ground · Skills 1–6 · P pause.</p>
     </div>
     <div class="panel">
-      <h2>Fight stats</h2>
+      <h2>Rotation</h2>
+      <div id="rot"></div>
+      <h2 style="margin-top:12px">Misses</h2>
       <div id="stats"></div>
+    </div>
+    <div class="panel">
+      <h2>Log</h2>
       <div id="log"></div>
     </div>
   </section>

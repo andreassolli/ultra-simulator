@@ -33,3 +33,5 @@ code{background:#0003;padding:0 4px;border-radius:3px}
 #stats div{display:flex;justify-content:space-between;border-bottom:1px dotted var(--line);padding:2px 0}
 .slot .lbl{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:11px;line-height:1.15;padding:0 3px;color:var(--text);word-break:break-all}
 .slot .cd,.slot .cdt{pointer-events:none}
+#rot div{padding:2px 0;border-bottom:1px dotted var(--line)}#rot .cur{color:var(--accent);font-weight:600}
+.slot img{filter:none}.slot .name{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:10px;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000}

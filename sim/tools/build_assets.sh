@@ -51,15 +51,10 @@ im = Image.open(glob.glob(sys.argv[1] + "/*/1.png")[0]).convert("RGB")
 im.crop((526, 652, 1486, 1152)).save(sys.argv[2], quality=88)
 PY
 
-echo "== skill effects (sp_* in Assets)"
-export_pack "$ASSETS" 0.5 fx sp_
+echo "== Lord of Order skill icons (LoO1-4, LoOaa, LoOp)"
+export_pack "$ASSETS" 0.3 icons LoO1 LoO2 LoO3 LoO4 LoOaa LoOp
 
-echo "== skill icons (same names without sp_)"
-java -cp "$CP" SwfIndex "$ASSETS" sp_ | grep -v '^Picked up' | awk '{sub(/^sp_/,"",$2); print $2}' > "$WORK/icon_names.txt"
-java -cp "$CP" SwfIndex "$ASSETS" $(cat "$WORK/icon_names.txt") | grep -v '^Picked up' \
-    | awk 'NR==FNR{want[$1]=1; next} ($2 in want) && !/ sp_/' "$WORK/icon_names.txt" - > "$WORK/icons.rects"
-IDS="$(cut -d' ' -f1 "$WORK/icons.rects" | paste -sd, -)"
-"${FFDEC[@]}" -zoom 1 -selectid "$IDS" -format sprite:png -export sprite "$WORK/icons" "$ASSETS" > /dev/null
-python3 "$HERE/pack_sprites.py" "$WORK/icons" "$WORK/icons.rects" "$OUT/icons" 1.0
+echo "== Lord of Order cast effect (symbol 9333, Symbol3aaaaa_loo_757)"
+export_pack "$ASSETS" 0.5 classfx 9333
 
 echo "done -> $OUT"
