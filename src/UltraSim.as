@@ -22,9 +22,11 @@ package
     import flash.system.ApplicationDomain;
     import flash.system.LoaderContext;
     import flash.text.TextField;
+    import flash.utils.getQualifiedClassName;
     import flash.utils.getTimer;
     import flash.utils.setTimeout;
 
+    import sim.DageFight;
     import sim.Fight;
     import sim.Hud;
     import sim.IFightHost;
@@ -59,25 +61,25 @@ package
     public dynamic class UltraSim extends MovieClip implements IFightHost
     {
         // ---- geometry (twips/20 from the map's Boss frame, see README) ------------------
-        private static const BOSS_PAD:Point = new Point(492.5, 315.7);
-        private static const MIDDLE_AT:Point = new Point(470, 420);
         private static const RIGHT_AT:Point = new Point(868, 410);
         private static const SAFE_A:Object = {x: 180.65, y: 220.55, w: 612.7, h: 294.7};
         private static const WALK:Object = {x0: 24, x1: 936, y0: 240, y1: 488};
-        private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0]};
+        private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0], ca: [-6, -2], cn: [6, -1], da: [-2, 2], db: [2, 0]};
         private static const CHAR_SCALE:Number = 0.65;
-        private static const BOSS_SCALE:Number = 0.38;
         private static const STAGE_W:Number = 960;
         private static const STAGE_H:Number = 500;
-        private static const NEXT_NAMES:Object = {auto: "Auto attack", truth: "Truth", listen: "Listen", zone: "Equal (zone)"};
         private static const BUFFS_PER_ROW:int = 4;
-        private static const BOSS_NAME:String = "Ultra Speaker";
         private static const RETURN_MS:int = 3500; // delay before the start screen returns after victory/defeat
-        /** Selectable bosses. Only entries with ready=true can be played; Ultra Dage is scaffolding for later
-         *  (its map/boss SWFs, classes and mechanics are not implemented yet). */
+        /** Selectable bosses: map / boss SWFs, party roles, boss spot and playable classes of each. */
         private static const BOSSES:Array = [
-            {id: "speaker", name: "Ultra Speaker", ready: true, classes: ["loo", "ap", "lr"]},
-            {id: "dage", name: "Ultra Dage", ready: false, classes: ["Classic Ninja", "Chaos Avenger"]}
+            {id: "speaker", name: "Ultra Speaker", classes: ["loo", "ap", "lr"],
+                mapSwf: "runtime/town-ultraspeaker.swf", bossSwf: "runtime/monster-UltraMalg.swf", bossClass: "UltraMalg", headClass: "mcHeadUltraMalg",
+                roles: ["ap", "lr", "loo", "dps"], pad: new Point(492.5, 315.7), home: new Point(470, 420), scale: 0.38,
+                loops: {ChargeALoop: [154, 172], PowerLoop: [95, 111], ChargeBLoop: [209, 228]}},
+            {id: "dage", name: "Ultra Dage", classes: ["ca", "cn"],
+                mapSwf: "runtime/town-ultradage.swf", bossSwf: "runtime/monster-UltraDage.swf", bossClass: "UltraDage", headClass: "mcHeadUltraDage",
+                roles: ["ca", "cn", "da", "db"], pad: new Point(480, 300), home: new Point(480, 410), scale: 0.6,
+                loops: {PowerLoop: [351, 363]}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
         private static const PORTRAIT_CX:Number = 50;
@@ -85,17 +87,20 @@ package
         private static const PORTRAIT_SIZE:Number = 58;
 
         private static const ROLE_COLOR:Object = {ap: 0xE8D9A0, lr: 0xE0507A, loo: 0xE0B84A, dps: 0x5AA86A};
-        private static const ROLE_FULL:Object = {ap: "Arch Paladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS"};
-        private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "Arch Paladin", lr: "Legion Revenant"};
+        private static const ROLE_FULL:Object = {ap: "Arch Paladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS",
+            ca: "Chaos Avenger", cn: "Classic Ninja", da: "DPS 1", db: "DPS 2"};
+        private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "Arch Paladin", lr: "Legion Revenant", ca: "Chaos Avenger", cn: "Classic Ninja"};
 
         // skill bar: slot -> [label, icon class in Assets.swf]. The SWF ships aa + 4 numbered icons per class.
         private static const SKILLS:Object = {
             loo: [["Attack", "LoOaa"], ["Harmony", "LoO1"], ["Ordinance", "LoO2"], ["Axiom", "LoO3"], ["Quix", "LoO4"], ["Taunt", null]],
             ap: [["Attack", null], ["Commandment", "apal1"], ["Heal", "apal2"], ["Seal", "apal3"], ["Eden", "apal4"], ["Taunt", null]],
-            lr: [["Attack", "LRaa"], ["Shade", "LR1"], ["Wicked", "LR2"], ["Empowerment", "LR3"], ["Anathema", "LR4"], ["Taunt", null]]
+            lr: [["Attack", "LRaa"], ["Shade", "LR1"], ["Wicked", "LR2"], ["Empowerment", "LR3"], ["Anathema", "LR4"], ["Taunt", null]],
+            // Ultra Dage classes (classes.json): aa, four skills, potions. Flux (3) is the Chaos Avenger's taunt.
+            ca: [["Greatsword", "Chavengeaa"], ["Siphon", "Chavengea1"], ["Flux", "Chavengea2"], ["Bulwark", "Chavengea3"], ["Fury", "Chavengea4"], ["Potions", "icu1"]],
+            cn: [["Attack", "iwd1"], ["Crosscut", "imr1"], ["Shadowblade", "ied2"], ["Shadowburn", "ief2"], ["Thin Air", "iea1"], ["Potions", "icu1"]]
         };
 
-        private static const BOSS_FRAMES:Object = {ChargeALoop: [154, 172], PowerLoop: [95, 111], ChargeBLoop: [209, 228]};
 
         // skin / hair / eye tones applied to the colour-keyed layers of the equipped items
         private static const COLORS:Object = {intColorSkin: 0xF0C9A0, intColorHair: 0xEBCB7A, intColorEye: 0x4A90D9};
@@ -112,8 +117,16 @@ package
         }
 
         // ---- loading ----------------------------------------------------------------------
-        private var mapDomain:ApplicationDomain;
         private var bossDomain:ApplicationDomain;
+        private var bossScenes:Object = {};   // boss id -> {map, boss, rune, safe, safe2, domain, def}
+        private var bossId:String = "speaker";
+        private var initialBoss:String = "speaker";
+        private var bossDef:Object = BOSSES[0];
+        private var roles:Array = BOSSES[0].roles;
+        private var bossPad:Point = BOSSES[0].pad;
+        private var homeAt:Point = BOSSES[0].home;
+        private var bossLoops:Object = BOSSES[0].loops;
+        private var plateId:String = "";
         private var assetsDomain:ApplicationDomain;
         private var mapHolder:MovieClip;
         private var mapMC:MovieClip;
@@ -129,6 +142,7 @@ package
         private var targetRing:Shape = new Shape();
         private var runeMC:MovieClip;
         private var safeMC:MovieClip;
+        private var safe2MC:MovieClip;
 
         // ---- game state -------------------------------------------------------------------
         private var fight:Fight;
@@ -227,6 +241,7 @@ package
             {
                 role = p["class"];
             }
+            initialBoss = p["boss"] == "dage" ? "dage" : "speaker";
             botOn = p["bot"] == "1";
             hintsOn = p["hints"] != "0";
             if (p["speed"])
@@ -248,9 +263,14 @@ package
             mapHolder.onWalkClick = function():void {};
             mapLayer.addChild(mapHolder);
 
-            pending = 5;
-            mapDomain = loadSwf("runtime/town-ultraspeaker.swf", onMapLoaded);
-            bossDomain = loadSwf("runtime/monster-UltraMalg.swf", onBossLoaded);
+            pending = 3 + 2 * BOSSES.length;
+            for each (var bd:Object in BOSSES)
+            {
+                var sc:Object = {def: bd};
+                bossScenes[bd.id] = sc;
+                sc.mapDomain = loadSwf(bd.mapSwf, makeLoaded(sc, "mapLoader"));
+                sc.domain = loadSwf(bd.bossSwf, makeLoaded(sc, "bossLoader"));
+            }
             assetsDomain = loadSwf("runtime/Assets.swf", onAssetsLoaded);
             armorDomain = loadSwf("runtime/Armor.swf", onAssetsLoaded);
             helmDomain = loadSwf("runtime/Helm.swf", onAssetsLoaded);
@@ -268,17 +288,9 @@ package
             return domain;
         }
 
-        private var mapLoader:Loader;
-        private var bossLoader:Loader;
-
-        private function onMapLoaded(l:Loader):void
+        private function makeLoaded(sc:Object, key:String):Function
         {
-            mapLoader = l;
-        }
-
-        private function onBossLoaded(l:Loader):void
-        {
-            bossLoader = l;
+            return function(l:Loader):void { sc[key] = l; };
         }
 
         private function onAssetsLoaded(l:Loader):void
@@ -298,10 +310,13 @@ package
         // ================================================================== scene setup
         private function start():void
         {
-            buildMap();
-            buildBoss();
+            for each (var bd:Object in BOSSES)
+            {
+                buildMap(bossScenes[bd.id]);
+                buildBoss(bossScenes[bd.id]);
+            }
             buildHud();
-            newFight(role);
+            selectBoss(initialBoss);
             stage.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
             stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
             lastTime = getTimer();
@@ -333,54 +348,113 @@ package
             }
         }
 
-        private function buildMap():void
+        private function buildMap(sc:Object):void
         {
-            mapMC = mapLoader.content as MovieClip;
-            mapHolder.addChild(mapMC);
-            mapMC.gotoAndStop("Boss");
-            // keep the painted backdrop and the two zone clips, hide the map-editor furniture
-            for (var i:int = 0; i < mapMC.numChildren; i++)
+            var m:MovieClip = sc.mapLoader.content as MovieClip;
+            sc.map = m;
+            m.visible = false;
+            mapHolder.addChild(m);
+            m.gotoAndStop("Boss");
+            // keep the painted backdrop and the zone clips, hide the map-editor furniture
+            for (var i:int = 0; i < m.numChildren; i++)
             {
-                var c:DisplayObject = mapMC.getChildAt(i);
-                if (c.name == "rune1" || c.name == "safe1")
+                var c:DisplayObject = m.getChildAt(i);
+                if (c.name == "rune1" || c.name == "safe1" || c.name == "safe2")
                 {
                     continue;
                 }
-                if (i > 0)
+                if (sc.def.id == "speaker" ? i > 0 : isFurniture(c))
                 {
                     c.visible = false;
                 }
             }
-            runeMC = mapMC.getChildByName("rune1") as MovieClip;
-            safeMC = mapMC.getChildByName("safe1") as MovieClip;
-            if (runeMC)
+            sc.rune = m.getChildByName("rune1") as MovieClip;
+            sc.safe = m.getChildByName("safe1") as MovieClip;
+            sc.safe2 = m.getChildByName("safe2") as MovieClip;
+            for each (var z:MovieClip in [sc.rune, sc.safe, sc.safe2])
             {
-                runeMC.gotoAndStop("off");
-            }
-            if (safeMC)
-            {
-                safeMC.gotoAndStop("off");
+                if (z)
+                {
+                    z.gotoAndStop("off");
+                }
             }
         }
 
-        private function buildBoss():void
+        /** Ultra Dage's map keeps its art in several layers; only the editor / game-logic clips are hidden. */
+        private static function isFurniture(c:DisplayObject):Boolean
         {
-            var UltraMalg:Class = bossDomain.getDefinition("UltraMalg") as Class;
-            bossMC = new UltraMalg() as MovieClip;
-            bossMC.onMove = false;
-            bossMC.scaleX = bossMC.scaleY = BOSS_SCALE;
-            bossMC.x = BOSS_PAD.x;
-            bossMC.y = BOSS_PAD.y;
-            bossMC.mouseEnabled = false;
-            bossMC.mouseChildren = false;
-            actorLayer.addChild(bossMC);
-            targetRing.graphics.lineStyle(2, 0xFFD24A, 0.9);
-            targetRing.graphics.drawEllipse(-120, -10, 240, 28);
-            targetRing.scaleX = targetRing.scaleY = BOSS_SCALE / 0.3;
-            targetRing.x = BOSS_PAD.x;
-            targetRing.y = BOSS_PAD.y;
-            actorLayer.addChildAt(targetRing, 0);
+            var cn:String = getQualifiedClassName(c);
+            for each (var key:String in ["Plate_", "Box_Generic", "Setup_Cell", "checkQS", "mcShadow", "mcWalkingArea", "Pad_", "comp_", "Popup", "mcCrystals"])
+            {
+                if (cn.indexOf(key) >= 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private function buildBoss(sc:Object):void
+        {
+            var Boss:Class = sc.domain.getDefinition(sc.def.bossClass) as Class;
+            var b:MovieClip = new Boss() as MovieClip;
+            sc.boss = b;
+            b.onMove = false;
+            b.scaleX = b.scaleY = sc.def.scale;
+            b.x = sc.def.pad.x;
+            b.y = sc.def.pad.y;
+            b.mouseEnabled = false;
+            b.mouseChildren = false;
+            b.visible = false;
+            actorLayer.addChild(b);
+            if (sc.def.id == "speaker")
+            {
+                targetRing.graphics.lineStyle(2, 0xFFD24A, 0.9);
+                targetRing.graphics.drawEllipse(-120, -10, 240, 28);
+                targetRing.scaleX = targetRing.scaleY = sc.def.scale / 0.3;
+                actorLayer.addChildAt(targetRing, 0);
+            }
+        }
+
+        /** Show the map / boss / HUD portrait of a boss and make its party and rules current. */
+        private function selectBoss(id:String):void
+        {
+            for each (var o:Object in bossScenes)
+            {
+                o.map.visible = false;
+                o.boss.visible = false;
+            }
+            var sc:Object = bossScenes[id];
+            bossId = id;
+            bossDef = sc.def;
+            roles = bossDef.roles;
+            bossPad = bossDef.pad;
+            homeAt = bossDef.home;
+            bossLoops = bossDef.loops;
+            bossDomain = sc.domain;
+            mapMC = sc.map;
+            bossMC = sc.boss;
+            runeMC = sc.rune;
+            safeMC = sc.safe;
+            safe2MC = sc.safe2;
+            mapMC.visible = true;
+            bossMC.visible = true;
+            targetRing.x = bossPad.x;
+            targetRing.y = bossPad.y;
+            targetRing.scaleX = targetRing.scaleY = bossId == "dage" ? 1.15 : bossDef.scale / 0.3;
+            if (bossDef.classes.indexOf(role) < 0)
+            {
+                role = bossDef.classes[0];
+            }
+            // the target frame's face and name
+            setFace(targetBox["mcHead"], new (bossDomain.getDefinition(bossDef.headClass) as Class)() as DisplayObject);
+            targetBox["mcHead"].head.hair.visible = false;
+            targetBox["mcHead"].head.helm.visible = false;
+            targetBox["mcHead"].backhair.visible = false;
+            targetBox["strName"].text = bossDef.name;
+            plateId = "";
             bossAnim("Idle", false);
+            newFight(role);
         }
 
         private function onBossChargeSpell(on:Boolean):void
@@ -412,7 +486,7 @@ package
             }
             actors = {};
             var root:CharacterRoot = new CharacterRoot();
-            for each (var r:String in Fight.ROLES)
+            for each (var r:String in roles)
             {
                 var a:Object = {role: r, moveTo: null, moving: false, aaT: Math.random() * 1.3, pose: "", poseUntil: 0};
                 var holder:MovieClip = new MovieClip();
@@ -427,7 +501,7 @@ package
                 av.pMC = mc;
                 av.objData = {intColorSkin: COLORS.intColorSkin, intColorHair: COLORS.intColorHair, intColorEye: COLORS.intColorEye};
                 mc.pAV = av;
-                var p:Point = spot(MIDDLE_AT, r);
+                var p:Point = spot(homeAt, r);
                 mc.x = p.x;
                 mc.y = p.y;
                 mc.scale(CHAR_SCALE);
@@ -515,11 +589,6 @@ package
             targetBox.y = 2;
             g.addChild(targetBox);
             // portrait rings, filled the way World/Game showPortraitBox() does it: swap the face (and helm) classes into mcHead.head
-            var BossHead:Class = bossDomain.getDefinition("mcHeadUltraMalg") as Class;
-            setFace(targetBox["mcHead"], new BossHead() as DisplayObject);
-            targetBox["mcHead"].head.hair.visible = false;
-            targetBox["mcHead"].head.helm.visible = false;
-            targetBox["mcHead"].backhair.visible = false;
             targetBox["btnOption"].visible = false;
             targetBox["stars"].visible = false;
             var head:MovieClip = playerBox["mcHead"];
@@ -539,7 +608,6 @@ package
             head.backhair.visible = true;
             playerBox["strName"].text = "Hero";
             playerBox["strLevel"].text = "100";
-            targetBox["strName"].text = BOSS_NAME;
             targetBox["strClass"].text = "Boss";
             targetBox["strLevel"].text = "100";
             for (var i:int = 0; i < 9; i++)
@@ -624,7 +692,19 @@ package
                 {name: "heal", icon: "apal2", boss: false},
                 {name: "harmony", icon: "LoO1", boss: false},
                 {name: "axiom", icon: "LoO3", boss: false},
-                {name: "ordinance", icon: "LoO2", boss: false}
+                {name: "ordinance", icon: "LoO2", boss: false},
+                // Ultra Dage: the SWFs have no pictures for his effects, so those get a lettered badge
+                {name: "focus", icon: BuffTaunt, boss: true},
+                {name: "cloak", glyph: ["C", 0x4A3A7A], boss: true},
+                {name: "might", glyph: ["M", 0xA82C2C], boss: true},
+                {name: "legion", glyph: ["+", 0x2E8B57], boss: true},
+                {name: "blood", glyph: ["B", 0x7A1A3A], boss: true},
+                {name: "siphon", icon: "Chavengea1", boss: true},
+                {name: "aeterna", glyph: ["A", 0x7B3FA0], boss: false},
+                {name: "decay", glyph: ["D", 0x4F8A2E], boss: false},
+                {name: "bulwark", icon: "Chavengea3", boss: false},
+                {name: "fury", icon: "Chavengea4", boss: false},
+                {name: "thinair", icon: "iea1", boss: false}
             ];
             for each (var d:Object in defs)
             {
@@ -638,7 +718,11 @@ package
                 bg.y = -bb.y * k;
                 slot.addChild(bg);
                 var icon:DisplayObject;
-                if (d.icon is String)
+                if (d.glyph)
+                {
+                    icon = glyphBadge(d.glyph[0], d.glyph[1]);
+                }
+                else if (d.icon is String)
                 {
                     var AC:Class = assetsDomain.getDefinition(d.icon) as Class;
                     icon = new AC() as DisplayObject;
@@ -648,7 +732,7 @@ package
                     icon = new d.icon() as DisplayObject;
                 }
                 var ib:Rectangle = icon.getBounds(icon);
-                var ik:Number = (size * (d.icon is String ? 0.8 : 0.64)) / Math.max(ib.width, ib.height);
+                var ik:Number = (size * (d.glyph || d.icon is String ? 0.8 : 0.64)) / Math.max(ib.width, ib.height);
                 icon.scaleX = icon.scaleY = ik;
                 icon.x = size / 2 - (ib.x + ib.width / 2) * ik;
                 icon.y = size / 2 - (ib.y + ib.height / 2) * ik;
@@ -667,6 +751,19 @@ package
                 hudLayer.addChild(slot);
                 buffIcons[d.name] = {sp: slot, cnt: cnt, ov: ov, size: size, boss: d.boss};
             }
+        }
+
+        private static function glyphBadge(letter:String, color:uint):DisplayObject
+        {
+            var sp:Sprite = new Sprite();
+            sp.graphics.lineStyle(4, 0xFFFFFF, 0.55);
+            sp.graphics.beginFill(color, 1);
+            sp.graphics.drawCircle(50, 50, 46);
+            sp.graphics.endFill();
+            var t:TextField = Hud.label(letter, 60, 0xFFFFFF, true, "center", 100);
+            t.y = 6;
+            sp.addChild(t);
+            return sp;
         }
 
         /** Lay out the active effects in a row; `count` is the little number in the corner. */
@@ -717,7 +814,7 @@ package
             }
             partyPanels = {};
             var y:Number = 111;
-            for each (var r:String in ["ap", "lr", "loo", "dps"])
+            for each (var r:String in roles)
             {
                 if (r == role)
                 {
@@ -785,7 +882,9 @@ package
             button("Fullscreen (F)", 836, 28, 118, toggleFullscreen);
         }
 
-        /** Class selection + Play; the fight sits paused (and untouched) behind it until Play is pressed. */
+        private static const CARD_ICON:Object = {loo: "LoOaa", ap: "apal1", lr: "LRaa", ca: "Chavengeaa", cn: "iwd1"};
+
+        /** Boss + class selection and Play; the fight sits paused (and untouched) behind it until Play is pressed. */
         private function showStartScreen():void
         {
             if (startScreen && startScreen.parent)
@@ -797,39 +896,41 @@ package
             startScreen.graphics.beginFill(0x05070d, 0.84);
             startScreen.graphics.drawRect(0, 0, STAGE_W, STAGE_H);
             startScreen.graphics.endFill();
-            var title:TextField = Hud.label("Ultra Speaker", 44, 0xFFD24A, true, "center", STAGE_W);
+            var title:TextField = Hud.label(bossDef.name, 44, 0xFFD24A, true, "center", STAGE_W);
             title.y = 36;
             startScreen.addChild(title);
-            var sub:TextField = Hud.label("Select your class", 18, 0xFFFFFF, false, "center", STAGE_W);
-            sub.y = 134;
-            startScreen.addChild(sub);
             for (var bi:int = 0; bi < BOSSES.length; bi++)
             {
                 var bd:Object = BOSSES[bi];
+                var sel:Boolean = bd.id == bossId;
                 var bt:Sprite = new Sprite();
-                var sel:Boolean = bd.ready;
                 bt.graphics.lineStyle(sel ? 2 : 1, sel ? 0xFFD24A : 0x3A4560, 1);
                 bt.graphics.beginFill(sel ? 0x1d2433 : 0x10141f, 0.95);
                 bt.graphics.drawRoundRect(0, 0, 200, 30, 8, 8);
                 bt.graphics.endFill();
-                var bl:TextField = Hud.label(bd.name + (bd.ready ? "" : " (soon)"), 14, bd.ready ? 0xFFFFFF : 0x6B7690, true, "center", 200);
+                var bl:TextField = Hud.label(bd.name, 14, sel ? 0xFFFFFF : 0x9BA6BD, true, "center", 200);
                 bl.y = 4;
                 bt.addChild(bl);
                 bt.x = STAGE_W / 2 - 210 + bi * 220;
                 bt.y = 98;
-                bt.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
+                bt.buttonMode = true;
+                bt.addEventListener(MouseEvent.MOUSE_DOWN, makeBossHandler(bd.id));
                 startScreen.addChild(bt);
             }
-            var classes:Array = [["loo", "LoOaa"], ["ap", "apal1"], ["lr", "LRaa"]];
+            var sub:TextField = Hud.label("Select your class", 18, 0xFFFFFF, false, "center", STAGE_W);
+            sub.y = 134;
+            startScreen.addChild(sub);
+            var classes:Array = bossDef.classes;
             cards = {};
+            var x0:Number = (STAGE_W - (classes.length * 200 + (classes.length - 1) * 20)) / 2;
             for (var i:int = 0; i < classes.length; i++)
             {
                 var card:Sprite = new Sprite();
-                card.x = 165 + i * 220;
+                card.x = x0 + i * 220;
                 card.y = 166;
                 card.buttonMode = true;
-                var cr:String = classes[i][0];
-                var C:Class = assetsDomain.getDefinition(classes[i][1]) as Class;
+                var cr:String = classes[i];
+                var C:Class = assetsDomain.getDefinition(CARD_ICON[cr]) as Class;
                 var icon:DisplayObject = new C() as DisplayObject;
                 var ib:Rectangle = icon.getBounds(icon);
                 var k:Number = 76 / Math.max(ib.width, ib.height);
@@ -865,6 +966,19 @@ package
             startScreen.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
             addChild(startScreen);
             markCard();
+        }
+
+        private function makeBossHandler(id:String):Function
+        {
+            return function(e:MouseEvent):void {
+                e.stopPropagation();
+                if (id != bossId)
+                {
+                    removeChild(startScreen);
+                    selectBoss(id); // swaps map, boss, party and class list while the screen is down
+                    showStartScreen();
+                }
+            };
         }
 
         private function makeCardHandler(r:String):Function
@@ -1012,8 +1126,9 @@ package
         private function newFight(r:String):void
         {
             role = r;
-            fight = new Fight(this, role, 10000000, [42000, 52000]);
+            fight = bossId == "dage" ? new DageFight(this, role, 6500000, [26000, 34000]) : new Fight(this, role, 10000000, [42000, 52000]);
             zoneRole = "";
+            plateId = "";
             banner = "";
             shout = "";
             overText.text = "";
@@ -1039,13 +1154,19 @@ package
             {
                 safeMC.gotoAndStop("off");
             }
+            if (safe2MC)
+            {
+                safe2MC.gotoAndStop("off");
+            }
+            bossMC.x = bossPad.x;
+            bossMC.y = bossPad.y;
             bossAnim("Idle", false);
             buildActors();
             startTime = getTimer();
             buildParty();
             buildSkillbar();
             portraitAt = 0;
-            log("Engaged " + BOSS_NAME + " as " + CLASS_NAMES[role], "");
+            log("Engaged " + bossDef.name + " as " + CLASS_NAMES[role], "");
         }
 
         // ---------------------------------------------------------------- IFightHost
@@ -1091,6 +1212,55 @@ package
                 }
             }
             return 0;
+        }
+
+        /** Ultra Dage: the lit plate. The boss walks onto the rune while it charges, like the map's own script does. */
+        public function plate(id:String):void
+        {
+            plateId = id;
+            if (safeMC)
+            {
+                safeMC.gotoAndStop(id == "a" ? "on" : "off");
+            }
+            if (safe2MC)
+            {
+                safe2MC.gotoAndStop(id == "b" ? "on" : "off");
+            }
+            if (runeMC)
+            {
+                runeMC.gotoAndStop(id != "" ? "on" : "off");
+            }
+            if (id != "")
+            {
+                setBanner("PLATE LIT - run to the glowing plate (" + (id == "a" ? "left" : "right") + ")", 0xFFD24A, 3000);
+            }
+        }
+
+        private function plateRect(id:String):Rectangle
+        {
+            var clip:MovieClip = id == "a" ? safeMC : safe2MC;
+            if (clip == null)
+            {
+                return new Rectangle(0, 0, 0, 0);
+            }
+            var b:Rectangle = clip.getBounds(mapHolder);
+            b.inflate(-b.width * 0.1, 0);
+            b.y -= 20; // the characters' feet stand a little below the plate's edge
+            b.height += 50;
+            return b;
+        }
+
+        public function roleOnPlate(r:String, id:String):Boolean
+        {
+            var mc:AvatarMC = actors[r].mc;
+            return plateRect(id).contains(mc.x, mc.y);
+        }
+
+        private function plateSpot(r:String, id:String):Point
+        {
+            var b:Rectangle = plateRect(id);
+            var st:Array = STACK[r];
+            return new Point(b.x + b.width / 2 + st[0] * 3, b.y + b.height / 2 + st[1] * 2);
         }
 
         public function announce(text:String):void
@@ -1183,7 +1353,7 @@ package
             if ((kind == "ordinance" || kind == "heal") && r == role)
             {
                 var C:Class = assetsDomain.getDefinition("Assets_20260702_fla.Symbol3aaaaa_loo_757") as Class;
-                for each (var who:String in Fight.ROLES)
+                for each (var who:String in roles)
                 {
                     var clip:MovieClip = new C() as MovieClip;
                     clip.mouseEnabled = false;
@@ -1218,11 +1388,24 @@ package
 
         private function bossFloater(amount:int, crit:Boolean):void
         {
-            showNumber(BOSS_PAD.x + (Math.random() - 0.5) * 200, BOSS_PAD.y - 150 - Math.random() * 60, String(amount), crit ? "crit" : "hit");
+            showNumber(bossPad.x + (Math.random() - 0.5) * 200, bossPad.y - 150 - Math.random() * 60, String(amount), crit ? "crit" : "hit");
         }
 
         public function mechanic(holder:String, ability:String, truthN:int, zoneN:int):void
         {
+            if (bossId == "dage")
+            {
+                // cue from the fight: the tauntable attack is about to land, Flux (3) is the Chaos Avenger's taunt
+                if (role == "ca")
+                {
+                    setBanner(ability == "regen" ? "TAUNT NOW - Flux (3) before the Legion Mages land" : (ability == "intro" ? "TAUNT NOW - Flux (3) the 2nd auto attack" : "TAUNT NOW - Flux (3) the next auto attack"), 0xFF5B5B, 2400);
+                }
+                if (botOn && role == "ca")
+                {
+                    botQueue.push({at: fight.t + 250, until: fight.t + 1800, k: 3});
+                }
+                return;
+            }
             var label:String = ability == "truth" ? "Truth" : (ability == "listen" ? "Listen" : "");
             var mine:Boolean = (holder == role);
             if (holder != null && label != "")
@@ -1290,7 +1473,7 @@ package
             var mx:Number = stage.mouseX;
             var my:Number = stage.mouseY;
             // the wings' pixels, or the boss' body column (the clip is mostly glow and gaps)
-            if (bossMC.hitTestPoint(mx, my, true) || (Math.abs(mx - BOSS_PAD.x) <= 150 && my >= 40 && my <= BOSS_PAD.y + 30))
+            if (bossMC.hitTestPoint(mx, my, true) || (Math.abs(mx - bossPad.x) <= 150 && my >= 40 && my <= bossPad.y + 30))
             {
                 moveToBoss(); // click the boss: target it and walk into range
                 return;
@@ -1330,7 +1513,7 @@ package
         private function moveToBoss():void
         {
             targeted = true;
-            actors[role].moveTo = new Point(BOSS_PAD.x - 90, BOSS_PAD.y + 70);
+            actors[role].moveTo = new Point(bossPad.x - 90, bossPad.y + 70);
         }
 
         private function castKey(k:int):Boolean
@@ -1385,7 +1568,7 @@ package
         private function updateActors(dt:Number):void
         {
             var f:Fight = fight;
-            for each (var r:String in Fight.ROLES)
+            for each (var r:String in roles)
             {
                 var a:Object = actors[r];
                 var mc:AvatarMC = a.mc;
@@ -1401,27 +1584,31 @@ package
                 {
                     goal = f.over ? null : a.moveTo;
                 }
+                else if (plateId != "")
+                {
+                    goal = plateSpot(r, plateId); // everybody runs to the lit plate and back
+                }
                 else if (zoneRole != "")
                 {
-                    goal = zoneRole == r ? MIDDLE_AT : spot(RIGHT_AT, r);
+                    goal = zoneRole == r ? homeAt : spot(RIGHT_AT, r);
                 }
                 else
                 {
-                    goal = spot(MIDDLE_AT, r);
+                    goal = spot(homeAt, r);
                 }
                 stepActor(a, goal, dt, isMe ? 250 : 300);
                 // swing at the boss when standing still near it
                 a.aaT -= dt;
-                var near:Boolean = Math.abs(BOSS_PAD.x - mc.x) <= 260 && Math.abs(BOSS_PAD.y - mc.y) <= 130;
+                var near:Boolean = Math.abs(bossPad.x - mc.x) <= 260 && Math.abs(bossPad.y - mc.y) <= 130;
                 if (!a.moving && near && a.aaT <= 0 && !f.over && (!isMe || targeted))
                 {
-                    a.aaT = 1.33;
-                    face(a, BOSS_PAD.x >= mc.x ? 1 : -1);
+                    a.aaT = isMe ? f.swingEvery() : 1.33;
+                    face(a, bossPad.x >= mc.x ? 1 : -1);
                     pose(a, isMe ? "RifleAttack" : "Attack1", 0.7);
                     if (isMe && !f.stunned())
                     {
-                        var d:int = int(Math.floor(1800 + Math.random() * 500));
-                        f.playerHit(d, d > 2200);
+                        var sw:Object = f.swing();
+                        f.playerHit(sw.dmg, sw.crit);
                     }
                 }
                 else if (!a.moving && a.poseUntil < f.t / 1000)
@@ -1509,7 +1696,7 @@ package
         private function updateBoss():void
         {
             // ChargeALoop ends on a stop(): restart it so the charge keeps animating
-            if (bossLoop && BOSS_FRAMES[bossLabel] && bossMC.currentFrame >= BOSS_FRAMES[bossLabel][1])
+            if (bossLoop && bossLoops[bossLabel] && bossMC.currentFrame >= bossLoops[bossLabel][1])
             {
                 bossMC.gotoAndPlay(bossLabel);
             }
@@ -1545,8 +1732,8 @@ package
 
         private function sortActors():void
         {
-            var list:Array = [{y: BOSS_PAD.y, o: bossMC}];
-            for each (var r:String in Fight.ROLES)
+            var list:Array = [{y: bossPad.y, o: bossMC}];
+            for each (var r:String in roles)
             {
                 list.push({y: actors[r].mc.y, o: actors[r].mc});
             }
@@ -1581,53 +1768,58 @@ package
             var active:Array = [];
             var remain:Function = function(until:Number):String { return String(Math.ceil((until - t) / 1000)); };
             var frac:Function = function(until:Number, total:Number):Number { return Math.max(0, Math.min(1, (until - t) / total)); };
+            var dage:DageFight = f as DageFight;
+            if (dage != null)
+            {
+                active = dage.activeBuffs();
+            }
             // on the boss
-            if (f.currentTaunt() != null)
+            if (dage == null && f.currentTaunt() != null)
             {
                 active.push({name: "taunt", count: "", frac: frac(f.tauntUntil, 6000)});
             }
-            if (f.apReduction == "seal")
+            if (dage == null && f.apReduction == "seal")
             {
                 active.push({name: "seal", count: remain(f.apReductionUntil), frac: frac(f.apReductionUntil, 7000)});
             }
-            else if (f.apReduction == "eden")
+            else if (dage == null && f.apReduction == "eden")
             {
                 active.push({name: "eden", count: remain(f.apReductionUntil), frac: frac(f.apReductionUntil, 25000)});
             }
-            if (t < f.quixUntil)
+            if (dage == null && t < f.quixUntil)
             {
                 active.push({name: "quix", count: remain(f.quixUntil), frac: frac(f.quixUntil, 4000)});
             }
             // on us
-            if (f.stunned())
+            if (dage == null && f.stunned())
             {
                 active.push({name: "stasis", count: remain(f.stunUntil), frac: frac(f.stunUntil, 6000)});
             }
-            if (f.somber[role] > 0)
+            if (dage == null && f.somber[role] > 0)
             {
                 active.push({name: "somber", count: String(f.somber[role]), frac: -1}); // stacks, no timer
             }
-            if (t < f.magiaBurnUntil)
+            if (dage == null && t < f.magiaBurnUntil)
             {
                 active.push({name: "magiaBurn", count: remain(f.magiaBurnUntil), frac: frac(f.magiaBurnUntil, 18000)});
             }
-            if (role == "lr" && t < f.lrEmpowerUntil)
+            if (dage == null && role == "lr" && t < f.lrEmpowerUntil)
             {
                 active.push({name: "empowerment", count: remain(f.lrEmpowerUntil), frac: frac(f.lrEmpowerUntil, 12000)});
             }
-            if (f.apHealBuff)
+            if (dage == null && f.apHealBuff)
             {
                 active.push({name: "heal", count: remain(f.apHealUntil), frac: frac(f.apHealUntil, 15000)});
             }
-            if (f.harmonyBuff)
+            if (dage == null && f.harmonyBuff)
             {
                 active.push({name: "harmony", count: remain(f.harmonyUntil), frac: frac(f.harmonyUntil, 10000)});
             }
-            if (t < f.axiomUntil)
+            if (dage == null && t < f.axiomUntil)
             {
                 active.push({name: "axiom", count: remain(f.axiomUntil), frac: frac(f.axiomUntil, 10000)});
             }
-            if (t < f.ordinanceUntil)
+            if (dage == null && t < f.ordinanceUntil)
             {
                 active.push({name: "ordinance", count: remain(f.ordinanceUntil), frac: frac(f.ordinanceUntil, 12000)});
             }
@@ -1643,7 +1835,7 @@ package
             var secs:Number = f.t / 1000;
             clockText.text = int(secs / 60) + ":" + (int(secs % 60) < 10 ? "0" : "") + int(secs % 60);
             // with hints off nothing says whose zone it is, who must taunt, or what is coming next
-            nextText.text = hintsOn ? "Next: " + NEXT_NAMES[Fight.PATTERN[f.ruleIdx]] : "";
+            nextText.text = hintsOn ? "Next: " + f.nextLabel() : "";
             nextText.visible = hintsOn;
             nextPanel.visible = hintsOn;
             logText.visible = hintsOn;
@@ -1658,7 +1850,7 @@ package
                 var k:int = s + 1;
                 var name:String = f.skillName(k);
                 var left:Number = k == 1 ? 0 : Math.max(0, f.cd[k] - f.t);
-                var len:Number = name != null ? Fight.SKILL_CD[name] : 1;
+                var len:Number = name != null ? f.skillCdMs(name) : 1;
                 // dark overlay that clears clockwise as the skill comes off cooldown
                 Hud.pie(slot.cd, slot.r * 0.92, left > 0 ? Math.min(1, left / Math.max(len, left)) : 0);
                 if (slot.txt)
@@ -1668,7 +1860,7 @@ package
                 slot.icon.alpha = f.stunned() && k >= 2 ? 0.5 : 1;
             }
             // health bars over each character
-            for each (var who:String in Fight.ROLES)
+            for each (var who:String in roles)
             {
                 var a:Object = actors[who];
                 Hud.bar(a.bar, 56, 6, f.hp[who] / f.maxHp(who), 0x6FE08A, 0x1D8A3A);
@@ -1679,6 +1871,10 @@ package
 
         private function botReact(holder:String, ability:String, truthN:int):void
         {
+            if (bossId == "dage")
+            {
+                return;
+            }
             var at:Number = fight.t + 350;
             if (holder == role)
             {
@@ -1707,6 +1903,11 @@ package
             }
             var f:Fight = fight;
             var a:Object = actors[role];
+            if (bossId == "dage")
+            {
+                runDageBot(f, a);
+                return;
+            }
             for (var i:int = botQueue.length - 1; i >= 0; i--)
             {
                 var q:Object = botQueue[i];
@@ -1725,19 +1926,19 @@ package
                 var wantIn:Boolean = (zoneRole == role);
                 if (wantIn != playerInZone())
                 {
-                    a.moveTo = wantIn ? MIDDLE_AT.clone() : spot(RIGHT_AT, role);
+                    a.moveTo = wantIn ? homeAt.clone() : spot(RIGHT_AT, role);
                 }
             }
             else
             {
-                var home:Point = spot(MIDDLE_AT, role);
+                var home:Point = spot(homeAt, role);
                 if (a.moveTo == null && Point.distance(new Point(a.mc.x, a.mc.y), home) > 20)
                 {
                     a.moveTo = home;
                 }
             }
             var low:Boolean = false;
-            for each (var r:String in Fight.ROLES)
+            for each (var r:String in roles)
             {
                 if (f.hp[r] < f.maxHp(r) * 0.65)
                 {
@@ -1767,16 +1968,71 @@ package
             }
         }
 
+        /** Auto-pilot for Ultra Dage: Flux on cue, run to the lit plate and back, skills off cooldown. */
+        private function runDageBot(f:Fight, a:Object):void
+        {
+            for (var i:int = botQueue.length - 1; i >= 0; i--)
+            {
+                var q:Object = botQueue[i];
+                if (f.t > q.until)
+                {
+                    botQueue.splice(i, 1);
+                }
+                else if (f.t >= q.at && f.cast(q.k))
+                {
+                    botQueue.splice(i, 1);
+                }
+            }
+            if (plateId != "")
+            {
+                if (!roleOnPlate(role, plateId))
+                {
+                    a.moveTo = plateSpot(role, plateId);
+                }
+            }
+            else
+            {
+                var home:Point = spot(homeAt, role);
+                if (a.moveTo == null && Point.distance(new Point(a.mc.x, a.mc.y), home) > 20)
+                {
+                    a.moveTo = home;
+                }
+            }
+            if (role == "ca")
+            {
+                f.cast(4);
+                f.cast(2);
+                f.cast(5);
+            }
+            else
+            {
+                f.cast(2);
+                f.cast(3);
+                f.cast(4);
+                f.cast(5);
+            }
+        }
+
         // ============================================================ state for tests
         public function getState():String
         {
             var f:Fight = fight;
             return "{\"t\":" + Math.round(f.t) + ",\"bossHp\":" + Math.round(f.bossHp) +
-                ",\"hp\":{\"ap\":" + f.hp.ap + ",\"lr\":" + f.hp.lr + ",\"loo\":" + f.hp.loo + ",\"dps\":" + f.hp.dps + "}" +
+                ",\"hp\":" + hpJson() +
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
-                ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\"" +
+                ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
                 ",\"gear\":\"" + gearState() + "\"}";
+        }
+
+        private function hpJson():String
+        {
+            var parts:Array = [];
+            for each (var r:String in roles)
+            {
+                parts.push("\"" + r + "\":" + fight.hp[r]);
+            }
+            return "{" + parts.join(",") + "}";
         }
 
         private function gearState():String

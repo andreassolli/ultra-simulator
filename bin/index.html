@@ -21,6 +21,7 @@
 <script>
   // FlashVars come from this page's query string (e.g. index.html?class=ap&bot=1)
   const player = window.RufflePlayer.newest().createPlayer();
+  window.player = player; // handy for tests: player.getState(), player.setBot(true) ...
   document.getElementById("c").appendChild(player);
   player.load({ url: "ultra_sim.swf", parameters: location.search.slice(1) });
   // Full screen: the game's "Fullscreen (F)" button and F key call this (a SWF cannot enter browser full screen itself in Ruffle)

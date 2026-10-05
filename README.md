@@ -44,6 +44,18 @@ reorganized without extracting the SWF again.
 - `sets`
 - `tooltip`
 
+## Ultra Dage (Flash)
+
+`runtime/town-ultradage.swf` (map) and `runtime/monster-UltraDage.swf` (boss) are loaded next to the Ultra Speaker ones. Rules are in `src/sim/DageFight.as`; the pattern, damage ranges, charge times, buffs and debuffs are from the wiki guide (`ultradage.mdx`), the class skills from `classes.json`.
+
+- **Classes:** Chaos Avenger (Greatsword, Siphon, **Flux = taunt, key 3**, Bulwark, Fury Unleashed) and Classic Ninja (Crosscut, Shadowblade, Shadowburn, Thin Air). Slot 6 is the potion slot (not simulated). The class you are not is played by the sim, so a Ninja player has a Chaos Avenger that taunts on cue.
+- **Plates:** Summon Brute Undead lights the left or right plate for 3 s; the whole party has to stand on it (20 % damage instead of 100 %). The other characters run to the plate and back by themselves; you click it. The rune under the boss lights up as in the map's own script.
+- **Taunt:** Decaying Strike (inverts healing, cannot be taunted) is followed by two auto attacks. Press Flux after the Decaying Strike lands and the next two autos only hit the Chaos Avenger; without it every auto hits all four and stacks Aeterna Nox. The same goes for the 2nd auto of the opening and for Summon Legion Mages. Hints on show a "TAUNT NOW" prompt; the auto-pilot does it by itself.
+- **Assumptions** (the guide gives no numbers for these): party HP (16k Avenger, 9.5k Ninja, 10k DPS), the raid's damage, ally healing (life steal, which Decay does not invert), the Legionnaire heal (55k per second for 14 s), and cooldowns: all of the players' cooldowns are halved ("haste"), because Flux lists 15 s but has to be up for every Decaying Strike (they come 9 s apart). Mana, potions, the Ninja's stun and hit-chance debuffs (Dage cannot be stunned and always hits) are not modelled.
+- **Icons:** the effects that have no picture in the SWFs (Aeterna Nox, Noxious Decay, Cloak of Darkness, Might of the Legion, Legionnaire, Blood Price) are lettered badges.
+
+Try it: `index.html?boss=dage&class=ca&autoplay=1&bot=1&speed=4`.
+
 ## Next step
 
 Inspect:
@@ -98,8 +110,8 @@ cd bin && python3 -m http.server 8000     # then open http://localhost:8000/
 `stage.displayState`). The Ruffle desktop app can also open `bin/ultra_sim.swf` directly, and so can
 Flash Player / AIR (`adl`); keep `bin/runtime/` next to the SWF. Move by left-clicking the ground, click the boss to target it, skills on keys `1`–`6` or by clicking.
 With no zone active everyone stacks in the middle; during Equal only the named role stays there and the rest move
-to the right of the box. The game opens on a start screen: pick a class and press Play (or Enter); nothing runs until then, and Restart returns to it. About 3.5 s after victory or defeat the start screen comes back on its own with a fresh fight. The start screen also has a boss selector: Ultra Speaker is playable; Ultra Dage (classes Classic Ninja / Chaos Avenger) is a disabled placeholder entry in the `BOSSES` table in `src/UltraSim.as`, to be filled in later.
-Optional FlashVars: `class=loo|ap|lr` (preselected class), `autoplay=1` (skip the start screen), `bot=1` (auto-pilot), `speed=4`, `hints=0`.
+to the right of the box. The game opens on a start screen: pick a class and press Play (or Enter); nothing runs until then, and Restart returns to it. About 3.5 s after victory or defeat the start screen comes back on its own with a fresh fight. The start screen also has a boss selector (Ultra Speaker / Ultra Dage); picking a boss swaps the map, the boss, the party and the class list.
+Optional FlashVars: `boss=dage` (start on Ultra Dage), `class=loo|ap|lr|ca|cn` (preselected class), `autoplay=1` (skip the start screen), `bot=1` (auto-pilot), `speed=4`, `hints=0`.
 
 **Hints toggle** (button under the class buttons, or `H`): with hints on the game tells you whose zone it is, who must
 taunt, when to Quix / Seal, what the boss casts next and keeps an event log. With hints off all of that is hidden and you

@@ -35,5 +35,11 @@ package sim
         function mechanic(role:String, ability:String, truthN:int, zoneN:int):void;
 
         function ended(result:String, reason:String):void;
+
+        /** Ultra Dage: light the plate `id` ("a" | "b"), or switch the plates off with "". */
+        function plate(id:String):void;
+
+        /** Ultra Dage: is `role`'s character standing on plate `id`? */
+        function roleOnPlate(role:String, id:String):Boolean;
     }
 }

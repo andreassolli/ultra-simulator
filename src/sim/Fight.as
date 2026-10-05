@@ -193,6 +193,32 @@ package sim
             }
         }
 
+        /** Seconds between the player's auto attacks. */
+        public function swingEvery():Number
+        {
+            return 1.33;
+        }
+
+        /** The player's next auto attack: {dmg, crit}. */
+        public function swing():Object
+        {
+            var d:int = int(Math.floor(1800 + Math.random() * 500));
+            return {dmg: d, crit: d > 2200};
+        }
+
+        /** Cooldown length of a skill by name, for the action bar overlay. */
+        public function skillCdMs(name:String):Number
+        {
+            return SKILL_CD[name];
+        }
+
+        /** What the boss does next, for the "Next:" panel. */
+        public function nextLabel():String
+        {
+            var names:Object = {auto: "Auto attack", truth: "Truth", listen: "Listen", zone: "Equal (zone)"};
+            return names[PATTERN[ruleIdx]];
+        }
+
         public function currentTaunt():String
         {
             return t < tauntUntil ? tauntRole : null;
