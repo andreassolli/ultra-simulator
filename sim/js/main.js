@@ -16,10 +16,12 @@ const BOSS_ANIMS = {
 };
 
 // _assets/assets.swf mcSkel (the skeleton AvatarMC wraps), label -> [first, last] frame
-const CHAR_ANIMS = {
+const NPC_ANIMS = {
   Idle: [8, 16], Walk: [54, 68], Fight: [622, 633], Attack: [703, 722], Castgood: [911, 931],
   Cast: [932, 958], Hit: [810, 827], Knockout: [828, 849], Dead: [495, 502],
 };
+// the equipped player carries a rifle: RifleFight / RifleAttack instead of the melee poses
+const PLAYER_ANIMS = { ...NPC_ANIMS, Fight: [1783, 1795], Attack: [679, 702] };
 const CHAR_SCALE = 1; // exported at 0.65 zoom already matches the stage size
 
 const ROLE_COLOR = { ap: '#e8d9a0', lr: '#e0507a', loo: '#e0b84a', dps: '#5aa86a' };
@@ -27,9 +29,15 @@ const ROLE_SHORT = { ap: 'AP', lr: 'LR', loo: 'LoO', dps: 'DPS' };
 
 // Standing spots. With no zone everybody gathers in the middle around the boss; during an
 // Equal zone only the named role stays in, the rest step out to the sides.
-const MIDDLE = { ap: { x: 420, y: 395 }, lr: { x: 560, y: 395 }, dps: { x: 640, y: 440 }, loo: { x: 350, y: 440 } };
-const OUTSIDE = { ap: { x: 880, y: 430 }, lr: { x: 850, y: 330 }, dps: { x: 100, y: 340 }, loo: { x: 110, y: 440 } };
-const ZONE_IN = { x: 480, y: 420 };
+// Everybody stacks on one spot in the middle (tiny offsets only so the pile stays readable);
+// when the zone belongs to someone else the rest stack up on the right, outside the box.
+const MIDDLE_AT = { x: 470, y: 420 };
+const RIGHT_AT = { x: 868, y: 410 };
+const STACK = { ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0] };
+const spot = (base, r) => ({ x: base.x + STACK[r][0], y: base.y + STACK[r][1] });
+const MIDDLE = Object.fromEntries(['ap', 'lr', 'dps', 'loo'].map((r) => [r, spot(MIDDLE_AT, r)]));
+const OUTSIDE = Object.fromEntries(['ap', 'lr', 'dps', 'loo'].map((r) => [r, spot(RIGHT_AT, r)]));
+const ZONE_IN = MIDDLE_AT;
 
 const A = {};
 let S;
@@ -44,11 +52,12 @@ const classDef = () => C.classes[playerRole];
 
 // ------------------------------------------------------------------- assets
 async function loadAssets() {
-  const [boss, map, cfx, chars, icons, bg] = await Promise.all([
+  const [boss, map, cfx, chars, player, icons, bg] = await Promise.all([
     loadAtlas('assets/boss'),
     loadAtlas('assets/map'),
     loadAtlas('assets/classfx'),
     loadAtlas('assets/chars'),
+    loadAtlas('assets/player'),
     fetch('assets/icons/atlas.json').then((r) => r.json()),
     loadImage('assets/map/bg.jpg'),
   ]);
@@ -56,9 +65,10 @@ async function loadAssets() {
   A.map = map;
   A.cfx = Object.values(cfx)[0];
   A.char = Object.values(chars)[0];
+  A.player = Object.values(player)[0];
   A.icons = new Set(Object.keys(icons));
   A.bg = bg;
-  await Promise.all([A.boss.load(), map.runey2_159.load(), map.telerune1_171.load(), A.cfx.load(), A.char.load()]);
+  await Promise.all([A.boss.load(), map.runey2_159.load(), map.telerune1_171.load(), A.cfx.load(), A.char.load(), A.player.load()]);
   // lowest visible pixel of the idle pose relative to the sprite origin -> puts the feet on y
   const d = A.char.data;
   A.charFoot = Math.max(...d.nums.map((n, i) => (n >= 8 && n <= 16 && d.frames[i] !== null ? d.rects[d.frames[i]][6] + d.rects[d.frames[i]][4] : -1e9)));
@@ -85,6 +95,7 @@ function newState() {
     shout: null,
     bossDmg: 0,
     playerDmg: 0,
+    target: true,
   };
   S0.fight = new Fight(
     { bossHp: C.fight.bossHp, partyDps: C.fight.partyDps },
@@ -206,6 +217,7 @@ function onEnd(result, reason) {
 
 // ------------------------------------------------------------------- movement
 function moveToBoss() {
+  S.target = true;
   S.chars[playerRole].moveTo = { x: C.map.bossPad.x - 90, y: C.map.bossPad.y + 70 };
 }
 
@@ -261,11 +273,11 @@ function updateChars(dt) {
     // everyone swings at the boss when standing still near it
     c.aaT -= dt;
     const inRange = Math.abs(b.x - c.x) <= C.player.attackRangeX && Math.abs(b.y - c.y) <= C.player.attackRangeY;
-    if (!c.moving && inRange && c.aaT <= 0 && !f.over) {
+    if (!c.moving && inRange && c.aaT <= 0 && !f.over && (!isMe || S.target)) {
       c.aaT = C.player.autoEvery;
       c.dir = b.x >= c.x ? 1 : -1;
       playAnim(r, 'Attack', 700);
-      if (isMe && !f.stunned()) {
+      if (isMe && S.target && !f.stunned()) {
         const d = Math.floor(rnd(C.player.autoDamage[0], C.player.autoDamage[1] + 1));
         f.playerHit(d, d > C.player.autoCritAbove);
         if (Math.random() < 0.5) bossFloater(d, d > C.player.autoCritAbove);
@@ -305,6 +317,7 @@ function runBot() {
   if (S.zoneRole) {
     const wantIn = S.zoneRole === playerRole;
     if (wantIn !== inSafeBox(c)) c.moveTo = wantIn ? { ...ZONE_IN } : { ...OUTSIDE[playerRole] };
+
   } else if (!c.moveTo && Math.hypot(c.x - MIDDLE[playerRole].x, c.y - MIDDLE[playerRole].y) > 20) {
     c.moveTo = { ...MIDDLE[playerRole] };
   }
@@ -339,8 +352,11 @@ function charFrame(r) {
   let name;
   if (dead) name = 'Dead';
   else if (c.hold > 0 && t - c.t0 < c.hold) name = c.anim;
-  else name = c.moving ? 'Walk' : 'Idle';
-  const [a, z] = CHAR_ANIMS[name];
+  else if (c.moving) name = 'Walk';
+  else if (r === playerRole && S.target && Math.abs(C.map.bossPad.x - c.x) <= C.player.attackRangeX && Math.abs(C.map.bossPad.y - c.y) <= C.player.attackRangeY) name = 'Fight';
+  else name = 'Idle';
+  const anims = r === playerRole ? PLAYER_ANIMS : NPC_ANIMS;
+  const [a, z] = anims[name];
   const n = z - a + 1;
   const start = name === c.anim && c.hold > 0 && t - c.t0 < c.hold ? c.t0 : 0;
   let i = Math.floor((t - start) * C.fps);
@@ -374,7 +390,8 @@ function text(str, x, y, { size = 12, color = '#fff', align = 'left', bold = fal
 function drawChar(r) {
   const c = S.chars[r];
   const num = charFrame(r);
-  const idx = A.char.data.nums.indexOf(num);
+  const atlas = r === playerRole ? A.player : A.char;
+  const idx = atlas.data.nums.indexOf(num);
   ctx.fillStyle = 'rgba(0,0,0,.35)';
   ctx.beginPath();
   ctx.ellipse(c.x, c.y, 28, 8, 0, 0, Math.PI * 2);
@@ -387,7 +404,7 @@ function drawChar(r) {
   ctx.ellipse(c.x, c.y, 24, 7, 0, 0, Math.PI * 2);
   ctx.stroke();
   ctx.globalAlpha = 1;
-  A.char.draw(ctx, idx, c.x, c.y - A.charFoot * CHAR_SCALE, CHAR_SCALE * c.dir, CHAR_SCALE);
+  atlas.draw(ctx, idx, c.x, c.y - A.charFoot * CHAR_SCALE, CHAR_SCALE * c.dir, CHAR_SCALE);
 }
 
 function drawOverlays() {
@@ -496,6 +513,13 @@ function render() {
   ].sort((a, c) => a.y - c.y);
   ents.forEach((e) => e.draw());
 
+  if (S.target) {
+    ctx.strokeStyle = 'rgba(255,210,74,.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(b.x, b.y + 4, 120, 20, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   const t = f.t / 1000;
   S.fx = S.fx.filter((x) => (t - x.t0) * C.fps < A.cfx.count);
   for (const x of S.fx) {
@@ -605,6 +629,12 @@ function toStage(ev) {
 canvas.addEventListener('mousedown', (ev) => {
   if (S.fight.over) return;
   const { x, y } = toStage(ev);
+  const bp = C.map.bossPad;
+  const hit = C.boss.displayScale;
+  if (Math.abs(x - bp.x) <= 190 * hit && y >= bp.y - 300 * hit && y <= bp.y + 30) {
+    moveToBoss(); // click the boss: target it and walk into range
+    return;
+  }
   S.chars[playerRole].moveTo = { x: clamp(x, C.walk.x0, C.walk.x1), y: clamp(y, C.walk.y0, C.walk.y1) };
 });
 window.addEventListener('keydown', (ev) => {

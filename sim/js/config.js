@@ -30,7 +30,7 @@ export const CONFIG = {
     partyDps: [42000, 52000], // per hit, every 0.6-1.1 s (rest of the raid)
   },
 
-  boss: { name: 'Ultra Speaker', level: 100, displayScale: 0.75 },
+  boss: { name: 'Ultra Speaker', level: 100, displayScale: 1.5 },
 
   player: {
     speed: 250, // px/s

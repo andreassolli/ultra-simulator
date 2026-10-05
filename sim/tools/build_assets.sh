@@ -2,6 +2,7 @@
 # Regenerate sim/assets/* from the original SWFs with JPEXS FFDec.
 #
 #   FFDEC_DIR=/path/to/ffdec_x.y.z \
+#   [GEAR_DIR=/folder/with/Armor.swf,Cape.swf,Helm.swf,Weapon.swf] \
 #   ./build_assets.sh Game3.swf town-ultraspeaker-6oct23.swf Assets_20260731.swf monster-UltraMalg.swf
 #
 # FFDEC_DIR must contain ffdec-cli.jar and lib/ffdec_lib.jar
@@ -65,5 +66,19 @@ python3 "$HERE/clean_skeleton.py" "$WORK/char.xml" "$WORK/char_clean.xml"
 java -cp "$CP" SwfIndex "$WORK/char_clean.swf" 2408 | grep -v '^Picked' > "$WORK/chars.rects"
 "${FFDEC[@]}" -zoom 0.65 -selectid 2408 -format sprite:png -export sprite "$WORK/chars" "$WORK/char_clean.swf" > /dev/null
 python3 "$HERE/pack_sprites.py" "$WORK/chars" "$WORK/chars.rects" "$OUT/chars" 0.65 "8-16,54-68,622-633,703-722,911-931,932-958,495-502,810-827,828-849"
+
+if [ -n "${GEAR_DIR:-}" ]; then
+    echo "== equipped player character (Armor/Cape/Helm/Weapon.swf from \$GEAR_DIR)"
+    OFF=20000; SPECS=()
+    for item in Armor Cape Helm Weapon; do
+        "${FFDEC[@]}" -swf2xml "$GEAR_DIR/$item.swf" "$WORK/$item.xml" > /dev/null
+        SPECS+=("$WORK/$item.xml:$OFF"); OFF=$((OFF + 10000))
+    done
+    python3 "$HERE/equip_skeleton.py" "$WORK/char.xml" "$WORK/char_eq.xml" "${SPECS[@]}"
+    "${FFDEC[@]}" -xml2swf "$WORK/char_eq.xml" "$WORK/char_eq.swf" > /dev/null
+    java -cp "$CP" SwfIndex "$WORK/char_eq.swf" 2408 | grep -v '^Picked' > "$WORK/player.rects"
+    "${FFDEC[@]}" -zoom 0.65 -selectid 2408 -format sprite:png -export sprite "$WORK/player" "$WORK/char_eq.swf" > /dev/null
+    python3 "$HERE/pack_sprites.py" "$WORK/player" "$WORK/player.rects" "$OUT/player" 0.65 "8-16,54-68,679-702,1783-1795,911-931,932-958,495-502,810-827,828-849"
+fi
 
 echo "done -> $OUT"
