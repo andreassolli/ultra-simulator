@@ -1,0 +1,462 @@
+MOVEMENT / CHARACTER CANDIDATES
+================================================================================
+
+This is a heuristic report. It does not prove that a class controls movement.
+Inspect the highest-scoring classes first.
+
+Score:    10
+Package:  (default)
+Classes:  main
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/main.as
+Terms:    arrow, down, enter_frame, ground, left, mouse, mouseevent, move, right, up
+
+Score:    9
+Package:  (default)
+Classes:  sets
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/sets.as
+Terms:    enter_frame, ground, left, mouse, mouseevent, move, right, up, walk
+
+Score:    9
+Package:  AQWorlds
+Classes:  AvatarMC
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/AQWorlds/AvatarMC.as
+Terms:    enter_frame, ground, left, mouse, move, onenterframe, right, up, walk
+
+Score:    8
+Package:  EpicDuel
+Classes:  CharacterBase
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/EpicDuel/CharacterBase.as
+Terms:    enter_frame, left, mouse, move, onenterframe, right, up, walk
+
+Score:    7
+Package:  (default)
+Classes:  characters
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/characters.as
+Terms:    arrow, ground, mouse, mouseevent, move, right, up
+
+Score:    7
+Package:  (default)
+Classes:  advcolor
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/advcolor.as
+Terms:    arrow, down, enter_frame, mouse, mouseevent, move, up
+
+Score:    7
+Package:  AQWorlds
+Classes:  PetMC
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/AQWorlds/PetMC.as
+Terms:    enter_frame, left, move, onenterframe, right, up, walk
+
+Score:    6
+Package:  (default)
+Classes:  scroll
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/scroll.as
+Terms:    down, enter_frame, mouse, mouseevent, move, up
+
+Score:    6
+Package:  (default)
+Classes:  backgroundcomponent
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/backgroundcomponent.as
+Terms:    arrow, ground, mouse, mouseevent, move, up
+
+Score:    5
+Package:  (default)
+Classes:  screenshot
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/screenshot.as
+Terms:    down, mouse, mouseevent, move, up
+
+Score:    5
+Package:  (default)
+Classes:  optioncomponent
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/optioncomponent.as
+Terms:    arrow, ground, mouse, mouseevent, up
+
+Score:    5
+Package:  (default)
+Classes:  itemfile
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/itemfile.as
+Terms:    ground, mouse, mouseevent, move, up
+
+Score:    5
+Package:  (default)
+Classes:  colorcomponent
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/colorcomponent.as
+Terms:    arrow, mouse, mouseevent, move, up
+
+Score:    4
+Package:  (default)
+Classes:  tooltip
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/tooltip.as
+Terms:    enter_frame, mouse, move, up
+
+Score:    4
+Package:  (default)
+Classes:  sidebar
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/sidebar.as
+Terms:    ground, mouse, mouseevent, up
+
+Score:    4
+Package:  (default)
+Classes:  radiocomponent
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/radiocomponent.as
+Terms:    arrow, mouse, mouseevent, up
+
+Score:    4
+Package:  (default)
+Classes:  messagebox
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/messagebox.as
+Terms:    mouse, mouseevent, move, up
+
+Score:    4
+Package:  (default)
+Classes:  emotecomponent
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/emotecomponent.as
+Terms:    arrow, mouse, mouseevent, up
+
+Score:    4
+Package:  (default)
+Classes:  context
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/context.as
+Terms:    mouse, mouseevent, move, up
+
+Score:    4
+Package:  (default)
+Classes:  buttoncomponent
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/buttoncomponent.as
+Terms:    arrow, mouse, mouseevent, up
+
+Score:    4
+Package:  (default)
+Classes:  backgrounds
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/backgrounds.as
+Terms:    ground, mouse, move, up
+
+Score:    4
+Package:  (default)
+Classes:  about
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/about.as
+Terms:    mouse, mouseevent, move, up
+
+Score:    4
+Package:  AQWorlds
+Classes:  mcSkel
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/AQWorlds/mcSkel.as
+Terms:    arrow, move, up, walk
+
+Score:    3
+Package:  (default)
+Classes:  setbtn
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/setbtn.as
+Terms:    mouse, mouseevent, up
+
+Score:    3
+Package:  (default)
+Classes:  savedcolor
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/savedcolor.as
+Terms:    mouse, mouseevent, up
+
+Score:    2
+Package:  (default)
+Classes:  emotes
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/emotes.as
+Terms:    move, up
+
+Score:    2
+Package:  Paradigm_fla
+Classes:  mcCape_87
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/mcCape_87.as
+Terms:    move, up
+
+Score:    2
+Package:  AQWorlds
+Classes:  Avatar
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/AQWorlds/Avatar.as
+Terms:    move, up
+
+Score:    1
+Package:  (default)
+Classes:  sectiontext
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/sectiontext.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  mcHeadM
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/mcHeadM.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  mcHeadF
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/mcHeadF.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  contextitem
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/contextitem.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  contextdivider
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/contextdivider.as
+Terms:    up
+
+Score:    1
+Package:  com.adobe.images
+Classes:  PNGEncoder
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/com/adobe/images/PNGEncoder.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Weapon_Wrist_R
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Weapon_Wrist_R.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Weapon_Wrist_L
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Weapon_Wrist_L.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Weapon_Staff
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Weapon_Staff.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Weapon_Gun
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Weapon_Gun.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Weapon_Grenade
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Weapon_Grenade.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Weapon_Blade
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Weapon_Blade.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Weapon_Auxiliary
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Weapon_Auxiliary.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Thigh_R_Female
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Thigh_R_Female.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Thigh_R
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Thigh_R.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Thigh_L
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Thigh_L.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Shin_R
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Shin_R.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Shin_L
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Shin_L.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  proton_cannon_249
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/proton_cannon_249.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  multicannoncopy_232
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/multicannoncopy_232.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  multicannon_439
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/multicannon_439.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  mcToggleBtn_45
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/mcToggleBtn_45.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  game_1_Male_Master1_28_789
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/game_1_Male_Master1_28_789.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  game_1_Male_Master1_27_781
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/game_1_Male_Master1_27_781.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  fxx_128
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/fxx_128.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  fireworks_box_202
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/fireworks_box_202.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Head_Iris_None_784
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Head_Iris_None_784.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Head_Iris_Light_785
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Head_Iris_Light_785.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Female_Nose_778
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Female_Nose_778.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Female_Iris_None_773
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Female_Iris_None_773.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Female_Iris_Light_774
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Female_Iris_Light_774.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Female_Eyebrow_Skin_Base__776
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Female_Eyebrow_Skin_Base__776.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Female_Eye_771
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Female_Eye_771.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Face_Light_769
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Face_Light_769.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Face_Dark_770
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Face_Dark_770.as
+Terms:    up
+
+Score:    1
+Package:  Paradigm_fla
+Classes:  Eyebrow_Skin_787
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Paradigm_fla/Eyebrow_Skin_787.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Hip
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Hip.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Head
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Head.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  HairAbove
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/HairAbove.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Forearm_R
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Forearm_R.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Forearm_L
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Forearm_L.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Foot_R
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Foot_R.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Foot_L
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Foot_L.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Craft
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Craft.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Body
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Body.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Bicep_R
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Bicep_R.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  Bicep_L
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/Bicep_L.as
+Terms:    up
+
+Score:    1
+Package:  (default)
+Classes:  AbyssalBow
+Source:   /Users/andreas/MyProjects/swf-testing/para_recovered/src/AbyssalBow.as
+Terms:    up
+

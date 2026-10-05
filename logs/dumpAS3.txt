@@ -1,0 +1,83 @@
+/Applications/FFDec.app/Contents/MacOS/../Resources/ffdec.sh: line 49: [: java version "26.0.2.1" 2026-08-18 Java(TM) SE Runtime Environment (build 26.0.2.1+1-7) Java HotSpot(TM) 64-Bit Server VM (build 26.0.2.1+1-7, mixed mode, sharing): integer expression expected
+/Applications/FFDec.app/Contents/MacOS/../Resources/ffdec.sh: line 51: [: java version "26.0.2.1" 2026-08-18 Java(TM) SE Runtime Environment (build 26.0.2.1+1-7) Java HotSpot(TM) 64-Bit Server VM (build 26.0.2.1+1-7, mixed mode, sharing): integer expression expected
+/Applications/FFDec.app/Contents/MacOS/../Resources/ffdec.sh: line 55: [: java version "26.0.2.1" 2026-08-18 Java(TM) SE Runtime Environment (build 26.0.2.1+1-7) Java HotSpot(TM) 64-Bit Server VM (build 26.0.2.1+1-7, mixed mode, sharing): integer expression expected
+/Applications/FFDec.app/Contents/MacOS/../Resources/ffdec.sh: line 57: [: java version "26.0.2.1" 2026-08-18 Java(TM) SE Runtime Environment (build 26.0.2.1+1-7) Java HotSpot(TM) 64-Bit Server VM (build 26.0.2.1+1-7, mixed mode, sharing): integer expression expected
+/Applications/FFDec.app/Contents/MacOS/../Resources/ffdec.sh: line 61: [: java version "26.0.2.1" 2026-08-18 Java(TM) SE Runtime Environment (build 26.0.2.1+1-7) Java HotSpot(TM) 64-Bit Server VM (build 26.0.2.1+1-7, mixed mode, sharing): integer expression expected
+/Applications/FFDec.app/Contents/MacOS/../Resources/ffdec.sh: line 63: [: java version "26.0.2.1" 2026-08-18 Java(TM) SE Runtime Environment (build 26.0.2.1+1-7) Java HotSpot(TM) 64-Bit Server VM (build 26.0.2.1+1-7, mixed mode, sharing): integer expression expected
+/Applications/FFDec.app/Contents/MacOS/../Resources/ffdec.sh: line 67: [: java version "26.0.2.1" 2026-08-18 Java(TM) SE Runtime Environment (build 26.0.2.1+1-7) Java HotSpot(TM) 64-Bit Server VM (build 26.0.2.1+1-7, mixed mode, sharing): integer expression expected
+AQWorlds.Avatar 0
+com.adobe.images.PNGEncoder 1
+AQWorlds.AvatarMC 2
+AQWorlds.PetMC 3
+AQWorlds.mcSkel 4
+AbyssalBow 5
+Bicep_L 6
+Bicep_R 7
+Body 8
+Craft 9
+EpicDuel.CharacterBase 10
+Foot_L 11
+Foot_R 12
+Forearm_L 13
+Forearm_R 14
+HairAbove 15
+Head 16
+Hip 17
+Paradigm_fla.Eyebrow_Skin_787 18
+Paradigm_fla.Face_Dark_770 19
+Paradigm_fla.Face_Light_769 20
+Paradigm_fla.Female_Eye_771 21
+Paradigm_fla.Female_Eyebrow_Skin_Base__776 22
+Paradigm_fla.Female_Iris_Light_774 23
+Paradigm_fla.Female_Iris_None_773 24
+Paradigm_fla.Female_Nose_778 25
+Paradigm_fla.Head_Iris_Light_785 26
+Paradigm_fla.Head_Iris_None_784 27
+Paradigm_fla.fireworks_box_202 28
+Paradigm_fla.fxx_128 29
+Paradigm_fla.game_1_Male_Master1_27_781 30
+Paradigm_fla.game_1_Male_Master1_28_789 31
+Paradigm_fla.mcCape_87 32
+Paradigm_fla.mcToggleBtn_45 33
+Paradigm_fla.multicannon_439 34
+Paradigm_fla.multicannoncopy_232 35
+Paradigm_fla.proton_cannon_249 36
+Shin_L 37
+Shin_R 38
+Thigh_L 39
+Thigh_R 40
+Thigh_R_Female 41
+Weapon_Auxiliary 42
+Weapon_Blade 43
+Weapon_Grenade 44
+Weapon_Gun 45
+Weapon_Staff 46
+Weapon_Wrist_L 47
+Weapon_Wrist_R 48
+about 49
+advcolor 50
+backgroundcomponent 51
+backgrounds 52
+buttoncomponent 53
+characters 54
+colorcomponent 55
+context 56
+contextdivider 57
+contextitem 58
+emotecomponent 59
+emotes 60
+itemfile 61
+main 62
+mcHeadF 63
+mcHeadM 64
+messagebox 65
+optioncomponent 66
+radiocomponent 67
+savedcolor 68
+screenshot 69
+scroll 70
+sectiontext 71
+setbtn 72
+sets 73
+sidebar 74
+tooltip 75

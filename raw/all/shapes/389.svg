@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns:ffdec="https://www.free-decompiler.com/flash" xmlns:xlink="http://www.w3.org/1999/xlink" ffdec:objectType="shape" height="351.8px" width="308.8px" xmlns="http://www.w3.org/2000/svg">
+  <g transform="matrix(1.0, 0.0, 0.0, 1.0, 169.45, 462.6)">
+    <path d="M-43.6 -133.15 Q-52.9 -130.95 -61.25 -122.2 L-169.45 -450.1 Q-101.1 -276.8 -43.6 -133.15" fill="url(#gradient0)" fill-rule="evenodd" stroke="none"/>
+    <path d="M-5.4 -138.85 Q-9.0 -137.25 -12.3 -134.2 -16.05 -130.75 -19.65 -124.9 -20.85 -125.7 -25.45 -130.0 -27.2 -131.3 -29.05 -132.2 L-49.7 -462.6 -5.4 -138.85" fill="url(#gradient1)" fill-rule="evenodd" stroke="none"/>
+    <path d="M30.0 -132.15 Q23.25 -137.75 14.0 -139.65 L51.1 -442.05 30.0 -132.15" fill="url(#gradient2)" fill-rule="evenodd" stroke="none"/>
+    <path d="M52.7 -129.65 L51.1 -127.35 Q44.45 -117.15 44.7 -110.8 43.9 -111.55 41.1 -117.2 L38.1 -122.65 Q64.35 -185.1 139.35 -423.1 L52.7 -129.65" fill="url(#gradient3)" fill-rule="evenodd" stroke="none"/>
+  </g>
+  <defs>
+    <radialGradient cx="0" cy="0" gradientTransform="matrix(0.2209, 0.0, 0.0, 0.2209, -146.45, -368.35)" gradientUnits="userSpaceOnUse" id="gradient0" r="819.2" spreadMethod="pad">
+      <stop offset="0.0" stop-color="#ffffff"/>
+      <stop offset="1.0" stop-color="#ffffff" stop-opacity="0.0"/>
+    </radialGradient>
+    <radialGradient cx="0" cy="0" gradientTransform="matrix(0.2483, 0.0, 0.0, 0.2483, -41.65, -368.35)" gradientUnits="userSpaceOnUse" id="gradient1" r="819.2" spreadMethod="pad">
+      <stop offset="0.0" stop-color="#ffffff"/>
+      <stop offset="1.0" stop-color="#ffffff" stop-opacity="0.0"/>
+    </radialGradient>
+    <radialGradient cx="0" cy="0" gradientTransform="matrix(0.2235, 0.0, 0.0, 0.2235, 40.55, -377.35)" gradientUnits="userSpaceOnUse" id="gradient2" r="819.2" spreadMethod="pad">
+      <stop offset="0.0" stop-color="#ffffff"/>
+      <stop offset="1.0" stop-color="#ffffff" stop-opacity="0.0"/>
+    </radialGradient>
+    <radialGradient cx="0" cy="0" gradientTransform="matrix(0.2499, 0.0, 0.0, 0.2499, 116.05, -351.45)" gradientUnits="userSpaceOnUse" id="gradient3" r="819.2" spreadMethod="pad">
+      <stop offset="0.0" stop-color="#ffffff"/>
+      <stop offset="1.0" stop-color="#ffffff" stop-opacity="0.0"/>
+    </radialGradient>
+  </defs>
+</svg>
