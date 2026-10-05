@@ -98,7 +98,11 @@ cd bin && python3 -m http.server 8000     # then open http://localhost:8000/
 `stage.displayState`). The Ruffle desktop app can also open `bin/ultra_sim.swf` directly, and so can
 Flash Player / AIR (`adl`); keep `bin/runtime/` next to the SWF. Move by left-clicking the ground, click the boss to target it, skills on keys `1`–`6` or by clicking.
 With no zone active everyone stacks in the middle; during Equal only the named role stays there and the rest move
-to the right of the box. Optional FlashVars: `class=loo|ap|lr`, `bot=1` (auto-pilot), `speed=4`.
+to the right of the box. Optional FlashVars: `class=loo|ap|lr`, `bot=1` (auto-pilot), `speed=4`, `hints=0`.
+
+**Hints toggle** (button under the class buttons, or `H`): with hints on the game tells you whose zone it is, who must
+taunt, when to Quix / Seal, what the boss casts next and keeps an event log. With hints off all of that is hidden and you
+play from the boss shouts, the zone glow and the buff icons only.
 
 Changes to the recovered code: `AvatarMC.load()` now reads files with `URLLoader` instead of AIR's `FileStream`
 (same behaviour in AIR, and it also runs outside AIR) and the AIR-only `allowLoadBytesCodeExecution` flag is

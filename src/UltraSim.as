@@ -134,6 +134,8 @@ package
         private var bossLoop:Boolean = false;
         private var targeted:Boolean = true;
         private var paused:Boolean = false;
+        private var hintsOn:Boolean = true; // context hints: who's zone it is, taunt / quix / seal prompts, next cast, log
+        private var hintsLabel:TextField;
         private var simSpeed:Number = 1;
         private var botOn:Boolean = false;
         private var botQueue:Array = [];
@@ -208,6 +210,7 @@ package
                 role = p["class"];
             }
             botOn = p["bot"] == "1";
+            hintsOn = p["hints"] != "0";
             if (p["speed"])
             {
                 simSpeed = Number(p["speed"]);
@@ -696,7 +699,7 @@ package
             }
         }
 
-        private function button(text:String, x:Number, y:Number, w:Number, fn:Function):void
+        private function button(text:String, x:Number, y:Number, w:Number, fn:Function):TextField
         {
             var b:Sprite = new Sprite();
             b.graphics.beginFill(0x161b26, 0.9);
@@ -714,6 +717,7 @@ package
                 fn();
             });
             hudLayer.addChild(b);
+            return t;
         }
 
         private function buildButtons():void
@@ -725,7 +729,15 @@ package
             button("Auto-pilot", 740, 76, 70, function():void { botOn = !botOn; });
             button("Pause", 814, 76, 50, function():void { paused = !paused; });
             button("1x/2x/4x", 868, 76, 86, function():void { simSpeed = simSpeed >= 4 ? 1 : simSpeed * 2; });
+            hintsLabel = button("", 676, 100, 150, toggleHints);
+            hintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
             button("Fullscreen (F)", 836, 100, 118, toggleFullscreen);
+        }
+
+        private function toggleHints():void
+        {
+            hintsOn = !hintsOn;
+            hintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
         }
 
         private function toggleFullscreen():void
@@ -1113,6 +1125,10 @@ package
             {
                 castKey(k);
             }
+            else if (e.keyCode == 72)
+            {
+                toggleHints();
+            }
             else if (e.keyCode == 70)
             {
                 toggleFullscreen();
@@ -1437,8 +1453,10 @@ package
             }
             var secs:Number = f.t / 1000;
             clockText.text = int(secs / 60) + ":" + (int(secs % 60) < 10 ? "0" : "") + int(secs % 60);
-            nextText.text = "Next: " + Fight.PATTERN[f.ruleIdx];
-            bannerText.text = (banner != "" && f.t < bannerUntil) ? banner : "";
+            // with hints off nothing says whose zone it is, who must taunt, or what is coming next
+            nextText.text = hintsOn ? "Next: " + Fight.PATTERN[f.ruleIdx] : "";
+            logText.visible = hintsOn;
+            bannerText.text = (hintsOn && banner != "" && f.t < bannerUntil) ? banner : "";
             bannerText.textColor = bannerColor;
             shoutText.text = (shout != "" && f.t < shoutUntil) ? shout : "";
             // skill cooldowns on the action bar
