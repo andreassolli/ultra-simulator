@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
-"""Pull the in-game HUD pieces out of game.swf into a small standalone SWF.
+"""Pull the in-game HUD pieces out of Spider.swf into a small standalone SWF.
 
-  ffdec-cli -swf2xml game.swf game.xml
-  extract_ui.py game.xml ui.xml        # then: ffdec-cli -xml2swf ui.xml bin/runtime/ui.swf
+  ffdec-cli -swf2xml Spider.swf spider.xml
+  extract_ui.py spider.xml ui.xml        # then: ffdec-cli -xml2swf ui.xml src/_assets/ui.swf
 
 Exports (SymbolClass names, all scripts stripped so they are pure artwork):
-  UI_PlayerBox   mcPortrait        player frame: portrait ring, HP / MP / SP bars, name, class, level
-  UI_TargetBox   mcPortraitTarget  target frame (used for the boss)
-  UI_PartyPanel  PartyPanel        compact party member frame (HP / MP, name)
-  UI_ActBar      actBar            the six round skill slots with their cooldown texts
+  UI_PlayerBox    mcPortrait        player frame: portrait ring, HP / MP / SP bars, name, class, level
+  UI_TargetBox    mcPortraitTarget  target frame (used for the boss)
+  UI_PartyPanel   PartyPanel        compact party member frame (HP / MP, name)
+  UI_ActBar       actBar            the six round skill slots with their cooldown texts
+  UI_HitDisplay   hitDisplay        floating damage / heal number      (World.showHitDisplay: hit)
+  UI_CritDisplay  critDisplay       floating critical damage number    (crit)
+  UI_AvoidDisplay avoidDisplay      "Miss!" / "Dodge!" style text      (miss, dodge, parry, block)
+  UI_AutoIcon     sprite 2811       default auto-attack icon (crossed swords)
 """
 import sys
 import xml.etree.ElementTree as ET
 
-ROOTS = {"UI_PlayerBox": 3525, "UI_TargetBox": 3543, "UI_PartyPanel": 141, "UI_ActBar": 3651}
+ROOTS = {"UI_PlayerBox": 3861, "UI_TargetBox": 3875, "UI_PartyPanel": 3446, "UI_ActBar": 3978,
+         "UI_HitDisplay": 3449, "UI_CritDisplay": 3419, "UI_AvoidDisplay": 3494, "UI_AutoIcon": 2811}
 ID_KEYS = ("shapeId", "spriteId", "characterID", "characterId", "buttonId", "fontId", "fontID", "bitmapId", "imageId", "soundId", "videoId")
 
 

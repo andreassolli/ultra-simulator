@@ -65,13 +65,16 @@ A Flash build of the Ultra Speaker fight, using the original SWFs at runtime ins
 | `Assets.swf` | Class skill icons (`LoO*`, `LR*`, `apal*`) and the cast effect |
 | `Armor.swf` `Cape.swf` `Helm.swf` `Weapon.swf` | Gear equipped on the player through `AvatarMC.load()` and its `onLoad*Complete` callbacks |
 
-The HUD is `game.swf`'s own: the player status box (portrait ring, HP / MP / SP bars, name, class, level), the target
-box for the boss, the compact party frames and the six-slot action bar for the skill icons. `tools/extract_ui.py`
-pulls those symbols out of `game.swf` into `src/_assets/ui.swf` (`ffdec-cli -swf2xml game.swf game.xml`, run the script,
-`ffdec-cli -xml2swf ui.xml src/_assets/ui.swf`), and `src/ui/*.as` embed them like the other recovered classes. Portraits
-are filled the way `Game.showPortraitBox()` does it: the boss's `mcHeadUltraMalg` into the target ring, the equipped
-armor's head and the helm into the player ring. `Loader3.swf` only downloads `game.swf` from the AQ servers, so it is
-not needed here. The stage is the game's 960x550 and scales to the window / full screen (`StageScaleMode.SHOW_ALL`).
+The HUD is `Spider.swf`'s own: the player status box (portrait ring, HP / MP / SP bars, name, class, level), the target
+box for the boss, the compact party frames, the six-slot action bar and the floating damage numbers (`hitDisplay`,
+`critDisplay`, `avoidDisplay`, set up like `World.showHitDisplay()`: white hits, orange glowing crits, green `+N+`
+heals). Classes without an auto-attack icon use Spider.swf's default one (sprite 2811, crossed swords). Healing
+(Ordinance, Heal) plays no cast effect. `tools/extract_ui.py` pulls those symbols out of `Spider.swf` into
+`src/_assets/ui.swf` (`ffdec-cli -swf2xml Spider.swf spider.xml`, run the script, `ffdec-cli -xml2swf ui.xml
+src/_assets/ui.swf`), and `src/ui/*.as` embed them like the other recovered classes. Portraits are filled the way the
+game's `showPortraitBox()` does it: the boss's `mcHeadUltraMalg` into the target ring, the equipped armor's head and the
+helm into the player ring. `Loader3.swf` only downloads the game from the AQ servers, so it is not needed here. The
+stage is the game's 960x550 and scales to the window / full screen (`StageScaleMode.SHOW_ALL`).
 The four players are `AvatarMC` instances (the recovered character), each with a health bar over its head. Rules (`src/sim/Fight.as`) are a port of the web simulator: the boss rotation (auto / Truth / Listen /
 Equal), Somber + armor, Seal / Quix / taunt requirements, and the Lord of Order, Arch Paladin and Legion Revenant
 skills. Pick your class with the buttons top right; the other roles are scripted.

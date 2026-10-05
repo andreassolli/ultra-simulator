@@ -27,7 +27,13 @@ package
     import sim.Hud;
     import sim.IFightHost;
 
+    import flash.filters.GlowFilter;
+
     import ui.UIActBar;
+    import ui.UIAutoIcon;
+    import ui.UIAvoidDisplay;
+    import ui.UICritDisplay;
+    import ui.UIHitDisplay;
     import ui.UIPartyPanel;
     import ui.UIPlayerBox;
     import ui.UITargetBox;
@@ -461,24 +467,23 @@ package
         private function buildHud():void
         {
             var g:Sprite = hudLayer;
-            // game.swf's own HUD pieces (bin/runtime/ui.swf, see tools/extract_ui.py), at their in-game positions
+            // Spider.swf's own HUD pieces (bin/runtime/ui.swf, see tools/extract_ui.py), at their in-game positions
             playerBox = ui("UI_PlayerBox");
-            playerBox.x = 2.6;
-            playerBox.y = 3.6;
+            playerBox.x = 1;
+            playerBox.y = 2;
             g.addChild(playerBox);
             targetBox = ui("UI_TargetBox");
-            targetBox.x = 296.6;
-            targetBox.y = 1.2;
+            targetBox.x = 235;
+            targetBox.y = 2;
             g.addChild(targetBox);
-            // portrait rings, filled the way Game.showPortraitBox() does it: swap the face (and helm) classes into mcHead.head
+            // portrait rings, filled the way World/Game showPortraitBox() does it: swap the face (and helm) classes into mcHead.head
             var BossHead:Class = bossDomain.getDefinition("mcHeadUltraMalg") as Class;
             setFace(targetBox["mcHead"], new BossHead() as DisplayObject);
             targetBox["mcHead"].head.hair.visible = false;
             targetBox["mcHead"].head.helm.visible = false;
             targetBox["mcHead"].backhair.visible = false;
             targetBox["btnOption"].visible = false;
-            playerBox["pfphud"].visible = false; // the black custom-portrait disc (Game.clearPortraitFromBox hides it)
-            targetBox["pfphud"].visible = false;
+            targetBox["stars"].visible = false;
             var head:MovieClip = playerBox["mcHead"];
             setFace(head, new (armorDomain.getDefinition("CoastalRFHead") as Class)() as DisplayObject);
             head.head.hair.visible = false;
@@ -574,7 +579,7 @@ package
             }
         }
 
-        /** HP / MP style bar of a game.swf frame: scale the fill and set its number. */
+        /** HP / MP style bar of a Spider.swf frame: scale the fill and set its number. */
         private static function setBar(box:MovieClip, group:String, bar:String, text:String, frac:Number, value:String):void
         {
             var g:MovieClip = box[group] as MovieClip;
@@ -679,6 +684,16 @@ package
                     icon.x = cx - (ib.x + ib.width / 2) * k;
                     icon.y = cy - (ib.y + ib.height / 2) * k;
                 }
+                else if (i == 0)
+                {
+                    // classes without their own auto-attack icon get Spider.swf's default one (sprite 2811)
+                    icon = new UIAutoIcon();
+                    var ab:Rectangle = icon.getBounds(icon);
+                    var ak:Number = (b.width * 0.86) / Math.max(ab.width, ab.height);
+                    icon.scaleX = icon.scaleY = ak;
+                    icon.x = cx - (ab.x + ab.width / 2) * ak;
+                    icon.y = cy - (ab.y + ab.height / 2) * ak;
+                }
                 else
                 {
                     var nm:TextField = Hud.label(defs[i][0], 9, 0xD8DEEA, false, "center", b.width);
@@ -731,6 +746,13 @@ package
             ownDamage = 0;
             botQueue = [];
             logLines = [];
+            for each (var fc:MovieClip in floaters)
+            {
+                if (fc.parent)
+                {
+                    fc.parent.removeChild(fc);
+                }
+            }
             floaters = [];
             if (runeMC)
             {
@@ -802,19 +824,56 @@ package
 
         public function floater(r:String, text:String, kind:String):void
         {
-            var color:uint = {dmg: 0xFF6B6B, crit: 0xFFB347, heal: 0x6FD98A, bad: 0xFF5B5B}[kind];
-            var tf:TextField = Hud.label(text, kind == "crit" || kind == "bad" ? 20 : 15, color, true);
             var x:Number = 480;
             var y:Number = 190;
             if (r != null && actors[r])
             {
-                x = actors[r].mc.x;
-                y = actors[r].mc.y - 120;
+                x = actors[r].mc.x + (Math.random() - 0.5) * 24;
+                y = actors[r].mc.y - 108;
             }
-            tf.x = x - tf.width / 2 + (Math.random() - 0.5) * 30;
-            tf.y = y;
-            fxLayer.addChild(tf);
-            floaters.push({tf: tf, t: 0, life: 1.4, y0: y});
+            showNumber(x, y, text, kind);
+        }
+
+        /**
+         * Floating combat text with Spider.swf's own clips, set up like World.showHitDisplay():
+         * hit = white number, crit = orange with a red glow, heal = "+N+" in green, avoid text for the rest.
+         */
+        private function showNumber(x:Number, y:Number, text:String, kind:String):void
+        {
+            var clip:MovieClip;
+            var label:String = text.replace(/[-+,]/g, "");
+            var color:uint = 0xFFFFFF;
+            var glow:uint = 0x000000;
+            switch (kind)
+            {
+                case "crit":
+                    clip = new UICritDisplay();
+                    color = 0xFF9944;
+                    glow = 0x330000;
+                    break;
+                case "heal":
+                    clip = new UIHitDisplay();
+                    label = "+" + label + "+";
+                    color = 0x00FFAA;
+                    break;
+                case "bad":
+                    clip = new UIAvoidDisplay();
+                    label = text;
+                    break;
+                default:
+                    clip = new UIHitDisplay();
+            }
+            var ti:TextField = clip["t"]["ti"] as TextField;
+            ti.autoSize = "center";
+            ti.text = label;
+            ti.textColor = color;
+            ti.filters = [new GlowFilter(glow, 1, 5, 5, 5, 1, false, false)];
+            clip.mouseEnabled = false;
+            clip.mouseChildren = false;
+            clip.x = x;
+            clip.y = y;
+            fxLayer.addChild(clip);
+            floaters.push(clip);
         }
 
         public function log(message:String, kind:String):void
@@ -842,15 +901,14 @@ package
 
         public function castFx(kind:String, r:String):void
         {
-            var targets:Array = (kind == "ordinance" || kind == "heal") ? Fight.ROLES : [r];
-            var C:Class = assetsDomain.getDefinition("Assets_20260702_fla.Symbol3aaaaa_loo_757") as Class;
-            for each (var who:String in targets)
+            // healing (Ordinance, Heal) plays no cast effect; the heal numbers are enough
+            if (kind != "ordinance" && kind != "heal")
             {
+                var C:Class = assetsDomain.getDefinition("Assets_20260702_fla.Symbol3aaaaa_loo_757") as Class;
                 var clip:MovieClip = new C() as MovieClip;
                 clip.mouseEnabled = false;
-                clip.scaleX = clip.scaleY = 1;
-                clip.x = actors[who].mc.x;
-                clip.y = actors[who].mc.y - 50;
+                clip.x = actors[r].mc.x;
+                clip.y = actors[r].mc.y - 50;
                 fxLayer.addChild(clip);
                 fxClips.push(clip);
             }
@@ -879,11 +937,7 @@ package
 
         private function bossFloater(amount:int, crit:Boolean):void
         {
-            var tf:TextField = Hud.label(Fight.fmt(amount), crit ? 22 : 15, crit ? 0xFFD24A : 0xFFFFFF, true);
-            tf.x = BOSS_PAD.x + (Math.random() - 0.5) * 200;
-            tf.y = BOSS_PAD.y - 140 - Math.random() * 60;
-            fxLayer.addChild(tf);
-            floaters.push({tf: tf, t: 0, life: 1.0, y0: tf.y});
+            showNumber(BOSS_PAD.x + (Math.random() - 0.5) * 200, BOSS_PAD.y - 150 - Math.random() * 60, String(amount), crit ? "crit" : "hit");
         }
 
         public function mechanic(holder:String, ability:String, truthN:int, zoneN:int):void
@@ -1176,16 +1230,13 @@ package
 
         private function updateFloaters(dt:Number):void
         {
+            // the clips animate themselves (and used to remove themselves in game scripts, which are not part of the art)
             for (var i:int = floaters.length - 1; i >= 0; i--)
             {
-                var f:Object = floaters[i];
-                f.t += dt;
-                var k:Number = f.t / f.life;
-                f.tf.y = f.y0 - 50 * k;
-                f.tf.alpha = 1 - k * k;
-                if (k >= 1)
+                var c:MovieClip = floaters[i];
+                if (c.currentFrame >= c.totalFrames)
                 {
-                    f.tf.parent.removeChild(f.tf);
+                    c.parent.removeChild(c);
                     floaters.splice(i, 1);
                 }
             }
@@ -1209,7 +1260,7 @@ package
         private function updateHud():void
         {
             var f:Fight = fight;
-            // game.swf status boxes: player and target (the boss)
+            // Spider.swf status boxes: player and target (the boss)
             playerBox["strClass"].text = CLASS_NAMES[role];
             setBar(playerBox, "HP", "intHPbar", "strIntHP", f.hp[role] / f.maxHp(role), Fight.fmt(f.hp[role]));
             setBar(playerBox, "MP", "intMPbar", "strIntMP", 1, "100");
