@@ -98,7 +98,7 @@ cd bin && python3 -m http.server 8000     # then open http://localhost:8000/
 `stage.displayState`). The Ruffle desktop app can also open `bin/ultra_sim.swf` directly, and so can
 Flash Player / AIR (`adl`); keep `bin/runtime/` next to the SWF. Move by left-clicking the ground, click the boss to target it, skills on keys `1`–`6` or by clicking.
 With no zone active everyone stacks in the middle; during Equal only the named role stays there and the rest move
-to the right of the box. The game opens on a start screen: pick a class and press Play (or Enter); nothing runs until then, and Restart returns to it.
+to the right of the box. The game opens on a start screen: pick a class and press Play (or Enter); nothing runs until then, and Restart returns to it. About 3.5 s after victory or defeat the start screen comes back on its own with a fresh fight. The start screen also has a boss selector: Ultra Speaker is playable; Ultra Dage (classes Classic Ninja / Chaos Avenger) is a disabled placeholder entry in the `BOSSES` table in `src/UltraSim.as`, to be filled in later.
 Optional FlashVars: `class=loo|ap|lr` (preselected class), `autoplay=1` (skip the start screen), `bot=1` (auto-pilot), `speed=4`, `hints=0`.
 
 **Hints toggle** (button under the class buttons, or `H`): with hints on the game tells you whose zone it is, who must

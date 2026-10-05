@@ -23,6 +23,7 @@ package
     import flash.system.LoaderContext;
     import flash.text.TextField;
     import flash.utils.getTimer;
+    import flash.utils.setTimeout;
 
     import sim.Fight;
     import sim.Hud;
@@ -71,6 +72,13 @@ package
         private static const NEXT_NAMES:Object = {auto: "Auto attack", truth: "Truth", listen: "Listen", zone: "Equal (zone)"};
         private static const BUFFS_PER_ROW:int = 4;
         private static const BOSS_NAME:String = "Ultra Speaker";
+        private static const RETURN_MS:int = 3500; // delay before the start screen returns after victory/defeat
+        /** Selectable bosses. Only entries with ready=true can be played; Ultra Dage is scaffolding for later
+         *  (its map/boss SWFs, classes and mechanics are not implemented yet). */
+        private static const BOSSES:Array = [
+            {id: "speaker", name: "Ultra Speaker", ready: true, classes: ["loo", "ap", "lr"]},
+            {id: "dage", name: "Ultra Dage", ready: false, classes: ["Classic Ninja", "Chaos Avenger"]}
+        ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
         private static const PORTRAIT_CX:Number = 50;
         private static const PORTRAIT_CY:Number = 25;
@@ -790,18 +798,35 @@ package
             startScreen.graphics.drawRect(0, 0, STAGE_W, STAGE_H);
             startScreen.graphics.endFill();
             var title:TextField = Hud.label("Ultra Speaker", 44, 0xFFD24A, true, "center", STAGE_W);
-            title.y = 44;
+            title.y = 36;
             startScreen.addChild(title);
             var sub:TextField = Hud.label("Select your class", 18, 0xFFFFFF, false, "center", STAGE_W);
-            sub.y = 108;
+            sub.y = 134;
             startScreen.addChild(sub);
+            for (var bi:int = 0; bi < BOSSES.length; bi++)
+            {
+                var bd:Object = BOSSES[bi];
+                var bt:Sprite = new Sprite();
+                var sel:Boolean = bd.ready;
+                bt.graphics.lineStyle(sel ? 2 : 1, sel ? 0xFFD24A : 0x3A4560, 1);
+                bt.graphics.beginFill(sel ? 0x1d2433 : 0x10141f, 0.95);
+                bt.graphics.drawRoundRect(0, 0, 200, 30, 8, 8);
+                bt.graphics.endFill();
+                var bl:TextField = Hud.label(bd.name + (bd.ready ? "" : " (soon)"), 14, bd.ready ? 0xFFFFFF : 0x6B7690, true, "center", 200);
+                bl.y = 4;
+                bt.addChild(bl);
+                bt.x = STAGE_W / 2 - 210 + bi * 220;
+                bt.y = 98;
+                bt.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
+                startScreen.addChild(bt);
+            }
             var classes:Array = [["loo", "LoOaa"], ["ap", "apal1"], ["lr", "LRaa"]];
             cards = {};
             for (var i:int = 0; i < classes.length; i++)
             {
                 var card:Sprite = new Sprite();
                 card.x = 165 + i * 220;
-                card.y = 150;
+                card.y = 166;
                 card.buttonMode = true;
                 var cr:String = classes[i][0];
                 var C:Class = assetsDomain.getDefinition(classes[i][1]) as Class;
@@ -827,7 +852,7 @@ package
             pt.y = 9;
             play.addChild(pt);
             play.x = (STAGE_W - 220) / 2;
-            play.y = 340;
+            play.y = 350;
             play.buttonMode = true;
             play.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
                 e.stopPropagation();
@@ -835,7 +860,7 @@ package
             });
             startScreen.addChild(play);
             var help:TextField = Hud.label("Left-click: move / target the boss  |  1-6: skills  |  H: hints  |  F: fullscreen", 12, 0x9BA6BD, false, "center", STAGE_W);
-            help.y = 420;
+            help.y = 424;
             startScreen.addChild(help);
             startScreen.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
             addChild(startScreen);
@@ -1237,6 +1262,14 @@ package
             overText.text = result == "win" ? "VICTORY" : "DEFEATED";
             overText.textColor = result == "win" ? 0x6FD98A : 0xFF5B5B;
             overSub.text = reason + " - press Restart";
+            var f:Fight = fight;
+            setTimeout(function():void {
+                if (fight === f) // not already restarted by hand
+                {
+                    newFight(role);
+                    showStartScreen();
+                }
+            }, RETURN_MS);
         }
 
         private function setBanner(text:String, color:uint, ms:Number):void
