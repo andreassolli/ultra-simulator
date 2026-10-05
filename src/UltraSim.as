@@ -66,6 +66,7 @@ package
         private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0]};
         private static const CHAR_SCALE:Number = 0.65;
         private static const BOSS_SCALE:Number = 0.3;
+        private static const STAGE_W:Number = 960;
         private static const BOSS_NAME:String = "Ultra Speaker";
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
         private static const PORTRAIT_CX:Number = 50;
@@ -533,13 +534,13 @@ package
             nextText.x = 810;
             nextText.y = 26;
             g.addChild(nextText);
-            bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 700);
-            bannerText.x = 260;
-            bannerText.y = 76;
+            bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 960);
+            bannerText.x = 0;
+            bannerText.y = 114;
             g.addChild(bannerText);
-            shoutText = Hud.label("", 13, 0xE9E2FF, false, "center", 700);
-            shoutText.x = 260;
-            shoutText.y = 100;
+            shoutText = Hud.label("", 13, 0xE9E2FF, false, "center", 960);
+            shoutText.x = 0;
+            shoutText.y = 138;
             g.addChild(shoutText);
             overText = Hud.label("", 40, 0xFFFFFF, true, "center", 960);
             overText.y = 180;
@@ -557,7 +558,9 @@ package
             g.addChild(logText);
             buildBuffIcons();
             actBar = ui("UI_ActBar");
-            actBar.x = 220;
+            // centre the six round slots on the stage
+            actBar.x = 0;
+            actBar.x = STAGE_W / 2 - (actBar["blank0"].getBounds(actBar).left + actBar["blank5"].getBounds(actBar).right) / 2;
             actBar.y = 494;
             g.addChild(actBar);
             buildButtons();
