@@ -88,6 +88,7 @@ package sim
         public var tauntRole:String = null;
         public var tauntUntil:Number = 0;
         public var stunUntil:Number = 0;
+        public var magiaBurnUntil:Number = 0;
         public var ordinanceUntil:Number = 0;
         public var axiomUntil:Number = 0;
         public var quixUntil:Number = 0;
@@ -334,6 +335,10 @@ package sim
                 if (holder == null)
                 {
                     return;
+                }
+                if (holder == playerRole)
+                {
+                    magiaBurnUntil = t + 18000; // Magia Burn debuff on the tank who takes the Truth
                 }
                 var dmg:Number = base * (1 - armor[holder]) * (1 - reductionFor(holder, true));
                 hurt(holder, Math.ceil(dmg), "Truth", crit ? "crit" : "dmg");

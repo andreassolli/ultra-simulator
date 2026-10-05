@@ -13,12 +13,13 @@ Exports (SymbolClass names, all scripts stripped so they are pure artwork):
   UI_CritDisplay  critDisplay       floating critical damage number    (crit)
   UI_AvoidDisplay avoidDisplay      "Miss!" / "Dodge!" style text      (miss, dodge, parry, block)
   UI_AutoIcon     sprite 2811       default auto-attack icon (crossed swords)
+  UI_SlotBg       ib1               the round skill-slot background (also used behind buff icons)
 """
 import sys
 import xml.etree.ElementTree as ET
 
 ROOTS = {"UI_PlayerBox": 3861, "UI_TargetBox": 3875, "UI_PartyPanel": 3446, "UI_ActBar": 3978,
-         "UI_HitDisplay": 3449, "UI_CritDisplay": 3419, "UI_AvoidDisplay": 3494, "UI_AutoIcon": 2811}
+         "UI_HitDisplay": 3449, "UI_CritDisplay": 3419, "UI_AvoidDisplay": 3494, "UI_AutoIcon": 2811, "UI_SlotBg": 2747}
 ID_KEYS = ("shapeId", "spriteId", "characterID", "characterId", "buttonId", "fontId", "fontID", "bitmapId", "imageId", "soundId", "videoId")
 
 

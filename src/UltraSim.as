@@ -3,6 +3,7 @@ package
     import AQWorlds.Avatar;
     import AQWorlds.AvatarMC;
 
+    import flash.display.Bitmap;
     import flash.display.DisplayObject;
     import flash.display.Loader;
     import flash.display.MovieClip;
@@ -29,6 +30,10 @@ package
 
     import flash.filters.GlowFilter;
 
+    import ui.BuffMagiaBurn;
+    import ui.BuffSomber;
+    import ui.BuffStasis;
+    import ui.BuffTaunt;
     import ui.UIActBar;
     import ui.UIAutoIcon;
     import ui.UIAvoidDisplay;
@@ -36,6 +41,7 @@ package
     import ui.UIHitDisplay;
     import ui.UIPartyPanel;
     import ui.UIPlayerBox;
+    import ui.UISlotBg;
     import ui.UITargetBox;
 
     /**
@@ -143,6 +149,7 @@ package
         private var targetBox:MovieClip;
         private var actBar:MovieClip;
         private var partyPanels:Object = {};
+        private var buffIcons:Object = {};
         private var armorDomain:ApplicationDomain;
         private var helmDomain:ApplicationDomain;
         private var portraitAt:int = 0;
@@ -545,11 +552,82 @@ package
             logText.y = 396;
             logText.autoSize = "none";
             g.addChild(logText);
+            buildBuffIcons();
             actBar = ui("UI_ActBar");
             actBar.x = 347;
             actBar.y = 494;
             g.addChild(actBar);
             buildButtons();
+        }
+
+        /**
+         * One boxed icon per effect, in the same round slot art as the skills. Boss effects (Taunt) sit under the boss
+         * frame, effects on our character (Stasis, Somber, Magia Burn) between our frame and the party frames.
+         */
+        private function buildBuffIcons():void
+        {
+            var defs:Array = [
+                {name: "taunt", icon: BuffTaunt, boss: true},
+                {name: "stasis", icon: BuffStasis, boss: false},
+                {name: "somber", icon: BuffSomber, boss: false},
+                {name: "magiaBurn", icon: BuffMagiaBurn, boss: false}
+            ];
+            for each (var d:Object in defs)
+            {
+                var size:Number = d.boss ? 30 : 23;
+                var slot:Sprite = new Sprite();
+                var bg:MovieClip = new UISlotBg();
+                var bb:Rectangle = bg.getBounds(bg);
+                var k:Number = size / Math.max(bb.width, bb.height);
+                bg.scaleX = bg.scaleY = k;
+                bg.x = -bb.x * k;
+                bg.y = -bb.y * k;
+                slot.addChild(bg);
+                var icon:Bitmap = new d.icon() as Bitmap;
+                var ik:Number = (size * 0.64) / icon.width;
+                icon.scaleX = icon.scaleY = ik;
+                icon.x = (size - icon.width) / 2;
+                icon.y = (size - icon.height) / 2;
+                slot.addChild(icon);
+                var cnt:TextField = Hud.label("", d.boss ? 10 : 9, 0xFFFFFF, true, "right", size);
+                cnt.x = 0;
+                cnt.y = size - (d.boss ? 15 : 14);
+                slot.addChild(cnt);
+                slot.mouseEnabled = false;
+                slot.mouseChildren = false;
+                slot.visible = false;
+                hudLayer.addChild(slot);
+                buffIcons[d.name] = {sp: slot, cnt: cnt, size: size, boss: d.boss};
+            }
+        }
+
+        /** Lay out the active effects in a row; `count` is the little number in the corner. */
+        private function showBuffs(active:Array):void
+        {
+            for each (var b:Object in buffIcons)
+            {
+                b.sp.visible = false;
+            }
+            var bx:Number = 245; // under the boss frame
+            var px:Number = 8; // under our frame
+            for each (var a:Object in active)
+            {
+                var ic:Object = buffIcons[a.name];
+                ic.cnt.text = a.count;
+                ic.sp.visible = true;
+                if (ic.boss)
+                {
+                    ic.sp.x = bx;
+                    ic.sp.y = 76;
+                    bx += ic.size + 4;
+                }
+                else
+                {
+                    ic.sp.x = px;
+                    ic.sp.y = 86;
+                    px += ic.size + 3;
+                }
+            }
         }
 
         private function buildParty():void
@@ -684,12 +762,12 @@ package
                     icon.x = cx - (ib.x + ib.width / 2) * k;
                     icon.y = cy - (ib.y + ib.height / 2) * k;
                 }
-                else if (i == 0)
+                else if (i == 0 || i == 5)
                 {
-                    // classes without their own auto-attack icon get Spider.swf's default one (sprite 2811)
+                    // Spider.swf's default icon (sprite 2811): auto attack for classes without their own, Taunt for everyone
                     icon = new UIAutoIcon();
                     var ab:Rectangle = icon.getBounds(icon);
-                    var ak:Number = (b.width * 0.86) / Math.max(ab.width, ab.height);
+                    var ak:Number = (b.width * 0.58) / Math.max(ab.width, ab.height);
                     icon.scaleX = icon.scaleY = ak;
                     icon.x = cx - (ab.x + ab.width / 2) * ak;
                     icon.y = cy - (ab.y + ab.height / 2) * ak;
@@ -1277,10 +1355,24 @@ package
             // buff chips
             var chips:Array = [];
             var t:Number = f.t;
+            var active:Array = [];
             if (f.currentTaunt() != null)
             {
-                chips.push("Taunt: " + ROLE_SHORT[f.currentTaunt()] + " " + ((f.tauntUntil - t) / 1000).toFixed(1) + "s");
+                active.push({name: "taunt", count: ROLE_SHORT[f.currentTaunt()]});
             }
+            if (f.stunned())
+            {
+                active.push({name: "stasis", count: ""});
+            }
+            if (f.somber[role] > 0)
+            {
+                active.push({name: "somber", count: String(f.somber[role])});
+            }
+            if (t < f.magiaBurnUntil)
+            {
+                active.push({name: "magiaBurn", count: ""});
+            }
+            showBuffs(active);
             if (t < f.ordinanceUntil)
             {
                 chips.push("Ordinance " + Math.round((f.ordinanceUntil - t) / 1000) + "s");
@@ -1304,10 +1396,6 @@ package
             if (t < f.lrEmpowerUntil)
             {
                 chips.push("LR Empowerment " + Math.round((f.lrEmpowerUntil - t) / 1000) + "s");
-            }
-            if (f.stunned())
-            {
-                chips.push("STASIS " + ((f.stunUntil - t) / 1000).toFixed(1) + "s");
             }
             for (var c:int = 0; c < chipTexts.length; c++)
             {

@@ -68,7 +68,10 @@ A Flash build of the Ultra Speaker fight, using the original SWFs at runtime ins
 The HUD is `Spider.swf`'s own: the player status box (portrait ring, HP / MP / SP bars, name, class, level), the target
 box for the boss, the compact party frames, the six-slot action bar and the floating damage numbers (`hitDisplay`,
 `critDisplay`, `avoidDisplay`, set up like `World.showHitDisplay()`: white hits, orange glowing crits, green `+N+`
-heals). Classes without an auto-attack icon use Spider.swf's default one (sprite 2811, crossed swords). Healing
+heals). Classes without an auto-attack icon use Spider.swf's default one (sprite 2811, crossed swords). The Taunt
+slot always uses that same icon, and it is drawn smaller than the class icons. Effects get their own boxed icons in the
+skill-slot art: Taunt (with the holder's role) under the boss frame; Stasis, Somber (with its stack count) and Magia Burn
+between our frame and the party frames (`src/_assets/buffs/*.png`). Healing
 (Ordinance, Heal) plays no cast effect. `tools/extract_ui.py` pulls those symbols out of `Spider.swf` into
 `src/_assets/ui.swf` (`ffdec-cli -swf2xml Spider.swf spider.xml`, run the script, `ffdec-cli -xml2swf ui.xml
 src/_assets/ui.swf`), and `src/ui/*.as` embed them like the other recovered classes. Portraits are filled the way the
