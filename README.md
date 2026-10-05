@@ -53,3 +53,37 @@ Inspect:
 Start with the highest-scoring classes and trace their references to determine
 which class actually controls the character, input, physics, and animation.
 # ultra-simulator
+
+## Ultra Speaker simulator (Flash)
+
+A Flash build of the Ultra Speaker fight, using the original SWFs at runtime instead of a re-drawn website:
+
+| File (`bin/runtime/`) | Used for |
+| --- | --- |
+| `town-ultraspeaker.swf` | The map: loaded and sent to its `Boss` frame; `rune1` / `safe1` are the Equal-zone clips |
+| `monster-UltraMalg.swf` | The boss clip `UltraMalg`, driven by its frame labels (`Attack1`, `Shadowflame`, `ChargeA`/`ChargeALoop`, `Absorption`, `Magic`, `Die` …) |
+| `Assets.swf` | Class skill icons (`LoO*`, `LR*`, `apal*`) and the cast effect |
+| `Armor.swf` `Cape.swf` `Helm.swf` `Weapon.swf` | Gear equipped on the player through `AvatarMC.load()` and its `onLoad*Complete` callbacks |
+
+The four players are `AvatarMC` instances (the recovered character), each with a health bar over its head and a
+party frame. Rules (`src/sim/Fight.as`) are a port of the web simulator: the boss rotation (auto / Truth / Listen /
+Equal), Somber + armor, Seal / Quix / taunt requirements, and the Lord of Order, Arch Paladin and Legion Revenant
+skills. Pick your class with the buttons top right; the other roles are scripted.
+
+```sh
+./build.sh          # bin/ultra_sim.swf (src/UltraSim.as)
+./build.sh test     # bin/character_test.swf (the original character test)
+```
+
+Open `bin/ultra_sim.swf` in Flash Player / AIR (`adl`) or Ruffle (that is how it was tested; keep `bin/runtime/` next
+to the SWF). Move by left-clicking the ground, click the boss to target it, skills on keys `1`–`6` or by clicking.
+With no zone active everyone stacks in the middle; during Equal only the named role stays there and the rest move
+to the right of the box. Optional FlashVars: `class=loo|ap|lr`, `bot=1` (auto-pilot), `speed=4`.
+
+Changes to the recovered code: `AvatarMC.load()` now reads files with `URLLoader` instead of AIR's `FileStream`
+(same behaviour in AIR, and it also runs outside AIR) and the AIR-only `allowLoadBytesCodeExecution` flag is
+set inside a try/catch. The client functions the loaded SWFs expect (`world.getQuestValue`, `mcSetColor`, ...) are
+small stubs in `UltraSim.as`.
+
+Assumptions: boss HP and the raid's damage are the web simulator's numbers, not data from the SWFs; the order of
+the class icons (`LoO1`–`LoO4` = Harmony … Quix, etc.) and which boss animation belongs to which ability are guesses.

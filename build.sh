@@ -7,7 +7,13 @@ MXMLC="${MXMLC:-$SDK/bin/mxmlc}"
 
 SRC="$PROJECT_DIR/src"
 OUT="$PROJECT_DIR/bin"
-OUTPUT="$OUT/character_test.swf"
+
+# ./build.sh        -> bin/ultra_sim.swf       (Ultra Speaker simulator, src/UltraSim.as)
+# ./build.sh test   -> bin/character_test.swf  (original character test, src/TestMain.as)
+case "${1:-sim}" in
+    test) MAIN="$SRC/TestMain.as"; OUTPUT="$OUT/character_test.swf"; WIDTH=1280; HEIGHT=720; FPS=30 ;;
+    *)    MAIN="$SRC/UltraSim.as"; OUTPUT="$OUT/ultra_sim.swf";       WIDTH=960;  HEIGHT=500; FPS=24 ;;
+esac
 
 if [ ! -x "$MXMLC" ] && [ ! -f "$MXMLC" ]; then
     echo "ERROR: mxmlc was not found:"
@@ -21,7 +27,7 @@ fi
 mkdir -p "$OUT"
 
 echo "=========================================="
-echo "Building recovered character test SWF"
+echo "Building $(basename "$OUTPUT")"
 echo "=========================================="
 echo "Project: $PROJECT_DIR"
 echo "SDK:     $SDK"
@@ -41,11 +47,11 @@ fi
 
 "$MXMLC" \
     -source-path+="src" \
-    -default-size 1280 720 \
-    -default-frame-rate=30 \
+    -default-size $WIDTH $HEIGHT \
+    -default-frame-rate=$FPS \
     -output="$OUTPUT" \
     $CONFIG \
-    "$SRC/TestMain.as"
+    "$MAIN"
 
 echo
 echo "=========================================="

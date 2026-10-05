@@ -5,12 +5,12 @@ package AQWorlds
    import flash.display.MovieClip;
    import flash.events.Event;
    import flash.events.IOErrorEvent;
-   import flash.filesystem.File;
-   import flash.filesystem.FileMode;
-   import flash.filesystem.FileStream;
    import flash.geom.ColorTransform;
    import flash.geom.Point;
    import flash.geom.Rectangle;
+   import flash.net.URLLoader;
+   import flash.net.URLLoaderDataFormat;
+   import flash.net.URLRequest;
    import flash.system.ApplicationDomain;
    import flash.system.LoaderContext;
    import flash.utils.ByteArray;
@@ -80,7 +80,7 @@ package AQWorlds
       
       private var LC:LoaderContext;
       
-      private var stream:FileStream;
+      private var stream:URLLoader;
       
       private var fileQueue:Array = [];
       
@@ -135,14 +135,18 @@ package AQWorlds
             return;
          }
          this.inProgress = true;
-         this.stream = new FileStream();
-         this.stream.openAsync(File.applicationDirectory.resolvePath(this.fileQueue[0].value),FileMode.READ);
+         // Recovered code read the file through AIR's FileStream. URLLoader works the same in
+         // AIR (paths are relative to the application directory) and in Flash Player / Ruffle.
+         this.stream = new URLLoader();
+         this.stream.dataFormat = URLLoaderDataFormat.BINARY;
          this.stream.addEventListener(IOErrorEvent.IO_ERROR,this.onError,false,0,true);
          this.stream.addEventListener(Event.COMPLETE,this.onFileComplete,false,0,true);
+         this.stream.load(new URLRequest(this.fileQueue[0].value));
       }
       
       private function onError(param1:IOErrorEvent) : void
       {
+         this.fileQueue.shift();
          this.inProgress = false;
       }
       
@@ -151,10 +155,15 @@ package AQWorlds
          this.AD = new ApplicationDomain();
          this.LC = new LoaderContext(false,this.AD);
          this.tLoader.contentLoaderInfo.addEventListener(Event.COMPLETE,this.fileQueue[0].callback,false,0,true);
-         this.LC.allowLoadBytesCodeExecution = true;
-         var _loc2_:ByteArray = new ByteArray();
-         this.stream.readBytes(_loc2_);
-         this.stream.close();
+         try
+         {
+            // AIR-only flag (needed there to run code from loadBytes); Flash Player / Ruffle don't have it
+            this.LC["allowLoadBytesCodeExecution"] = true;
+         }
+         catch(e:Error)
+         {
+         }
+         var _loc2_:ByteArray = ByteArray(this.stream.data);
          this.tLoader.loadBytes(_loc2_,this.LC);
       }
       
