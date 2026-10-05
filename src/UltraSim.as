@@ -154,6 +154,8 @@ package
         private var actBar:MovieClip;
         private var partyPanels:Object = {};
         private var buffIcons:Object = {};
+        private var bossBuffX:Number = 245;
+        private var playerBuffX:Number = 8;
         private var armorDomain:ApplicationDomain;
         private var helmDomain:ApplicationDomain;
         private var portraitAt:int = 0;
@@ -166,6 +168,7 @@ package
         private var overSub:TextField;
         private var skillSlots:Array = [];
         private var logText:TextField;
+        private var logPanel:Sprite;
         private var logLines:Array = [];
 
         public function UltraSim()
@@ -528,12 +531,12 @@ package
                 chipTexts.push(chip);
             }
             clockText = Hud.label("0:00", 14, 0xFFFFFF, true, "right", 100);
-            clockText.x = 850;
-            clockText.y = 6;
+            clockText.x = 854;
+            clockText.y = 78;
             g.addChild(clockText);
             nextText = Hud.label("", 11, 0x8A95AB, false, "right", 140);
-            nextText.x = 810;
-            nextText.y = 26;
+            nextText.x = 814;
+            nextText.y = 98;
             g.addChild(nextText);
             bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 960);
             bannerText.x = 0;
@@ -549,14 +552,21 @@ package
             overSub = Hud.label("", 15, 0xFFFFFF, false, "center", 960);
             overSub.y = 232;
             g.addChild(overSub);
-            logText = Hud.label("", 10, 0xB8C1D6, false, "left", 360);
+            logPanel = new Sprite();
+            Hud.panel(logPanel, 0, 0, 262, 98);
+            logPanel.x = 690;
+            logPanel.y = 398;
+            g.addChild(logPanel);
+            logText = Hud.label("", 11, 0xFFFFFF, false, "left", 252);
             logText.multiline = true;
             logText.wordWrap = true;
-            logText.height = 90;
-            logText.x = 660;
-            logText.y = 396;
+            logText.height = 92;
+            logText.x = 695;
+            logText.y = 401;
             logText.autoSize = "none";
             g.addChild(logText);
+            bossBuffX = targetBox.x + targetBox["HP"].x;
+            playerBuffX = playerBox.x + playerBox["HP"].x;
             buildBuffIcons();
             actBar = ui("UI_ActBar");
             // centre the six round slots on the stage
@@ -646,12 +656,12 @@ package
                 var row:int = int(n / BUFFS_PER_ROW);
                 if (ic.boss)
                 {
-                    ic.sp.x = 245 + col * (ic.size + 4); // under the boss frame
+                    ic.sp.x = bossBuffX + col * (ic.size + 4); // directly under the boss' bars
                     ic.sp.y = 76 + row * (ic.size + 4);
                 }
                 else
                 {
-                    ic.sp.x = 8 + col * (ic.size + 3); // under our frame
+                    ic.sp.x = playerBuffX + col * (ic.size + 3); // directly under our bars
                     ic.sp.y = 86 + row * (ic.size + 3);
                 }
             }
@@ -734,15 +744,15 @@ package
 
         private function buildButtons():void
         {
-            button("Lord of Order", 676, 52, 90, function():void { newFight("loo"); });
-            button("Arch Paladin", 770, 52, 90, function():void { newFight("ap"); });
-            button("Legion Rev.", 864, 52, 90, function():void { newFight("lr"); });
-            button("Restart", 676, 76, 60, function():void { newFight(role); });
-            button("Auto-pilot", 740, 76, 70, function():void { botOn = !botOn; });
-            button("Pause", 814, 76, 50, function():void { paused = !paused; });
-            hintsLabel = button("", 676, 100, 150, toggleHints);
+            button("Lord of Order", 676, 4, 90, function():void { newFight("loo"); });
+            button("Arch Paladin", 770, 4, 90, function():void { newFight("ap"); });
+            button("Legion Rev.", 864, 4, 90, function():void { newFight("lr"); });
+            button("Restart", 676, 28, 60, function():void { newFight(role); });
+            button("Auto-pilot", 740, 28, 70, function():void { botOn = !botOn; });
+            button("Pause", 814, 28, 50, function():void { paused = !paused; });
+            hintsLabel = button("", 676, 52, 150, toggleHints);
             hintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
-            button("Fullscreen (F)", 836, 100, 118, toggleFullscreen);
+            button("Fullscreen (F)", 836, 52, 118, toggleFullscreen);
         }
 
         private function toggleHints():void
@@ -1467,6 +1477,7 @@ package
             // with hints off nothing says whose zone it is, who must taunt, or what is coming next
             nextText.text = hintsOn ? "Next: " + Fight.PATTERN[f.ruleIdx] : "";
             logText.visible = hintsOn;
+            logPanel.visible = hintsOn;
             bannerText.text = (hintsOn && banner != "" && f.t < bannerUntil) ? banner : "";
             bannerText.textColor = bannerColor;
             shoutText.text = (shout != "" && f.t < shoutUntil) ? shout : "";
