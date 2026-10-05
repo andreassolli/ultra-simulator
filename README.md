@@ -53,3 +53,7 @@ Inspect:
 Start with the highest-scoring classes and trace their references to determine
 which class actually controls the character, input, physics, and animation.
 # ultra-simulator
+
+## Ultra Speaker simulator
+
+See [`sim/`](sim/README.md) — a browser simulator of the Ultra Speaker boss fight built from the map, monster and skill SWFs.

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultra Speaker Simulator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Ultra Speaker <small>boss simulator</small></h1>
+    <div class="ctl">
+      <button id="btnRestart">Restart</button>
+      <button id="btnPause">Pause</button>
+      <label>Speed
+        <select id="selSpeed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+      </label>
+      <label class="chk"><input type="checkbox" id="chkBot"> Auto-pilot</label>
+      <label class="chk"><input type="checkbox" id="chkMana"> Infinite MP</label>
+    </div>
+  </header>
+
+  <div class="stagewrap"><canvas id="stage" width="960" height="500"></canvas><div id="loading">Loading…</div></div>
+
+  <section class="bar" id="skillbar"></section>
+
+  <section class="panels">
+    <div class="panel">
+      <h2>Skill set</h2>
+      <p class="hint">Effects and icons are the <code>sp_*</code> clips from <code>Assets_20260731.swf</code>. Pick a set to fill slots, or choose a clip per slot.</p>
+      <select id="selSet"></select>
+      <div id="slotPickers"></div>
+    </div>
+    <div class="panel">
+      <h2>Mechanics</h2>
+      <ul class="hint">
+        <li><b>Charge A</b> (zone A): the red rune lights and <code>safe1</code> glows — stay <em>inside</em> the glowing box.</li>
+        <li><b>Charge B</b> (zone B): rune lit, box dark — stay <em>outside</em> the box.</li>
+        <li><b>PowerUp</b>: raid blast on release (<code>Attack2</code>) — keep HP high.</li>
+        <li>Shadowflame circles are telegraphed; melee swings hit near the boss.</li>
+      </ul>
+      <p class="hint">Move: WASD / arrows / click ground · Target: click boss · Skills: 1–5 · Potion: 6 · Tab: auto-attack.</p>
+    </div>
+    <div class="panel">
+      <h2>Fight stats</h2>
+      <div id="stats"></div>
+      <div id="log"></div>
+    </div>
+  </section>
+</main>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
