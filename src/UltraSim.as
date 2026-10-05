@@ -33,7 +33,9 @@ package
 
     import flash.filters.GlowFilter;
 
+    import ui.BuffAeternaNox;
     import ui.BuffMagiaBurn;
+    import ui.BuffNoxiousDecay;
     import ui.BuffSomber;
     import ui.BuffStasis;
     import ui.BuffTaunt;
@@ -693,15 +695,15 @@ package
                 {name: "harmony", icon: "LoO1", boss: false},
                 {name: "axiom", icon: "LoO3", boss: false},
                 {name: "ordinance", icon: "LoO2", boss: false},
-                // Ultra Dage: the SWFs have no pictures for his effects, so those get a lettered badge
+                // Ultra Dage: Aeterna Nox's picture stands for all of his effects except Noxious Decay
                 {name: "focus", icon: BuffTaunt, boss: true},
-                {name: "cloak", glyph: ["C", 0x4A3A7A], boss: true},
-                {name: "might", glyph: ["M", 0xA82C2C], boss: true},
-                {name: "legion", glyph: ["+", 0x2E8B57], boss: true},
-                {name: "blood", glyph: ["B", 0x7A1A3A], boss: true},
+                {name: "cloak", icon: BuffAeternaNox, fill: true, boss: true},
+                {name: "might", icon: BuffAeternaNox, fill: true, boss: true},
+                {name: "legion", icon: BuffAeternaNox, fill: true, boss: true},
+                {name: "blood", icon: BuffAeternaNox, fill: true, boss: true},
                 {name: "siphon", icon: "Chavengea1", boss: true},
-                {name: "aeterna", glyph: ["A", 0x7B3FA0], boss: false},
-                {name: "decay", glyph: ["D", 0x4F8A2E], boss: false},
+                {name: "aeterna", icon: BuffAeternaNox, fill: true, boss: false},
+                {name: "decay", icon: BuffNoxiousDecay, fill: true, boss: false},
                 {name: "bulwark", icon: "Chavengea3", boss: false},
                 {name: "fury", icon: "Chavengea4", boss: false},
                 {name: "thinair", icon: "iea1", boss: false}
@@ -732,7 +734,7 @@ package
                     icon = new d.icon() as DisplayObject;
                 }
                 var ib:Rectangle = icon.getBounds(icon);
-                var ik:Number = (size * (d.glyph || d.icon is String ? 0.8 : 0.64)) / Math.max(ib.width, ib.height);
+                var ik:Number = (size * (d.fill ? 0.9 : (d.icon is String ? 0.8 : 0.64))) / Math.max(ib.width, ib.height);
                 icon.scaleX = icon.scaleY = ik;
                 icon.x = size / 2 - (ib.x + ib.width / 2) * ik;
                 icon.y = size / 2 - (ib.y + ib.height / 2) * ik;
@@ -1180,7 +1182,14 @@ package
             bossLoop = loop;
             if (bossMC)
             {
-                bossMC.gotoAndPlay(label);
+                if (bossId == "dage" && label == "Idle")
+                {
+                    bossMC.gotoAndStop(label); // Ruffle runs on from the Idle label into Walk; he would jog on the spot
+                }
+                else
+                {
+                    bossMC.gotoAndPlay(label);
+                }
             }
         }
 

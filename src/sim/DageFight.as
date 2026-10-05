@@ -389,6 +389,7 @@ package sim
                     casts.missedTaunt++;
                     host2.floater("ca", "Missed Taunt", "bad");
                     host2.log("Auto attack hit everyone: no Focus after Decaying Strike", "bad");
+                    later(CAST.auto, function():void { finish("lose", "Missed Taunt (auto attack)"); });
                 }
                 else if (taunted)
                 {
@@ -458,6 +459,11 @@ package sim
                     if (r == playerRole)
                     {
                         casts[on ? "plates" : "missedPlate"]++;
+                        if (!on)
+                        {
+                            finish("lose", "Missed the plate");
+                            return;
+                        }
                     }
                     hit(r, rnd(3986, 4871) * (on ? 0.2 : 1), on ? "Brute Undead (on the plate)" : "Brute Undead - off the plate");
                     if (over)
@@ -482,18 +488,13 @@ package sim
             host2.bossAnim("Powerup", false);
             later(3900, function():void { host2.bossAnim("PowerLoop", true); });
             later(8000, function():void { host2.bossAnim("Aoe", false); });
-            later(6500, function():void { host2.mechanic("ca", "regen", 0, 0); }); // tauntable: taunt now
             npcTank(8200);
             var picked:Array = null;
             later(CAST.regen, function():void {
                 picked = targets();
                 var tauntedNow:Boolean = currentTaunt() != null;
-                if (playerClass == "ca" && !tauntedNow)
-                {
-                    casts.missedTaunt++;
-                    host2.floater("ca", "Missed Taunt", "bad");
-                }
-                else if (tauntedNow)
+                // tauntable, but the Flux is needed for the Decaying Strike that follows it, so it is optional
+                if (tauntedNow)
                 {
                     casts.taunted++;
                 }
