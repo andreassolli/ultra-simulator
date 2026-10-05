@@ -79,7 +79,8 @@ package sim
 
         public static function panel(s:Sprite, x:Number, y:Number, w:Number, h:Number):void
         {
-            s.graphics.beginFill(0x080a12, 0.72);
+            s.graphics.lineStyle(1, 0x3A4560, 0.9);
+            s.graphics.beginFill(0x080a12, 0.78);
             s.graphics.drawRoundRect(x, y, w, h, 8, 8);
             s.graphics.endFill();
         }

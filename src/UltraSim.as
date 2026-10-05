@@ -140,6 +140,8 @@ package
         private var paused:Boolean = false;
         private var hintsOn:Boolean = true; // context hints: who's zone it is, taunt / quix / seal prompts, next cast, log
         private var hintsLabel:TextField;
+        private var startScreen:Sprite;
+        private var cards:Object = {};
         private var simSpeed:Number = 1;
         private var botOn:Boolean = false;
         private var botQueue:Array = [];
@@ -164,6 +166,7 @@ package
         private var chipTexts:Array = [];
         private var clockText:TextField;
         private var nextText:TextField;
+        private var nextPanel:Sprite;
         private var bannerText:TextField;
         private var shoutText:TextField;
         private var overText:TextField;
@@ -305,12 +308,21 @@ package
                     ExternalInterface.addCallback("setSpeed", function(s:Number):void { simSpeed = s; });
                     ExternalInterface.addCallback("setPaused", function(p:Boolean):void { paused = p; });
                     ExternalInterface.addCallback("startClass", function(r:String):void { newFight(r); });
+                    ExternalInterface.addCallback("play", playGame);
                 }
             }
             catch (err:Error)
             {
             }
             ready = true;
+            if (loaderInfo.parameters["autoplay"] == "1")
+            {
+                paused = false;
+            }
+            else
+            {
+                showStartScreen();
+            }
         }
 
         private function buildMap():void
@@ -535,13 +547,16 @@ package
             }
             clockText = Hud.label("0:00", 14, 0xFFFFFF, true, "right", 100);
             clockText.x = 854;
-            clockText.y = 78;
+            clockText.y = 54;
             g.addChild(clockText);
-            nextText = Hud.label("", 15, 0xFFFFFF, true, "right", 270);
-            nextText.background = true;
-            nextText.backgroundColor = 0x080a12;
-            nextText.x = 684;
-            nextText.y = 100;
+            nextPanel = new Sprite();
+            Hud.panel(nextPanel, 0, 0, 262, 26);
+            nextPanel.x = 690;
+            nextPanel.y = 78;
+            g.addChild(nextPanel);
+            nextText = Hud.label("", 14, 0xFFFFFF, true, "left", 252);
+            nextText.x = 695;
+            nextText.y = 81;
             g.addChild(nextText);
             bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 960);
             bannerText.x = 0;
@@ -754,15 +769,112 @@ package
 
         private function buildButtons():void
         {
-            button("Lord of Order", 676, 4, 90, function():void { newFight("loo"); });
-            button("Arch Paladin", 770, 4, 90, function():void { newFight("ap"); });
-            button("Legion Rev.", 864, 4, 90, function():void { newFight("lr"); });
-            button("Restart", 676, 28, 60, function():void { newFight(role); });
-            button("Auto-pilot", 740, 28, 70, function():void { botOn = !botOn; });
-            button("Pause", 814, 28, 50, function():void { paused = !paused; });
-            hintsLabel = button("", 676, 52, 150, toggleHints);
+            button("Restart", 676, 4, 70, function():void { newFight(role); showStartScreen(); });
+            button("Auto-pilot", 750, 4, 90, function():void { botOn = !botOn; });
+            button("Pause", 844, 4, 110, function():void { paused = !paused; });
+            hintsLabel = button("", 676, 28, 150, toggleHints);
             hintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
-            button("Fullscreen (F)", 836, 52, 118, toggleFullscreen);
+            button("Fullscreen (F)", 836, 28, 118, toggleFullscreen);
+        }
+
+        /** Class selection + Play; the fight sits paused (and untouched) behind it until Play is pressed. */
+        private function showStartScreen():void
+        {
+            if (startScreen && startScreen.parent)
+            {
+                return;
+            }
+            paused = true;
+            startScreen = new Sprite();
+            startScreen.graphics.beginFill(0x05070d, 0.84);
+            startScreen.graphics.drawRect(0, 0, STAGE_W, STAGE_H);
+            startScreen.graphics.endFill();
+            var title:TextField = Hud.label("Ultra Speaker", 44, 0xFFD24A, true, "center", STAGE_W);
+            title.y = 44;
+            startScreen.addChild(title);
+            var sub:TextField = Hud.label("Select your class", 18, 0xFFFFFF, false, "center", STAGE_W);
+            sub.y = 108;
+            startScreen.addChild(sub);
+            var classes:Array = [["loo", "LoOaa"], ["ap", "apal1"], ["lr", "LRaa"]];
+            cards = {};
+            for (var i:int = 0; i < classes.length; i++)
+            {
+                var card:Sprite = new Sprite();
+                card.x = 165 + i * 220;
+                card.y = 150;
+                card.buttonMode = true;
+                var cr:String = classes[i][0];
+                var C:Class = assetsDomain.getDefinition(classes[i][1]) as Class;
+                var icon:DisplayObject = new C() as DisplayObject;
+                var ib:Rectangle = icon.getBounds(icon);
+                var k:Number = 76 / Math.max(ib.width, ib.height);
+                icon.scaleX = icon.scaleY = k;
+                icon.x = 100 - (ib.x + ib.width / 2) * k;
+                icon.y = 58 - (ib.y + ib.height / 2) * k;
+                card.addChild(icon);
+                var nm:TextField = Hud.label(CLASS_NAMES[cr], 16, 0xFFFFFF, true, "center", 200);
+                nm.y = 106;
+                card.addChild(nm);
+                card.addEventListener(MouseEvent.MOUSE_DOWN, makeCardHandler(cr));
+                startScreen.addChild(card);
+                cards[cr] = card;
+            }
+            var play:Sprite = new Sprite();
+            play.graphics.beginFill(0xE0B84A, 1);
+            play.graphics.drawRoundRect(0, 0, 220, 52, 12, 12);
+            play.graphics.endFill();
+            var pt:TextField = Hud.label("Play", 26, 0x15110a, true, "center", 220);
+            pt.y = 9;
+            play.addChild(pt);
+            play.x = (STAGE_W - 220) / 2;
+            play.y = 340;
+            play.buttonMode = true;
+            play.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
+                e.stopPropagation();
+                playGame();
+            });
+            startScreen.addChild(play);
+            var help:TextField = Hud.label("Left-click: move / target the boss  |  1-6: skills  |  H: hints  |  F: fullscreen", 12, 0x9BA6BD, false, "center", STAGE_W);
+            help.y = 420;
+            startScreen.addChild(help);
+            startScreen.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
+            addChild(startScreen);
+            markCard();
+        }
+
+        private function makeCardHandler(r:String):Function
+        {
+            return function(e:MouseEvent):void {
+                e.stopPropagation();
+                if (r != role)
+                {
+                    newFight(r); // rebuilds the party with this class and equips the gear while the screen is up
+                }
+                markCard();
+            };
+        }
+
+        private function markCard():void
+        {
+            for (var r:String in cards)
+            {
+                var c:Sprite = cards[r];
+                c.graphics.clear();
+                c.graphics.lineStyle(r == role ? 3 : 1, r == role ? 0xFFD24A : 0x3A4560, 1);
+                c.graphics.beginFill(r == role ? 0x1d2433 : 0x10141f, 0.95);
+                c.graphics.drawRoundRect(0, 0, 200, 140, 12, 12);
+                c.graphics.endFill();
+            }
+        }
+
+        private function playGame():void
+        {
+            if (startScreen && startScreen.parent)
+            {
+                removeChild(startScreen);
+            }
+            paused = false;
+            lastTime = getTimer();
         }
 
         private function toggleHints():void
@@ -1020,11 +1132,12 @@ package
         {
             var t:Number = fight ? fight.t / 1000 : 0;
             logLines.push("[" + t.toFixed(1) + "s] " + message);
-            while (logLines.length > 7)
+            while (logLines.length > 80)
             {
                 logLines.shift();
             }
             logText.text = logLines.join("\n");
+            logText.scrollV = logText.maxScrollV; // keep the newest line in view
         }
 
         public function playerInZone():Boolean
@@ -1041,13 +1154,11 @@ package
 
         public function castFx(kind:String, r:String):void
         {
-            // healing plays its effect only when the player casts it themselves, on everyone it heals;
-            // heals cast by the scripted party members show only their numbers
-            var heals:Boolean = (kind == "ordinance" || kind == "heal");
-            if (!heals || r == role)
+            // the sparkle is the healing effect: it plays only when the player casts a heal themselves, on everyone it heals
+            if ((kind == "ordinance" || kind == "heal") && r == role)
             {
                 var C:Class = assetsDomain.getDefinition("Assets_20260702_fla.Symbol3aaaaa_loo_757") as Class;
-                for each (var who:String in (heals ? Fight.ROLES : [r]))
+                for each (var who:String in Fight.ROLES)
                 {
                     var clip:MovieClip = new C() as MovieClip;
                     clip.mouseEnabled = false;
@@ -1138,7 +1249,7 @@ package
         // ===================================================================== input
         private function onMouseDown(e:MouseEvent):void
         {
-            if (!ready || fight.over)
+            if (!ready || fight.over || (startScreen && startScreen.parent))
             {
                 return;
             }
@@ -1156,6 +1267,14 @@ package
 
         private function onKeyDown(e:KeyboardEvent):void
         {
+            if (startScreen && startScreen.parent)
+            {
+                if (e.keyCode == 13) // Enter = Play
+                {
+                    playGame();
+                }
+                return;
+            }
             var k:int = e.keyCode - 48; // keys 1-6
             if (k >= 1 && k <= 6)
             {
@@ -1491,8 +1610,9 @@ package
             var secs:Number = f.t / 1000;
             clockText.text = int(secs / 60) + ":" + (int(secs % 60) < 10 ? "0" : "") + int(secs % 60);
             // with hints off nothing says whose zone it is, who must taunt, or what is coming next
-            nextText.text = hintsOn ? "Next: " + NEXT_NAMES[Fight.PATTERN[f.ruleIdx]] + " " : "";
+            nextText.text = hintsOn ? "Next: " + NEXT_NAMES[Fight.PATTERN[f.ruleIdx]] : "";
             nextText.visible = hintsOn;
+            nextPanel.visible = hintsOn;
             logText.visible = hintsOn;
             logPanel.visible = hintsOn;
             bannerText.text = (hintsOn && banner != "" && f.t < bannerUntil) ? banner : "";
