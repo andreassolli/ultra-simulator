@@ -67,6 +67,7 @@ package
         private static const CHAR_SCALE:Number = 0.65;
         private static const BOSS_SCALE:Number = 0.3;
         private static const STAGE_W:Number = 960;
+        private static const BUFFS_PER_ROW:int = 4;
         private static const BOSS_NAME:String = "Ultra Speaker";
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
         private static const PORTRAIT_CX:Number = 50;
@@ -84,7 +85,7 @@ package
             lr: [["Attack", "LRaa"], ["Shade", "LR1"], ["Wicked", "LR2"], ["Empowerment", "LR3"], ["Anathema", "LR4"], ["Taunt", null]]
         };
 
-        private static const BOSS_FRAMES:Object = {ChargeALoop: [154, 172]};
+        private static const BOSS_FRAMES:Object = {ChargeALoop: [154, 172], PowerLoop: [95, 111], ChargeBLoop: [209, 228]};
 
         // skin / hair / eye tones applied to the colour-keyed layers of the equipped items
         private static const COLORS:Object = {intColorSkin: 0xF0C9A0, intColorHair: 0xB9B9C4, intColorEye: 0x4A90D9};
@@ -538,9 +539,9 @@ package
             bannerText.x = 0;
             bannerText.y = 114;
             g.addChild(bannerText);
-            shoutText = Hud.label("", 13, 0xE9E2FF, false, "center", 960);
+            shoutText = Hud.label("", 19, 0xFFD24A, true, "center", 960); // boss speech: yellow, larger
             shoutText.x = 0;
-            shoutText.y = 138;
+            shoutText.y = 136;
             g.addChild(shoutText);
             overText = Hud.label("", 40, 0xFFFFFF, true, "center", 960);
             overText.y = 180;
@@ -633,25 +634,32 @@ package
             {
                 b.sp.visible = false;
             }
-            var bx:Number = 245; // under the boss frame
-            var px:Number = 8; // under our frame
+            var bossN:int = 0;
+            var meN:int = 0;
             for each (var a:Object in active)
             {
                 var ic:Object = buffIcons[a.name];
                 ic.cnt.text = a.count;
                 ic.sp.visible = true;
+                var n:int = ic.boss ? bossN++ : meN++;
+                var col:int = n % BUFFS_PER_ROW;
+                var row:int = int(n / BUFFS_PER_ROW);
                 if (ic.boss)
                 {
-                    ic.sp.x = bx;
-                    ic.sp.y = 76;
-                    bx += ic.size + 4;
+                    ic.sp.x = 245 + col * (ic.size + 4); // under the boss frame
+                    ic.sp.y = 76 + row * (ic.size + 4);
                 }
                 else
                 {
-                    ic.sp.x = px;
-                    ic.sp.y = 86;
-                    px += ic.size + 3;
+                    ic.sp.x = 8 + col * (ic.size + 3); // under our frame
+                    ic.sp.y = 86 + row * (ic.size + 3);
                 }
+            }
+            // a second row of our effects pushes the party frames down so nothing overlaps
+            var extra:Number = Math.max(0, int((meN + BUFFS_PER_ROW - 1) / BUFFS_PER_ROW) - 1) * 26;
+            for each (var pp:MovieClip in partyPanels)
+            {
+                pp.y = pp.baseY + extra;
             }
         }
 
@@ -675,6 +683,7 @@ package
                 var p:MovieClip = ui("UI_PartyPanel");
                 p.x = 10;
                 p.y = y;
+                p.baseY = y;
                 p["strName"].text = (r == "dps" ? "DPS" : CLASS_NAMES[r]);
                 hudLayer.addChild(p);
                 partyPanels[r] = p;
@@ -1589,7 +1598,7 @@ package
             return "{\"t\":" + Math.round(f.t) + ",\"bossHp\":" + Math.round(f.bossHp) +
                 ",\"hp\":{\"ap\":" + f.hp.ap + ",\"lr\":" + f.hp.lr + ",\"loo\":" + f.hp.loo + ",\"dps\":" + f.hp.dps + "}" +
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
-                ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\"" +
+                ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
                 ",\"gear\":\"" + gearState() + "\"}";
         }

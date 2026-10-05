@@ -299,7 +299,10 @@ package sim
         private function truth(n:int):void
         {
             last["truth"] = t;
-            host.bossAnim("Shadowflame", false);
+            // charge up (PowerUp -> PowerLoop), then Shadowflame timed to finish as the hit lands at 2.0 s
+            host.bossAnim("PowerUp", false);
+            after(710, function():void { host.bossAnim("PowerLoop", true); });
+            after(1250, function():void { host.bossAnim("Shadowflame", false); });
             host.announce("I will make you see the truth.");
             var base:int = irnd(1447, 1766);
             var crit:Boolean = base > 1447 + 220;
@@ -349,7 +352,10 @@ package sim
         private function listen():void
         {
             last["listen"] = t;
-            host.bossAnim("Magic", false);
+            // ChargeB -> ChargeBLoop, then Magic timed to finish as the stun lands at 2.0 s
+            host.bossAnim("ChargeB", false);
+            after(750, function():void { host.bossAnim("ChargeBLoop", true); });
+            after(1165, function():void { host.bossAnim("Magic", false); });
             host.announce("You shall listen.");
             var holder:String = mech;
             after(2000, function():void {
