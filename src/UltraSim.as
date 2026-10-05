@@ -8,12 +8,15 @@ package
     import flash.display.MovieClip;
     import flash.display.Shape;
     import flash.display.Sprite;
+    import flash.display.StageDisplayState;
+    import flash.display.StageScaleMode;
     import flash.events.Event;
     import flash.events.IOErrorEvent;
     import flash.events.KeyboardEvent;
     import flash.events.MouseEvent;
     import flash.external.ExternalInterface;
     import flash.geom.Point;
+    import flash.geom.Rectangle;
     import flash.net.URLRequest;
     import flash.system.ApplicationDomain;
     import flash.system.LoaderContext;
@@ -23,6 +26,11 @@ package
     import sim.Fight;
     import sim.Hud;
     import sim.IFightHost;
+
+    import ui.UIActBar;
+    import ui.UIPartyPanel;
+    import ui.UIPlayerBox;
+    import ui.UITargetBox;
 
     /**
      * Ultra Speaker boss simulator, running as a Flash movie.
@@ -34,7 +42,7 @@ package
      * Document class must extend MovieClip: the loaded SWFs do MovieClip(stage.getChildAt(0)).world
      * so `world` below is a small stand-in for the game client they expect.
      */
-    [SWF(width="960", height="500", frameRate="24", backgroundColor="#000000")]
+    [SWF(width="960", height="550", frameRate="24", backgroundColor="#000000")]
     public dynamic class UltraSim extends MovieClip implements IFightHost
     {
         // ---- geometry (twips/20 from the map's Boss frame, see README) ------------------
@@ -47,6 +55,10 @@ package
         private static const CHAR_SCALE:Number = 0.65;
         private static const BOSS_SCALE:Number = 0.3;
         private static const BOSS_NAME:String = "Ultra Speaker";
+        // centre / size of the portrait ring in the local coordinates of the status box's mcHead
+        private static const PORTRAIT_CX:Number = 50;
+        private static const PORTRAIT_CY:Number = 25;
+        private static const PORTRAIT_SIZE:Number = 58;
 
         private static const ROLE_COLOR:Object = {ap: 0xE8D9A0, lr: 0xE0507A, loo: 0xE0B84A, dps: 0x5AA86A};
         private static const ROLE_SHORT:Object = {ap: "AP", lr: "LR", loo: "LoO", dps: "DPS"};
@@ -121,14 +133,13 @@ package
         private var startTime:int = 0;
 
         // ---- HUD pieces ---------------------------------------------------------------------
-        private var bossBar:Shape = new Shape();
-        private var bossText:TextField;
-        private var bossName:TextField;
-        private var castBar:Shape = new Shape();
-        private var partyBars:Object = {};
-        private var partyTexts:Object = {};
-        private var partyNames:Object = {};
-        private var partySomber:Object = {};
+        private var playerBox:MovieClip;
+        private var targetBox:MovieClip;
+        private var actBar:MovieClip;
+        private var partyPanels:Object = {};
+        private var armorDomain:ApplicationDomain;
+        private var helmDomain:ApplicationDomain;
+        private var portraitAt:int = 0;
         private var chipTexts:Array = [];
         private var clockText:TextField;
         private var nextText:TextField;
@@ -175,6 +186,9 @@ package
         {
             removeEventListener(Event.ADDED_TO_STAGE, init);
             stage.frameRate = 24;
+            // scale the whole 960x550 game to the window / full screen, keeping the aspect ratio
+            stage.scaleMode = StageScaleMode.SHOW_ALL;
+            stage.align = "";
             var p:Object = loaderInfo.parameters;
             if (p["class"] && CLASS_NAMES[p["class"]])
             {
@@ -200,10 +214,12 @@ package
             mapHolder.onWalkClick = function():void {};
             mapLayer.addChild(mapHolder);
 
-            pending = 3;
+            pending = 5;
             mapDomain = loadSwf("runtime/town-ultraspeaker.swf", onMapLoaded);
             bossDomain = loadSwf("runtime/monster-UltraMalg.swf", onBossLoaded);
             assetsDomain = loadSwf("runtime/Assets.swf", onAssetsLoaded);
+            armorDomain = loadSwf("runtime/Armor.swf", onAssetsLoaded);
+            helmDomain = loadSwf("runtime/Helm.swf", onAssetsLoaded);
         }
 
         private function loadSwf(url:String, done:Function):ApplicationDomain
@@ -399,49 +415,95 @@ package
             mc.load("runtime/Helm.swf", mc.onLoadHelmComplete);
         }
 
+        private function ui(name:String):MovieClip
+        {
+            switch (name)
+            {
+                case "UI_PlayerBox":
+                    return new UIPlayerBox();
+                case "UI_TargetBox":
+                    return new UITargetBox();
+                case "UI_PartyPanel":
+                    return new UIPartyPanel();
+                default:
+                    return new UIActBar();
+            }
+        }
+
+        private static function setFace(head:MovieClip, face:DisplayObject):void
+        {
+            var old:DisplayObject = head.head.getChildByName("face");
+            if (old)
+            {
+                head.head.removeChild(old);
+            }
+            head.head.addChildAt(face, 0).name = "face";
+        }
+
+        /** Same recolouring AvatarMC.scanColor() does, applied to the portrait's item layers. */
+        private function tintPortrait(c:DisplayObject):void
+        {
+            var mc:MovieClip = c as MovieClip;
+            if (mc == null)
+            {
+                return;
+            }
+            if ("isColored" in mc)
+            {
+                actors[role].mc.changeColor(mc, Number(COLORS["intColor" + mc.strLocation]), mc.strShade);
+            }
+            for (var i:int = 0; i < mc.numChildren; i++)
+            {
+                tintPortrait(mc.getChildAt(i));
+            }
+        }
+
         private function buildHud():void
         {
             var g:Sprite = hudLayer;
-            // boss frame
-            Hud.panel(g, 322, 6, 336, 50);
-            bossName = Hud.label(BOSS_NAME, 14, 0xFFFFFF, true);
-            bossName.x = 330;
-            bossName.y = 6;
-            g.addChild(bossName);
-            var lvl:TextField = Hud.label("Lvl 100", 12, 0xFFD24A, false, "right", 80);
-            lvl.x = 570;
-            lvl.y = 8;
-            g.addChild(lvl);
-            bossBar.x = 330;
-            bossBar.y = 31;
-            g.addChild(bossBar);
-            bossText = Hud.label("", 11, 0xFFFFFF, true, "center", 320);
-            bossText.x = 330;
-            bossText.y = 30;
-            g.addChild(bossText);
-            castBar.x = 330;
-            castBar.y = 50;
-            g.addChild(castBar);
-
-            // party frames
-            Hud.panel(g, 6, 6, 218, 118);
-            var r:String;
-            for each (r in Fight.ROLES)
+            // game.swf's own HUD pieces (bin/runtime/ui.swf, see tools/extract_ui.py), at their in-game positions
+            playerBox = ui("UI_PlayerBox");
+            playerBox.x = 2.6;
+            playerBox.y = 3.6;
+            g.addChild(playerBox);
+            targetBox = ui("UI_TargetBox");
+            targetBox.x = 296.6;
+            targetBox.y = 1.2;
+            g.addChild(targetBox);
+            // portrait rings, filled the way Game.showPortraitBox() does it: swap the face (and helm) classes into mcHead.head
+            var BossHead:Class = bossDomain.getDefinition("mcHeadUltraMalg") as Class;
+            setFace(targetBox["mcHead"], new BossHead() as DisplayObject);
+            targetBox["mcHead"].head.hair.visible = false;
+            targetBox["mcHead"].head.helm.visible = false;
+            targetBox["mcHead"].backhair.visible = false;
+            targetBox["btnOption"].visible = false;
+            playerBox["pfphud"].visible = false; // the black custom-portrait disc (Game.clearPortraitFromBox hides it)
+            targetBox["pfphud"].visible = false;
+            var head:MovieClip = playerBox["mcHead"];
+            setFace(head, new (armorDomain.getDefinition("CoastalRFHead") as Class)() as DisplayObject);
+            head.head.hair.visible = false;
+            while (head.head.helm.numChildren > 0)
             {
-                partyBars[r] = new Shape();
-                partyTexts[r] = Hud.label("", 10, 0xFFFFFF, true, "center", 200);
-                partyNames[r] = Hud.label("", 11, ROLE_COLOR[r], true);
-                partySomber[r] = Hud.label("", 10, 0xC58BFF, false, "right", 120);
-                g.addChild(partyBars[r]);
-                g.addChild(partyTexts[r]);
-                g.addChild(partyNames[r]);
-                g.addChild(partySomber[r]);
+                head.head.helm.removeChildAt(0);
             }
+            head.head.helm.addChild(new (helmDomain.getDefinition("SteelSeasVisage") as Class)() as DisplayObject);
+            head.head.helm.visible = true;
+            while (head.backhair.numChildren > 0)
+            {
+                head.backhair.removeChildAt(0);
+            }
+            head.backhair.addChild(new (helmDomain.getDefinition("SteelSeasVisage_backhair") as Class)() as DisplayObject);
+            head.backhair.visible = true;
+            playerBox["strName"].text = "Hero";
+            playerBox["strLevel"].text = "100";
+            targetBox["strName"].text = BOSS_NAME;
+            targetBox["strClass"].text = "Boss";
+            targetBox["strLevel"].text = "100";
             for (var i:int = 0; i < 9; i++)
             {
                 var chip:TextField = Hud.label("", 11, 0xFFFFFF);
                 chip.x = 14;
-                chip.y = 130 + i * 18;
+                chip.y = 240 + i * 18;
                 chip.background = true;
                 chip.backgroundColor = 0x080a12;
                 chip.visible = false;
@@ -457,12 +519,12 @@ package
             nextText.y = 26;
             g.addChild(nextText);
             bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 700);
-            bannerText.x = 130;
-            bannerText.y = 66;
+            bannerText.x = 260;
+            bannerText.y = 76;
             g.addChild(bannerText);
             shoutText = Hud.label("", 13, 0xE9E2FF, false, "center", 700);
-            shoutText.x = 130;
-            shoutText.y = 90;
+            shoutText.x = 260;
+            shoutText.y = 100;
             g.addChild(shoutText);
             overText = Hud.label("", 40, 0xFFFFFF, true, "center", 960);
             overText.y = 180;
@@ -475,10 +537,61 @@ package
             logText.wordWrap = true;
             logText.height = 90;
             logText.x = 596;
-            logText.y = 404;
+            logText.y = 396;
             logText.autoSize = "none";
             g.addChild(logText);
+            actBar = ui("UI_ActBar");
+            actBar.x = 347;
+            actBar.y = 494;
+            g.addChild(actBar);
             buildButtons();
+        }
+
+        private function buildParty():void
+        {
+            for each (var old:MovieClip in partyPanels)
+            {
+                if (old.parent)
+                {
+                    old.parent.removeChild(old);
+                }
+            }
+            partyPanels = {};
+            var y:Number = 111;
+            for each (var r:String in ["ap", "lr", "loo", "dps"])
+            {
+                if (r == role)
+                {
+                    continue;
+                }
+                var p:MovieClip = ui("UI_PartyPanel");
+                p.x = 10;
+                p.y = y;
+                p["strName"].text = ROLE_SHORT[r] + " - " + (r == "dps" ? "DPS" : CLASS_NAMES[r]);
+                hudLayer.addChild(p);
+                partyPanels[r] = p;
+                y += p.height + 4;
+            }
+        }
+
+        /** HP / MP style bar of a game.swf frame: scale the fill and set its number. */
+        private static function setBar(box:MovieClip, group:String, bar:String, text:String, frac:Number, value:String):void
+        {
+            var g:MovieClip = box[group] as MovieClip;
+            if (g == null)
+            {
+                return;
+            }
+            var b:DisplayObject = g[bar];
+            if (b)
+            {
+                b.scaleX = Math.max(0, Math.min(1, frac));
+            }
+            var t:TextField = g[text] as TextField;
+            if (t)
+            {
+                t.text = value;
+            }
         }
 
         private function button(text:String, x:Number, y:Number, w:Number, fn:Function):void
@@ -510,57 +623,88 @@ package
             button("Auto-pilot", 740, 76, 70, function():void { botOn = !botOn; });
             button("Pause", 814, 76, 50, function():void { paused = !paused; });
             button("1x/2x/4x", 868, 76, 86, function():void { simSpeed = simSpeed >= 4 ? 1 : simSpeed * 2; });
+            button("Fullscreen (F)", 836, 100, 118, toggleFullscreen);
+        }
+
+        private function toggleFullscreen():void
+        {
+            try
+            {
+                // inside a web page the page owns full screen (index.html defines toggleGameFullscreen)
+                if (ExternalInterface.available && ExternalInterface.call("window.toggleGameFullscreen") === true)
+                {
+                    return;
+                }
+            }
+            catch (err1:Error)
+            {
+            }
+            try
+            {
+                stage.displayState = stage.displayState == StageDisplayState.NORMAL ? StageDisplayState.FULL_SCREEN_INTERACTIVE : StageDisplayState.NORMAL;
+            }
+            catch (err:Error)
+            {
+            }
         }
 
         private function buildSkillbar():void
         {
             for each (var old:Object in skillSlots)
             {
-                if (old.sp.parent)
+                for each (var d:DisplayObject in [old.icon, old.cd, old.key])
                 {
-                    old.sp.parent.removeChild(old.sp);
+                    if (d && d.parent)
+                    {
+                        d.parent.removeChild(d);
+                    }
                 }
             }
             skillSlots = [];
             var defs:Array = SKILLS[role];
-            for (var i:int = 0; i < defs.length; i++)
+            for (var i:int = 0; i < 6; i++)
             {
-                var slot:Sprite = new Sprite();
-                slot.graphics.beginFill(0x161b26, 0.92);
-                slot.graphics.lineStyle(1, 0x273044);
-                slot.graphics.drawRoundRect(0, 0, 54, 54, 8, 8);
-                slot.graphics.endFill();
-                slot.x = 10 + i * 60;
-                slot.y = 438;
+                var slot:MovieClip = actBar["blank" + i];
+                var b:Rectangle = slot.getBounds(actBar);
+                var cx:Number = b.x + b.width / 2;
+                var cy:Number = b.y + b.height / 2;
                 var icon:DisplayObject = null;
                 if (defs[i][1] != null && assetsDomain.hasDefinition(defs[i][1]))
                 {
                     var C:Class = assetsDomain.getDefinition(defs[i][1]) as Class;
                     icon = new C() as DisplayObject;
-                    icon.scaleX = icon.scaleY = 50 / 328;
-                    icon.x = 2;
-                    icon.y = 2;
-                    slot.addChild(icon);
+                    var ib:Rectangle = icon.getBounds(icon);
+                    var k:Number = (b.width * 0.86) / Math.max(ib.width, ib.height);
+                    icon.scaleX = icon.scaleY = k;
+                    icon.x = cx - (ib.x + ib.width / 2) * k;
+                    icon.y = cy - (ib.y + ib.height / 2) * k;
                 }
                 else
                 {
-                    var nm:TextField = Hud.label(defs[i][0], 11, 0xD8DEEA, false, "center", 54);
-                    nm.y = 20;
-                    slot.addChild(nm);
+                    var nm:TextField = Hud.label(defs[i][0], 9, 0xD8DEEA, false, "center", b.width);
+                    nm.x = b.x;
+                    nm.y = cy - 7;
+                    icon = nm;
                 }
-                var key:TextField = Hud.label(String(i + 1), 10, 0xFFFFFF, true);
-                key.x = 3;
-                key.y = 0;
-                slot.addChild(key);
+                (icon as Object).mouseEnabled = false;
+                actBar.addChild(icon);
                 var cd:Shape = new Shape();
-                slot.addChild(cd);
-                var cdt:TextField = Hud.label("", 14, 0xFFFFFF, true, "center", 54);
-                cdt.y = 16;
-                slot.addChild(cdt);
+                cd.x = cx;
+                cd.y = cy;
+                actBar.addChild(cd);
+                var key:TextField = Hud.label(String(i + 1), 10, 0xFFFFFF, true);
+                key.x = b.x + 1;
+                key.y = b.y - 3;
+                actBar.addChild(key);
+                var cdt:TextField = actBar["txtCD" + i] as TextField;
+                if (cdt)
+                {
+                    cdt.text = "";
+                    actBar.setChildIndex(cdt, actBar.numChildren - 1);
+                }
                 slot.buttonMode = true;
                 slot.addEventListener(MouseEvent.MOUSE_DOWN, makeSlotHandler(i + 1));
-                hudLayer.addChild(slot);
-                skillSlots.push({sp: slot, cd: cd, txt: cdt});
+                skillSlots.push({sp: slot, cd: cd, txt: cdt, icon: icon, key: key, r: b.width / 2});
             }
         }
 
@@ -599,7 +743,9 @@ package
             bossAnim("Idle", false);
             buildActors();
             startTime = getTimer();
+            buildParty();
             buildSkillbar();
+            portraitAt = 0;
             log("Engaged " + BOSS_NAME + " as " + CLASS_NAMES[role], "");
         }
 
@@ -816,6 +962,10 @@ package
             {
                 castKey(k);
             }
+            else if (e.keyCode == 70)
+            {
+                toggleFullscreen();
+            }
             else if (e.keyCode == 80)
             {
                 paused = !paused;
@@ -869,6 +1019,7 @@ package
             {
                 lastColor = now; // re-tint item layers as the gear SWFs finish loading
                 actors[role].mc.updateColor();
+                tintPortrait(playerBox["mcHead"]);
             }
             updateBoss();
             updateFx();
@@ -1058,32 +1209,19 @@ package
         private function updateHud():void
         {
             var f:Fight = fight;
-            Hud.bar(bossBar, 320, 16, f.bossHp / f.bossMaxHp, 0xFF5B5B, 0xA01626);
-            bossText.text = Fight.fmt(f.bossHp) + "  (" + (f.bossHp / f.bossMaxHp * 100).toFixed(1) + "%)";
-            var order:Array = [role];
-            for each (var rr:String in ["ap", "lr", "loo", "dps"])
+            // game.swf status boxes: player and target (the boss)
+            playerBox["strClass"].text = CLASS_NAMES[role];
+            setBar(playerBox, "HP", "intHPbar", "strIntHP", f.hp[role] / f.maxHp(role), Fight.fmt(f.hp[role]));
+            setBar(playerBox, "MP", "intMPbar", "strIntMP", 1, "100");
+            setBar(playerBox, "SP", "intSPbar", "strIntSP", 1, "100");
+            setBar(targetBox, "HP", "intHPbar", "strIntHP", f.bossHp / f.bossMaxHp, Fight.fmt(f.bossHp));
+            setBar(targetBox, "MP", "intMPbar", "strIntMP", 1, "100");
+            for (var r:String in partyPanels)
             {
-                if (rr != role)
-                {
-                    order.push(rr);
-                }
-            }
-            for (var i:int = 0; i < order.length; i++)
-            {
-                var r:String = order[i];
-                var y:Number = 14 + i * 28;
-                partyNames[r].text = ROLE_SHORT[r] + (r == role ? " (you)" : "");
-                partyNames[r].x = 14;
-                partyNames[r].y = y - 6;
-                partySomber[r].text = f.somber[r] > 0 ? "Somber x" + f.somber[r] : "";
-                partySomber[r].x = 94;
-                partySomber[r].y = y - 5;
-                partyBars[r].x = 14;
-                partyBars[r].y = y + 11;
-                Hud.bar(partyBars[r], 200, 12, f.hp[r] / f.maxHp(r), 0x6FE08A, 0x1D8A3A);
-                partyTexts[r].text = Fight.fmt(f.hp[r]) + " / " + Fight.fmt(f.maxHp(r));
-                partyTexts[r].x = 14;
-                partyTexts[r].y = y + 7;
+                setBar(partyPanels[r], "HP", "intHPbar", "strIntHP", f.hp[r] / f.maxHp(r), Fight.fmt(f.hp[r]));
+                setBar(partyPanels[r], "MP", "intMPbar", "strIntMP", 1, "");
+                var sm:int = f.somber[r];
+                partyPanels[r]["strName"].text = ROLE_SHORT[r] + " - " + (r == "dps" ? "DPS" : CLASS_NAMES[r]) + (sm > 0 ? "  x" + sm : "");
             }
             // buff chips
             var chips:Array = [];
@@ -1134,7 +1272,7 @@ package
             bannerText.text = (banner != "" && f.t < bannerUntil) ? banner : "";
             bannerText.textColor = bannerColor;
             shoutText.text = (shout != "" && f.t < shoutUntil) ? shout : "";
-            // skill cooldowns
+            // skill cooldowns on the action bar
             for (var s:int = 0; s < skillSlots.length; s++)
             {
                 var slot:Object = skillSlots[s];
@@ -1146,11 +1284,14 @@ package
                 if (left > 0)
                 {
                     slot.cd.graphics.beginFill(0x000000, 0.6);
-                    slot.cd.graphics.drawRect(0, 54 * (1 - left / len), 54, 54 * left / len);
+                    slot.cd.graphics.drawCircle(0, 0, slot.r);
                     slot.cd.graphics.endFill();
                 }
-                slot.txt.text = left > 50 ? (left / 1000).toFixed(left > 9950 ? 0 : 1) : "";
-                slot.sp.alpha = f.stunned() && k >= 2 ? 0.5 : 1;
+                if (slot.txt)
+                {
+                    slot.txt.text = left > 50 ? (left / 1000).toFixed(left > 9950 ? 0 : 1) : "";
+                }
+                slot.icon.alpha = f.stunned() && k >= 2 ? 0.5 : 1;
             }
             // health bars over each character
             for each (var who:String in Fight.ROLES)
@@ -1162,7 +1303,6 @@ package
             }
         }
 
-        // ===================================================================== bot
         private function botReact(holder:String, ability:String, truthN:int):void
         {
             var at:Number = fight.t + 350;

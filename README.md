@@ -65,8 +65,14 @@ A Flash build of the Ultra Speaker fight, using the original SWFs at runtime ins
 | `Assets.swf` | Class skill icons (`LoO*`, `LR*`, `apal*`) and the cast effect |
 | `Armor.swf` `Cape.swf` `Helm.swf` `Weapon.swf` | Gear equipped on the player through `AvatarMC.load()` and its `onLoad*Complete` callbacks |
 
-The four players are `AvatarMC` instances (the recovered character), each with a health bar over its head and a
-party frame. Rules (`src/sim/Fight.as`) are a port of the web simulator: the boss rotation (auto / Truth / Listen /
+The HUD is `game.swf`'s own: the player status box (portrait ring, HP / MP / SP bars, name, class, level), the target
+box for the boss, the compact party frames and the six-slot action bar for the skill icons. `tools/extract_ui.py`
+pulls those symbols out of `game.swf` into `src/_assets/ui.swf` (`ffdec-cli -swf2xml game.swf game.xml`, run the script,
+`ffdec-cli -xml2swf ui.xml src/_assets/ui.swf`), and `src/ui/*.as` embed them like the other recovered classes. Portraits
+are filled the way `Game.showPortraitBox()` does it: the boss's `mcHeadUltraMalg` into the target ring, the equipped
+armor's head and the helm into the player ring. `Loader3.swf` only downloads `game.swf` from the AQ servers, so it is
+not needed here. The stage is the game's 960x550 and scales to the window / full screen (`StageScaleMode.SHOW_ALL`).
+The four players are `AvatarMC` instances (the recovered character), each with a health bar over its head. Rules (`src/sim/Fight.as`) are a port of the web simulator: the boss rotation (auto / Truth / Listen /
 Equal), Somber + armor, Seal / Quix / taunt requirements, and the Lord of Order, Arch Paladin and Legion Revenant
 skills. Pick your class with the buttons top right; the other roles are scripted.
 
@@ -81,7 +87,9 @@ Run it with Ruffle (how it was tested; the game loads `bin/runtime/*.swf` over H
 cd bin && python3 -m http.server 8000     # then open http://localhost:8000/
 ```
 
-`bin/index.html` loads Ruffle from unpkg. The Ruffle desktop app can also open `bin/ultra_sim.swf` directly, and so can
+`bin/index.html` loads Ruffle from unpkg and fills the window; the game letterboxes itself to the window size. The in-game
+`Fullscreen (F)` button and the `F` key go full screen (in a web page via `window.toggleGameFullscreen`, otherwise through
+`stage.displayState`). The Ruffle desktop app can also open `bin/ultra_sim.swf` directly, and so can
 Flash Player / AIR (`adl`); keep `bin/runtime/` next to the SWF. Move by left-clicking the ground, click the boss to target it, skills on keys `1`–`6` or by clicking.
 With no zone active everyone stacks in the middle; during Equal only the named role stays there and the rest move
 to the right of the box. Optional FlashVars: `class=loo|ap|lr`, `bot=1` (auto-pilot), `speed=4`.
