@@ -1,13 +1,14 @@
-# Ultra Speaker simulator (Lord of Order)
+# Ultra Speaker simulator
 
-A browser simulator of the Ultra Speaker fight where you play the **Lord of Order**, using
+A browser simulator of the Ultra Speaker fight where you pick your class (**Lord of Order**, **Arch Paladin** or **Legion Revenant**; the other two plus a DPS are scripted), using
 art and animations pulled from the Flash files:
 
 | SWF | Used for |
 | --- | --- |
 | `town-ultraspeaker-6oct23.swf` | The **Boss** frame: background, `BossPad`, `Left` spawn pad, the `SafeA` box, the `rune1` / `safe1` Equal-zone clips |
 | `monster-UltraMalg.swf` | The boss clip with all animation labels (Attack1, Shadowflame, ChargeA/Loop, Absorption, Magic, Die, …) |
-| `Assets_20260731.swf` | Lord of Order skill icons (`LoO1`–`LoO4`, `LoOaa`, `LoOp`) and the LoO cast effect (`Symbol3aaaaa_loo_757`) |
+| `Assets_20260731.swf` | Class skill icons (`LoO*`, `LR*`, `apal*`) and the cast effect (`Symbol3aaaaa_loo_757`) |
+| `_assets/assets.swf` (main branch) | The character: `mcSkel`, the skeleton `AvatarMC` wraps, with the parts `hideOptionalParts()` hides removed — i.e. what `bin/character_test.swf` shows |
 | `Game3.swf` | Used while building the first version (combat pipeline, 24 fps); the class has no `sp_*` effect clips in `Assets`, so none are used |
 
 ## Run
@@ -18,9 +19,9 @@ python3 -m http.server 8000
 # open http://localhost:8000      (?bot=1 auto-pilot, ?speed=4 fast-forward)
 ```
 
-Controls: WASD / arrows / click to move, `1`–`6` skills, `P` pause.
-`1` Attack (walks you to the boss; auto attacks while in range), `2` Harmony, `3` Ordinance,
-`4` Axiom, `5` Quix, `6` Taunt.
+Controls: **left-click the ground to move** (mouse only), `1`–`6` skills, `P` pause. `1` walks you to the boss and auto attacks while in range.
+With no zone active everyone gathers in the middle; during Equal only the named role stays inside the box.
+`?class=ap|lr|loo` picks the class from the URL.
 
 ## Boss abilities
 

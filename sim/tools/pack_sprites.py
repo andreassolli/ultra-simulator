@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Pack FFDec sprite:png exports into cropped sprite sheets + a JSON atlas.
 
-Usage: pack_sprites.py <ffdec-export-dir> <rects.txt> <out-dir> <zoom>
+Usage: pack_sprites.py <ffdec-export-dir> <rects.txt> <out-dir> <zoom> [frames]
+
+[frames] optional frame filter such as "8-16,54-68" (1-based source frame numbers).
 
 <ffdec-export-dir> holds DefineSprite_<id>_<class>/<n>.png folders.
 <rects.txt>        SwfIndex output: "<id> <class> xmin ymin xmax ymax frames" (twips).
@@ -12,6 +14,12 @@ import hashlib, json, os, re, sys
 from PIL import Image
 
 src, rects_file, out, zoom = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
+only = None
+if len(sys.argv) > 5:
+    only = set()
+    for part in sys.argv[5].split(','):
+        a, _, b = part.partition('-')
+        only.update(range(int(a), int(b or a) + 1))
 os.makedirs(out, exist_ok=True)
 rects = {}
 for line in open(rects_file):
@@ -28,6 +36,8 @@ for d in sorted(os.listdir(src)):
     sid, cls = int(m.group(1)), m.group(2).split(".")[-1]
     xmin, ymin = rects[sid][0] / 20 * zoom, rects[sid][1] / 20 * zoom
     files = sorted(os.listdir(os.path.join(src, d)), key=lambda f: int(f.split(".")[0]))
+    if only is not None:
+        files = [f for f in files if int(f.split(".")[0]) in only]
     crops, seen, order = [], {}, []
     for f in files:
         im = Image.open(os.path.join(src, d, f)).convert("RGBA")
@@ -72,7 +82,7 @@ for d in sorted(os.listdir(src)):
         "id": sid, "sheets": names, "zoom": zoom, "count": len(files),
         "rects": [[p[0], p[1], p[2], c.size[0], c.size[1], round(ox, 1), round(oy, 1)]
                   for (c, ox, oy), p in zip(crops, pos)],
-        "frames": order,
+        "frames": order, "nums": [int(f.split(".")[0]) for f in files],
     }
 json.dump(atlas, open(os.path.join(out, "atlas.json"), "w"), separators=(",", ":"))
 print(len(atlas), "clips,", sum(os.path.getsize(os.path.join(out, f)) for f in os.listdir(out)) // 1024, "KiB")

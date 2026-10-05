@@ -11,6 +11,7 @@
   <header>
     <h1>Ultra Speaker <small>boss simulator</small></h1>
     <div class="ctl">
+      <label>Class <select id="selClass"></select></label>
       <button id="btnRestart">Restart</button>
       <button id="btnPause">Pause</button>
       <label>Speed
@@ -26,15 +27,14 @@
 
   <section class="panels">
     <div class="panel">
-      <h2>You are the Lord of Order</h2>
+      <h2>Your class</h2>
+      <p class="hint" id="help"></p>
       <ul class="hint">
-        <li><b>Taunt (6)</b> before every cast marked <code>LoO</code> in the rotation banner — a missed taunt is a wipe.</li>
-        <li><b>Quix (5)</b> on Truth #5 and #9 of a cycle; the other Truths need the Arch Paladin's Seal (scripted).</li>
-        <li><b>Equal</b> (zone): only the named role stands <em>inside</em> the glowing box. You are zone <b>4</b>; for zones 1–3 get outside, then back in.</li>
-        <li><b>Ordinance (3)</b> heals the party; <b>Harmony (2)</b> raises max HP; keep <b>Axiom (4)</b> rolling.</li>
-        <li><b>Listen</b> stuns whoever is holding the boss for 6 s (you cannot use skills 2–6).</li>
+        <li><b>Taunt</b> (6) when the banner says your class tanks the next cast — a missed taunt is a wipe.</li>
+        <li><b>Equal</b> (zone): only the named role stands <em>inside</em> the glowing box (zones 1–4: DPS, LR, AP, LoO). When it isn't your zone, click to walk out of the box, then click back in.</li>
+        <li><b>Listen</b> stuns whoever is holding the boss for 6 s (skills 2–6 locked).</li>
       </ul>
-      <p class="hint">Move: WASD / arrows / click ground · Skills 1–6 · P pause.</p>
+      <p class="hint">Move: left-click the ground · Skills: 1–6 or click · P pause.</p>
     </div>
     <div class="panel">
       <h2>Rotation</h2>

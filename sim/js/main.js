@@ -1,6 +1,6 @@
 import { CONFIG as C } from './config.js';
 import { loadAtlas, loadImage } from './sprites.js';
-import { Fight, PATTERN, MECHANICS, ZONE_ROLES, ROLES, ROLE_NAMES, LOO } from './fight.js';
+import { Fight, PATTERN, MECHANICS, ZONE_ROLES, ROLES, CLASS_SKILLS, SKILL_CD, LOO } from './fight.js';
 
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
@@ -15,35 +15,53 @@ const BOSS_ANIMS = {
   Fall: [256, 288], Getup: [289, 304], Die: [305, 379], Dead: [380, 385],
 };
 
-const ROLE_COLOR = { ap: '#e8d9a0', lr: '#9b2d4f', loo: '#e0b84a', dps: '#5aa86a' };
+// _assets/assets.swf mcSkel (the skeleton AvatarMC wraps), label -> [first, last] frame
+const CHAR_ANIMS = {
+  Idle: [8, 16], Walk: [54, 68], Fight: [622, 633], Attack: [703, 722], Castgood: [911, 931],
+  Cast: [932, 958], Hit: [810, 827], Knockout: [828, 849], Dead: [495, 502],
+};
+const CHAR_SCALE = 1; // exported at 0.65 zoom already matches the stage size
+
+const ROLE_COLOR = { ap: '#e8d9a0', lr: '#e0507a', loo: '#e0b84a', dps: '#5aa86a' };
 const ROLE_SHORT = { ap: 'AP', lr: 'LR', loo: 'LoO', dps: 'DPS' };
-const ROLE_OUT = { ap: { x: 880, y: 430 }, lr: { x: 850, y: 330 }, dps: { x: 100, y: 340 }, loo: { x: 110, y: 440 } };
+
+// Standing spots. With no zone everybody gathers in the middle around the boss; during an
+// Equal zone only the named role stays in, the rest step out to the sides.
+const MIDDLE = { ap: { x: 420, y: 395 }, lr: { x: 560, y: 395 }, dps: { x: 640, y: 440 }, loo: { x: 350, y: 440 } };
+const OUTSIDE = { ap: { x: 880, y: 430 }, lr: { x: 850, y: 330 }, dps: { x: 100, y: 340 }, loo: { x: 110, y: 440 } };
 const ZONE_IN = { x: 480, y: 420 };
 
 const A = {};
 let S;
+let playerRole = params.get('class') && C.classes[params.get('class')] ? params.get('class') : 'loo';
 let paused = false;
 let speed = 1;
 let bot = false;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const fmt = (n) => Math.round(n).toLocaleString('en-US');
 const rnd = (a, b) => a + Math.random() * (b - a);
+const classDef = () => C.classes[playerRole];
 
 // ------------------------------------------------------------------- assets
 async function loadAssets() {
-  const [boss, map, cfx, icons, bg] = await Promise.all([
+  const [boss, map, cfx, chars, icons, bg] = await Promise.all([
     loadAtlas('assets/boss'),
     loadAtlas('assets/map'),
     loadAtlas('assets/classfx'),
+    loadAtlas('assets/chars'),
     fetch('assets/icons/atlas.json').then((r) => r.json()),
     loadImage('assets/map/bg.jpg'),
   ]);
   A.boss = boss.UltraMalg;
   A.map = map;
   A.cfx = Object.values(cfx)[0];
+  A.char = Object.values(chars)[0];
   A.icons = new Set(Object.keys(icons));
   A.bg = bg;
-  await Promise.all([A.boss.load(), map.runey2_159.load(), map.telerune1_171.load(), A.cfx.load()]);
+  await Promise.all([A.boss.load(), map.runey2_159.load(), map.telerune1_171.load(), A.cfx.load(), A.char.load()]);
+  // lowest visible pixel of the idle pose relative to the sprite origin -> puts the feet on y
+  const d = A.char.data;
+  A.charFoot = Math.max(...d.nums.map((n, i) => (n >= 8 && n <= 16 && d.frames[i] !== null ? d.rects[d.frames[i]][6] + d.rects[d.frames[i]][4] : -1e9)));
 }
 
 // -------------------------------------------------------------------- state
@@ -55,9 +73,9 @@ function inSafeBox(p) {
 function newState() {
   const S0 = {
     fight: null,
-    player: { x: C.map.leftPad.x, y: C.map.leftPad.y, dir: 1, moveTo: null, moving: false, aaT: 0, lunge: 0 },
-    npc: Object.fromEntries(['ap', 'lr', 'dps'].map((r) => [r, { x: ROLE_OUT[r].x, y: ROLE_OUT[r].y, dir: -1 }])),
-    keys: new Set(),
+    chars: Object.fromEntries(
+      ROLES.map((r) => [r, { x: MIDDLE[r].x, y: MIDDLE[r].y, dir: 1, moving: false, anim: 'Idle', t0: 0, hold: 0, moveTo: null, aaT: rnd(0, 1.3) }])
+    ),
     boss: { anim: 'Idle', t0: 0, loop: false },
     rune: false,
     zoneRole: null,
@@ -65,34 +83,37 @@ function newState() {
     floaters: [],
     banner: null,
     shout: null,
-    result: null,
     bossDmg: 0,
     playerDmg: 0,
-    wipes: 0,
   };
   S0.fight = new Fight(
     { bossHp: C.fight.bossHp, partyDps: C.fight.partyDps },
     {
       boss: (name, loop = false) => {
         if (S && S.fight && S.fight.over && S.fight.over.result === 'win') return;
-        S.boss = { anim: name, t0: S.fight.t / 1000, loop };
+        if (S && S.fight) S.boss = { anim: name, t0: S.fight.t / 1000, loop };
       },
       zone: (on, role) => {
         if (!S || !S.fight) return;
         S.rune = on;
         S.zoneRole = on ? role : null;
         if (on) {
+          const mine = role === playerRole;
           S.banner = {
-            text: role === 'loo' ? `EQUAL — zone ${zoneNo(role)}: STAND INSIDE THE BOX` : `EQUAL — ${ROLE_SHORT[role]} inside; you stay OUTSIDE the box`,
+            text: mine ? `EQUAL — zone ${zoneNo(role)}: STAND INSIDE THE BOX` : `EQUAL — ${ROLE_SHORT[role]} inside; step OUTSIDE the box`,
             until: S.fight.t + 3400,
-            color: role === 'loo' ? '#6fd98a' : '#ffd24a',
+            color: mine ? '#6fd98a' : '#ffd24a',
           };
         }
       },
-      announce: (text) => (S.shout = { text, until: S.fight.t + 3500 }),
+      announce: (text) => S && S.fight && (S.shout = { text, until: S.fight.t + 3500 }),
       floater: (role, text, kind) => addFloater(role, text, kind),
       log: (msg, cls) => log(msg, cls),
-      playerInZone: () => inSafeBox(S.player),
+      playerInZone: () => inSafeBox(S.chars[playerRole]),
+      playerCentered: () => {
+        const x = S.chars[playerRole].x;
+        return x >= 166 && x <= 812;
+      },
       end: (result, reason) => onEnd(result, reason),
       mechanic: (role, ability, info) => onMechanic(role, ability, info),
       bossDamage: (d, crit, who) => {
@@ -101,7 +122,8 @@ function newState() {
         if (who === 'party' && Math.random() < 0.35) bossFloater(d, crit);
       },
       fx: (kind, role) => spawnCastFx(kind, role),
-    }
+    },
+    playerRole
   );
   return S0;
 }
@@ -114,53 +136,56 @@ function log(msg, cls = '') {
   const el = $('log');
   const d = document.createElement('div');
   d.className = cls;
-  const t = S ? S.fight.t / 1000 : 0;
+  const t = S && S.fight ? S.fight.t / 1000 : 0;
   d.textContent = `[${t.toFixed(1).padStart(5)}s] ${msg}`;
   el.appendChild(d);
   el.scrollTop = el.scrollHeight;
   while (el.childNodes.length > 120) el.removeChild(el.firstChild);
 }
 
-function roleXY(role) {
-  if (role === 'loo') return S.player;
-  return S.npc[role];
-}
-
 function addFloater(role, text, kind) {
-  const p = role ? roleXY(role) : { x: C.stage.w / 2, y: 190 };
+  if (!S) return;
+  const p = role ? S.chars[role] : { x: C.stage.w / 2, y: 190 };
   const color = { dmg: '#ff6b6b', crit: '#ffb347', heal: '#6fd98a', bad: '#ff5b5b', info: '#fff' }[kind] || '#fff';
-  S.floaters.push({ x: p.x + rnd(-16, 16), y: p.y - (role ? 110 : 0), text, color, t: 0, life: 1.4, big: kind === 'crit' || kind === 'bad' });
+  S.floaters.push({ x: p.x + rnd(-16, 16), y: p.y - (role ? 120 : 0), text, color, t: 0, life: 1.4, big: kind === 'crit' || kind === 'bad' });
 }
 
 function bossFloater(d, crit) {
   S.floaters.push({ x: C.map.bossPad.x + rnd(-110, 110), y: C.map.bossPad.y - rnd(120, 190), text: fmt(d), color: crit ? '#ffd24a' : '#fff', t: 0, life: 1.0, big: crit, small: true });
 }
 
+function playAnim(role, name, ms) {
+  const c = S.chars[role];
+  c.anim = name;
+  c.t0 = S.fight.t / 1000;
+  c.hold = ms / 1000;
+}
+
 function spawnCastFx(kind, role) {
   const targets = kind === 'ordinance' || kind === 'heal' ? ROLES : [role];
-  for (const r of targets) {
-    const p = roleXY(r);
-    S.fx.push({ t0: S.fight.t / 1000, role: r, tint: kind });
-    void p;
-  }
+  const t = S.fight.t / 1000;
+  for (const r of targets) S.fx.push({ t0: t, role: r });
+  if (!['taunt'].includes(kind)) playAnim(role, 'Cast', 700);
 }
 
 function onMechanic(role, ability, info) {
   const f = S.fight;
-  let label = '';
-  if (ability === 'truth') label = 'Truth';
-  else if (ability === 'listen') label = 'Listen';
+  const label = ability === 'truth' ? 'Truth' : ability === 'listen' ? 'Listen' : '';
+  const mine = role === playerRole;
   if (role && label) {
     S.banner = {
-      text: role === 'loo' ? `TAUNT NOW — ${label} on YOU (6)` : `${ROLE_SHORT[role]} holds the boss — ${label}`,
+      text: mine ? `TAUNT NOW — ${label} on YOU (6)` : `${ROLE_SHORT[role]} holds the boss — ${label}`,
       until: f.t + 2400,
-      color: role === 'loo' ? '#ff5b5b' : '#ffd24a',
+      color: mine ? '#ff5b5b' : '#ffd24a',
     };
   }
   if (ability === 'truth') {
     const n = ((info.truthN - 1) % 9) + 1;
-    if (n === 5 || n === 9) {
-      S.banner = { text: `QUIX NOW — Truth #${n} (5)` + (role === 'loo' ? ' + TAUNT (6)' : ''), until: f.t + 2400, color: '#ff5b5b' };
+    const needSeal = (info.truthN >= 1 && info.truthN <= 3) || (info.truthN >= 5 && info.truthN <= 7);
+    if (playerRole === 'loo' && (n === 5 || n === 9)) {
+      S.banner = { text: `QUIX NOW — Truth #${n} (5)` + (mine ? ' + TAUNT (6)' : ''), until: f.t + 2400, color: '#ff5b5b' };
+    } else if (playerRole === 'ap' && needSeal) {
+      S.banner = { text: `SEAL NOW (4) — Truth #${info.truthN}` + (mine ? ' + TAUNT (6)' : ''), until: f.t + 2400, color: '#ff5b5b' };
     }
   }
   if (bot) botReact(role, ability, info);
@@ -179,13 +204,9 @@ function onEnd(result, reason) {
   S.rune = false;
 }
 
-// ------------------------------------------------------------------- player
-function skillByKey(k) {
-  return C.loo.find((s) => s.key === k);
-}
-
+// ------------------------------------------------------------------- movement
 function moveToBoss() {
-  S.player.moveTo = { x: C.map.bossPad.x - 90, y: C.map.bossPad.y + 70 };
+  S.chars[playerRole].moveTo = { x: C.map.bossPad.x - 90, y: C.map.bossPad.y + 70 };
 }
 
 function castKey(k) {
@@ -196,117 +217,110 @@ function castKey(k) {
     return true;
   }
   const ok = f.cast(k);
-  if (ok) S.player.lunge = 0.3;
+  if (ok) S.chars[playerRole].aaT = Math.max(S.chars[playerRole].aaT, 0.4);
   return ok;
 }
 
-function updatePlayer(dt) {
-  const p = S.player;
-  const f = S.fight;
-  if (f.over) {
-    p.moving = false;
+function stepChar(c, goal, dt, speedPx) {
+  if (!goal) {
+    c.moving = false;
     return;
   }
-  let vx = 0;
-  let vy = 0;
-  const k = S.keys;
-  if (k.has('a') || k.has('arrowleft')) vx -= 1;
-  if (k.has('d') || k.has('arrowright')) vx += 1;
-  if (k.has('w') || k.has('arrowup')) vy -= 1;
-  if (k.has('s') || k.has('arrowdown')) vy += 1;
-  if (vx || vy) {
-    p.moveTo = null;
-    const l = Math.hypot(vx, vy);
-    vx /= l;
-    vy /= l;
-  } else if (p.moveTo) {
-    const dx = p.moveTo.x - p.x;
-    const dy = p.moveTo.y - p.y;
-    const d = Math.hypot(dx, dy);
-    if (d < 4) p.moveTo = null;
-    else {
-      vx = dx / d;
-      vy = dy / d;
-    }
+  const dx = goal.x - c.x;
+  const dy = goal.y - c.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 3) {
+    c.moving = false;
+    if (c.moveTo === goal) c.moveTo = null;
+    return;
   }
-  p.moving = !!(vx || vy);
-  if (p.moving) {
-    const step = C.player.speed * dt;
-    const lim = p.moveTo ? Math.min(step, Math.hypot(p.moveTo.x - p.x, p.moveTo.y - p.y)) : step;
-    p.x = clamp(p.x + vx * lim, C.walk.x0, C.walk.x1);
-    p.y = clamp(p.y + vy * lim, C.walk.y0, C.walk.y1);
-    if (vx) p.dir = vx > 0 ? 1 : -1;
-  }
-  p.lunge = Math.max(0, p.lunge - dt);
-  // skill 1: auto attack while in range and not stasis-locked
-  p.aaT -= dt;
-  const b = C.map.bossPad;
-  const inRange = Math.abs(b.x - p.x) <= C.player.attackRangeX && Math.abs(b.y - p.y) <= C.player.attackRangeY;
-  if (!p.moving && !f.stunned() && inRange && p.aaT <= 0) {
-    p.aaT = C.player.autoEvery;
-    p.dir = b.x >= p.x ? 1 : -1;
-    p.lunge = 0.3;
-    const d = Math.floor(rnd(C.player.autoDamage[0], C.player.autoDamage[1] + 1));
-    f.playerHit(d, d > C.player.autoCritAbove);
-    if (Math.random() < 0.5) bossFloater(d, d > C.player.autoCritAbove);
-  }
+  const st = Math.min(d, speedPx * dt);
+  c.x += (dx / d) * st;
+  c.y += (dy / d) * st;
+  if (Math.abs(dx) > 1) c.dir = dx > 0 ? 1 : -1;
+  c.moving = true;
 }
 
-function updateNpcs(dt) {
-  for (const r of ['ap', 'lr', 'dps']) {
-    const n = S.npc[r];
-    const goal = S.zoneRole === r ? ZONE_IN : ROLE_OUT[r];
-    const dx = goal.x - n.x;
-    const dy = goal.y - n.y;
-    const d = Math.hypot(dx, dy);
-    if (d > 2) {
-      const st = Math.min(d, 300 * dt);
-      n.x += (dx / d) * st;
-      n.y += (dy / d) * st;
-      n.dir = dx >= 0 ? 1 : -1;
-      n.moving = true;
-    } else n.moving = false;
+function updateChars(dt) {
+  const f = S.fight;
+  const b = C.map.bossPad;
+  for (const r of ROLES) {
+    const c = S.chars[r];
+    if (f.hp[r] <= 0) {
+      c.moving = false;
+      continue;
+    }
+    const isMe = r === playerRole;
+    if (isMe) {
+      // mouse-click movement only
+      if (!f.over) stepChar(c, c.moveTo, dt, C.player.speed);
+    } else {
+      const goal = S.zoneRole ? (S.zoneRole === r ? ZONE_IN : OUTSIDE[r]) : MIDDLE[r];
+      stepChar(c, goal, dt, 300);
+    }
+    // everyone swings at the boss when standing still near it
+    c.aaT -= dt;
+    const inRange = Math.abs(b.x - c.x) <= C.player.attackRangeX && Math.abs(b.y - c.y) <= C.player.attackRangeY;
+    if (!c.moving && inRange && c.aaT <= 0 && !f.over) {
+      c.aaT = C.player.autoEvery;
+      c.dir = b.x >= c.x ? 1 : -1;
+      playAnim(r, 'Attack', 700);
+      if (isMe && !f.stunned()) {
+        const d = Math.floor(rnd(C.player.autoDamage[0], C.player.autoDamage[1] + 1));
+        f.playerHit(d, d > C.player.autoCritAbove);
+        if (Math.random() < 0.5) bossFloater(d, d > C.player.autoCritAbove);
+      }
+    }
   }
 }
 
 // ---------------------------------------------------------------- auto-pilot
-let botTauntAt = null; // human-like reaction delay, ms of fight time
-let botQuixAt = null;
+const bq = []; // [{at, until, fn}] reactions queued with a human-like delay
 
 function botReact(role, ability, info) {
-  const at = S.fight.t + 350;
-  if (role === 'loo') botTauntAt = at;
+  const f = S.fight;
+  const at = f.t + 350;
+  const queue = (fn) => bq.push({ at, until: at + 1400, fn });
+  if (role === playerRole) queue(() => f.cast(6));
   if (ability === 'truth') {
     const n = ((info.truthN - 1) % 9) + 1;
-    if (n === 5 || n === 9) botQuixAt = at;
+    if (playerRole === 'loo' && (n === 5 || n === 9)) queue(() => f.cast(5));
+    if (playerRole === 'ap' && ((info.truthN >= 1 && info.truthN <= 3) || (info.truthN >= 5 && info.truthN <= 7))) {
+      queue(() => f.cast(4));
+      bq.push({ at: f.t + 5000, until: f.t + 6500, fn: () => f.cast(5) });
+    }
   }
 }
 
 function runBot() {
   const f = S.fight;
-  const p = S.player;
+  const c = S.chars[playerRole];
   if (!bot || f.over) return;
-  // positioning
-  let goal = null;
-  if (S.zoneRole) {
-    const wantIn = S.zoneRole === 'loo';
-    const inside = inSafeBox(p);
-    if (wantIn && !inside) goal = { x: ZONE_IN.x, y: ZONE_IN.y };
-    else if (!wantIn && inside) goal = { x: 120, y: 420 };
-    else goal = p.moveTo || null; // hold
-    if (wantIn === inside) goal = null;
-  } else if (!p.moveTo && (Math.abs(C.map.bossPad.x - p.x) > C.player.attackRangeX - 40 || Math.abs(C.map.bossPad.y - p.y) > C.player.attackRangeY - 20)) {
-    goal = { x: C.map.bossPad.x - 90, y: C.map.bossPad.y + 70 };
+  for (let i = bq.length - 1; i >= 0; i--) {
+    const q = bq[i];
+    if (f.t > q.until) bq.splice(i, 1);
+    else if (f.t >= q.at && q.fn()) bq.splice(i, 1);
   }
-  if (goal) p.moveTo = goal;
-  // skills
-  if (botTauntAt !== null && f.t > botTauntAt + 1400) botTauntAt = null; // too late to matter
-  if (botTauntAt !== null && f.t >= botTauntAt && f.cast(6)) botTauntAt = null;
-  if (botQuixAt !== null && f.t > botQuixAt + 1400) botQuixAt = null;
-  if (botQuixAt !== null && f.t >= botQuixAt && f.cast(5)) botQuixAt = null;
-  if (f.hp.loo < f.maxHp('loo') * 0.8 || ROLES.some((r) => f.hp[r] < f.maxHp(r) * 0.65)) f.cast(3);
-  f.cast(2);
-  f.cast(4);
+  // positioning: follow the arena rules (the click-to-move the player would do)
+  if (S.zoneRole) {
+    const wantIn = S.zoneRole === playerRole;
+    if (wantIn !== inSafeBox(c)) c.moveTo = wantIn ? { ...ZONE_IN } : { ...OUTSIDE[playerRole] };
+  } else if (!c.moveTo && Math.hypot(c.x - MIDDLE[playerRole].x, c.y - MIDDLE[playerRole].y) > 20) {
+    c.moveTo = { ...MIDDLE[playerRole] };
+  }
+  const low = ROLES.some((r) => f.hp[r] < f.maxHp(r) * 0.65) || (S.zoneRole === playerRole && f.hp[playerRole] < 3400);
+  if (playerRole === 'loo') {
+    if (low) f.cast(3);
+    f.cast(2);
+    f.cast(4);
+  } else if (playerRole === 'ap') {
+    if (low) f.cast(3);
+    f.cast(2);
+  } else if (playerRole === 'lr') {
+    f.cast(4);
+    f.cast(5);
+    f.cast(3);
+  }
 }
 
 // -------------------------------------------------------------------- render
@@ -316,6 +330,22 @@ function bossFrame() {
   let i = Math.floor((S.fight.t / 1000 - S.boss.t0) * C.fps);
   i = S.boss.loop ? i % n : Math.min(i, n - 1);
   return a - 1 + i;
+}
+
+function charFrame(r) {
+  const c = S.chars[r];
+  const t = S.fight.t / 1000;
+  const dead = S.fight.hp[r] <= 0;
+  let name;
+  if (dead) name = 'Dead';
+  else if (c.hold > 0 && t - c.t0 < c.hold) name = c.anim;
+  else name = c.moving ? 'Walk' : 'Idle';
+  const [a, z] = CHAR_ANIMS[name];
+  const n = z - a + 1;
+  const start = name === c.anim && c.hold > 0 && t - c.t0 < c.hold ? c.t0 : 0;
+  let i = Math.floor((t - start) * C.fps);
+  i = name === 'Dead' ? Math.min(i, n - 1) : i % n;
+  return a + i; // source frame number
 }
 
 function bar(x, y, w, h, frac, c1, c2) {
@@ -341,51 +371,23 @@ function text(str, x, y, { size = 12, color = '#fff', align = 'left', bold = fal
   ctx.fillText(str, x, y);
 }
 
-function drawToken(role, p, moving, dead) {
-  const t = S.fight.t / 1000;
-  const bob = moving ? Math.sin(t * 16 + role.length) * 3 : Math.sin(t * 2.5) * 1;
-  const col = ROLE_COLOR[role];
-  ctx.save();
-  ctx.translate(p.x, p.y);
+function drawChar(r) {
+  const c = S.chars[r];
+  const num = charFrame(r);
+  const idx = A.char.data.nums.indexOf(num);
   ctx.fillStyle = 'rgba(0,0,0,.35)';
   ctx.beginPath();
-  ctx.ellipse(0, 0, 28, 8, 0, 0, Math.PI * 2);
+  ctx.ellipse(c.x, c.y, 28, 8, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.scale(p.dir || 1, 1);
-  if (dead) ctx.rotate(-Math.PI / 2.2);
-  ctx.translate((p.lunge || 0) > 0 ? Math.sin((p.lunge / 0.3) * Math.PI) * 10 : 0, -bob);
-  ctx.fillStyle = col;
-  ctx.globalAlpha = 0.55;
+  // ring in the role colour so the identical silhouettes can be told apart
+  ctx.strokeStyle = ROLE_COLOR[r];
+  ctx.globalAlpha = r === playerRole ? 0.95 : 0.6;
+  ctx.lineWidth = r === playerRole ? 3 : 2;
   ctx.beginPath();
-  ctx.moveTo(-10, -76);
-  ctx.quadraticCurveTo(-32, -40, -16, -4);
-  ctx.lineTo(-4, -8);
-  ctx.closePath();
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  const leg = moving ? Math.sin(t * 16) * 8 : 0;
-  ctx.strokeStyle = '#2d3a55';
-  ctx.lineWidth = 9;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(-5, -34); ctx.lineTo(-6 + leg, -3);
-  ctx.moveTo(6, -34); ctx.lineTo(7 - leg, -3);
+  ctx.ellipse(c.x, c.y, 24, 7, 0, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.fillStyle = col;
-  ctx.beginPath();
-  ctx.roundRect(-14, -80, 28, 50, 8);
-  ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,.25)';
-  ctx.fillRect(-14, -50, 28, 5);
-  ctx.fillStyle = '#f0c9a0';
-  ctx.beginPath();
-  ctx.arc(0, -94, 13, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#3b2a1c';
-  ctx.beginPath();
-  ctx.arc(-1, -99, 13, Math.PI, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  ctx.globalAlpha = 1;
+  A.char.draw(ctx, idx, c.x, c.y - A.charFoot * CHAR_SCALE, CHAR_SCALE * c.dir, CHAR_SCALE);
 }
 
 function drawOverlays() {
@@ -419,24 +421,19 @@ function drawHud() {
   bar(bx, 31, bw, 16, frac, '#ff5b5b', '#a01626');
   text(`${fmt(f.bossHp)}  (${(frac * 100).toFixed(1)}%)`, bx + bw / 2, 44, { size: 11, align: 'center', bold: true });
 
-  // party frames
-  const order = ['loo', 'ap', 'lr', 'dps'];
+  const order = [playerRole, ...['ap', 'lr', 'loo', 'dps'].filter((r) => r !== playerRole)];
   ctx.fillStyle = 'rgba(8,10,18,.72)';
   ctx.beginPath();
   ctx.roundRect(6, 6, 218, 118, 8);
   ctx.fill();
   order.forEach((r, i) => {
     const y = 14 + i * 28;
-    const hp = f.hp[r];
-    const mx = f.maxHp(r);
-    text(`${ROLE_SHORT[r]}${r === 'loo' ? ' (you)' : ''}`, 14, y + 8, { size: 11, bold: true, color: ROLE_COLOR[r] });
-    const sm = f.somber[r];
-    if (sm > 0) text(`Somber ×${sm}`, 214, y + 8, { size: 10, align: 'right', color: '#c58bff' });
-    bar(14, y + 11, 200, 12, hp / mx, '#6fe08a', '#1d8a3a');
-    text(`${fmt(hp)} / ${fmt(mx)}`, 114, y + 21, { size: 10, align: 'center', bold: true });
+    text(`${ROLE_SHORT[r]}${r === playerRole ? ' (you)' : ''}`, 14, y + 8, { size: 11, bold: true, color: ROLE_COLOR[r] });
+    if (f.somber[r] > 0) text(`Somber ×${f.somber[r]}`, 214, y + 8, { size: 10, align: 'right', color: '#c58bff' });
+    bar(14, y + 11, 200, 12, f.hp[r] / f.maxHp(r), '#6fe08a', '#1d8a3a');
+    text(`${fmt(f.hp[r])} / ${fmt(f.maxHp(r))}`, 114, y + 21, { size: 10, align: 'center', bold: true });
   });
 
-  // buffs
   const chips = [];
   const now = f.t;
   const leftS = (u) => Math.max(0, (u - now) / 1000);
@@ -446,19 +443,19 @@ function drawHud() {
   if (now < f.axiomUntil) chips.push([`Axiom ${leftS(f.axiomUntil).toFixed(0)}s`, '#c58bff']);
   if (now < f.quixUntil) chips.push([`Quix ${leftS(f.quixUntil).toFixed(1)}s`, '#ffd24a']);
   if (f.ap.reduction) chips.push([`AP ${f.ap.reduction === 'seal' ? 'Seal' : 'Eden'}`, '#e8d9a0']);
+  if (now < f.lrEmpowerUntil) chips.push([`LR Empowerment ${leftS(f.lrEmpowerUntil).toFixed(0)}s`, '#e0507a']);
   if (f.stunned()) chips.push([`STASIS ${leftS(f.stunUntil).toFixed(1)}s`, '#ff5b5b']);
   chips.forEach(([label, color], i) => {
     const y = 134 + i * 20;
     ctx.fillStyle = 'rgba(8,10,18,.72)';
-    ctx.fillRect(6, y, 128, 17);
+    ctx.fillRect(6, y, 148, 17);
     ctx.fillStyle = color;
     ctx.fillRect(6, y, 4, 17);
     text(label, 16, y + 13, { size: 11 });
   });
 
   text(fmtTime(f.t / 1000), C.stage.w - 12, 22, { size: 14, align: 'right', bold: true });
-  const nxt = PATTERN[f.rot.idx];
-  text(`Next: ${nxt}`, C.stage.w - 12, 40, { size: 11, align: 'right', color: '#8a95ab' });
+  text(`Next: ${PATTERN[f.rot.idx]}`, C.stage.w - 12, 40, { size: 11, align: 'right', color: '#8a95ab' });
 
   if (S.banner && f.t < S.banner.until) text(S.banner.text, C.stage.w / 2 + 60, 84, { size: 16, align: 'center', bold: true, color: S.banner.color });
   if (S.shout && f.t < S.shout.until) text(`"${S.shout.text}"`, C.stage.w / 2 + 60, 106, { size: 13, align: 'center', color: '#e9e2ff' });
@@ -483,7 +480,6 @@ function render() {
   drawOverlays();
 
   const b = C.map.bossPad;
-  const dead = (r) => f.hp[r] <= 0;
   const ents = [
     {
       y: b.y,
@@ -492,33 +488,30 @@ function render() {
         ctx.beginPath();
         ctx.ellipse(b.x, b.y + 4, 150, 22, 0, 0, Math.PI * 2);
         ctx.fill();
-        const bob = f.over && f.over.result === 'win' ? 0 : Math.sin(f.t / 1000 * 2.2) * 4;
+        const bob = f.over && f.over.result === 'win' ? 0 : Math.sin((f.t / 1000) * 2.2) * 4;
         A.boss.draw(ctx, bossFrame(), b.x, b.y + bob, C.boss.displayScale, C.boss.displayScale);
       },
     },
-    { y: S.player.y, draw: () => drawToken('loo', S.player, S.player.moving, dead('loo')) },
-    ...['ap', 'lr', 'dps'].map((r) => ({ y: S.npc[r].y, draw: () => drawToken(r, S.npc[r], S.npc[r].moving, dead(r)) })),
+    ...ROLES.map((r) => ({ y: S.chars[r].y, draw: () => drawChar(r) })),
   ].sort((a, c) => a.y - c.y);
   ents.forEach((e) => e.draw());
 
-  // cast effects (Symbol3aaaaa_loo_757 sparkle from Assets_20260731.swf)
   const t = f.t / 1000;
   S.fx = S.fx.filter((x) => (t - x.t0) * C.fps < A.cfx.count);
   for (const x of S.fx) {
-    const p = roleXY(x.role);
+    const p = S.chars[x.role];
     const s = 1 / A.cfx.zoom;
     A.cfx.draw(ctx, Math.floor((t - x.t0) * C.fps), p.x, p.y - 50, s, s);
   }
 
-  // name tags
   for (const r of ROLES) {
-    const p = roleXY(r);
-    bar(p.x - 28, p.y - 124, 56, 6, f.hp[r] / f.maxHp(r), '#6fe08a', '#1d8a3a');
-    text(ROLE_SHORT[r], p.x, p.y - 128, { size: 11, align: 'center', bold: true, color: ROLE_COLOR[r] });
+    const p = S.chars[r];
+    bar(p.x - 28, p.y - 112, 56, 6, f.hp[r] / f.maxHp(r), '#6fe08a', '#1d8a3a');
+    text(ROLE_SHORT[r], p.x, p.y - 116, { size: 11, align: 'center', bold: true, color: ROLE_COLOR[r] });
   }
   if (f.currentTaunt()) {
-    const p = roleXY(f.currentTaunt());
-    text('TAUNT', p.x, p.y - 142, { size: 10, align: 'center', bold: true, color: '#ffd24a' });
+    const p = S.chars[f.currentTaunt()];
+    text('TAUNT', p.x, p.y - 130, { size: 10, align: 'center', bold: true, color: '#ffd24a' });
   }
 
   for (const fl of S.floaters) {
@@ -535,39 +528,38 @@ function render() {
 function buildSkillbar() {
   const bar = $('skillbar');
   bar.innerHTML = '';
-  for (const s of C.loo) {
+  for (const s of classDef().skills) {
     const b = document.createElement('button');
     b.className = 'slot';
     const icon = s.icon && A.icons.has(s.icon) ? `<img src="assets/icons/${s.icon}.webp" alt="">` : `<span class="lbl">${s.name}</span>`;
-    b.innerHTML = `${icon}<span class="key">${s.key}</span><span class="cd"></span><span class="cdt"></span>${s.icon ? `<span class="name">${s.name}</span>` : ''}`;
+    b.innerHTML = `${icon}<span class="key">${s.key}</span><span class="cd"></span><span class="cdt"></span>${s.icon && A.icons.has(s.icon) ? `<span class="name">${s.name}</span>` : ''}`;
     b.title = `${s.name} — ${s.tip}`;
     b.addEventListener('click', () => castKey(s.key));
     bar.appendChild(b);
   }
-  if (A.icons.has(C.passiveIcon)) {
+  const passive = classDef().passive;
+  if (passive && A.icons.has(passive)) {
     const p = document.createElement('div');
     p.className = 'slot';
     p.style.cursor = 'default';
     p.title = 'Passive';
-    p.innerHTML = `<img src="assets/icons/${C.passiveIcon}.webp" alt=""><span class="name">Passive</span>`;
+    p.innerHTML = `<img src="assets/icons/${passive}.webp" alt=""><span class="name">Passive</span>`;
     bar.appendChild(p);
   }
 }
 
-const CD_IDX = { harmony: 2, ordinance: 3, axiom: 4, quix: 5, taunt: 6 };
-const CD_LEN = { 2: LOO.harmony.cd, 3: LOO.ordinance.cd, 4: LOO.axiom.cd, 5: LOO.quix.cd, 6: LOO.taunt.cd };
-
 function updateSkillbar() {
   const f = S.fight;
   const nodes = $('skillbar').children;
-  C.loo.forEach((s, i) => {
+  classDef().skills.forEach((s, i) => {
     const n = nodes[i];
     if (s.key === 1) {
       n.classList.toggle('off', f.stunned());
       return;
     }
+    const len = SKILL_CD[CLASS_SKILLS[playerRole][s.key]] || 1;
     const left = Math.max(0, f.cd[s.key] - f.t);
-    n.querySelector('.cd').style.height = `${clamp(left / Math.max(CD_LEN[s.key], 1), 0, 1) * 100}%`;
+    n.querySelector('.cd').style.height = `${clamp(left / len, 0, 1) * 100}%`;
     n.querySelector('.cdt').textContent = left > 50 ? (left / 1000).toFixed(left > 9950 ? 0 : 1) : '';
     n.classList.toggle('off', f.stunned());
   });
@@ -579,9 +571,8 @@ function updatePanels() {
   for (let k = 0; k < 7; k++) {
     let idx = f.rot.idx + k;
     if (idx >= PATTERN.length) idx = 6 + ((idx - PATTERN.length) % (PATTERN.length - 6));
-    const ab = PATTERN[idx];
     const mech = MECHANICS[idx];
-    rows.push(`<div class="${k === 0 ? 'cur' : ''}">${ab.toUpperCase()}${mech ? ` <span style="color:var(--dim)">→ ${ROLE_SHORT[mech]} tanks</span>` : ''}</div>`);
+    rows.push(`<div class="${k === 0 ? 'cur' : ''}">${PATTERN[idx].toUpperCase()}${mech ? ` <span style="color:var(--dim)">→ ${ROLE_SHORT[mech]} tanks${mech === playerRole ? ' (you!)' : ''}</span>` : ''}</div>`);
   }
   $('rot').innerHTML = rows.join('');
   const c = f.counters;
@@ -598,12 +589,11 @@ function updatePanels() {
 }
 
 function restart() {
-  const keys = S ? S.keys : new Set();
   S = newState();
-  S.keys = keys;
-  botTauntAt = botQuixAt = null;
+  bq.length = 0;
   $('log').innerHTML = '';
-  log('Engaged Ultra Speaker');
+  buildSkillbar();
+  log(`Engaged Ultra Speaker as ${classDef().name}`);
 }
 
 // --------------------------------------------------------------------- input
@@ -611,23 +601,18 @@ function toStage(ev) {
   const r = canvas.getBoundingClientRect();
   return { x: ((ev.clientX - r.left) / r.width) * C.stage.w, y: ((ev.clientY - r.top) / r.height) * C.stage.h };
 }
+// movement is mouse only: click the ground to walk there
 canvas.addEventListener('mousedown', (ev) => {
   if (S.fight.over) return;
   const { x, y } = toStage(ev);
-  S.player.moveTo = { x: clamp(x, C.walk.x0, C.walk.x1), y: clamp(y, C.walk.y0, C.walk.y1) };
+  S.chars[playerRole].moveTo = { x: clamp(x, C.walk.x0, C.walk.x1), y: clamp(y, C.walk.y0, C.walk.y1) };
 });
-const MOVE_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
 window.addEventListener('keydown', (ev) => {
   if (ev.target.tagName === 'SELECT') return;
   const k = ev.key.toLowerCase();
-  if (MOVE_KEYS.has(k)) {
-    S.keys.add(k);
-    ev.preventDefault();
-  } else if (k >= '1' && k <= '6') castKey(parseInt(k, 10));
+  if (k >= '1' && k <= '6') castKey(parseInt(k, 10));
   else if (k === 'p') $('btnPause').click();
 });
-window.addEventListener('keyup', (ev) => S.keys.delete(ev.key.toLowerCase()));
-window.addEventListener('blur', () => S.keys.clear());
 $('btnRestart').addEventListener('click', restart);
 $('btnPause').addEventListener('click', () => {
   paused = !paused;
@@ -635,6 +620,20 @@ $('btnPause').addEventListener('click', () => {
 });
 $('selSpeed').addEventListener('change', (e) => (speed = parseFloat(e.target.value)));
 $('chkBot').addEventListener('change', (e) => (bot = e.target.checked));
+$('selClass').addEventListener('change', (e) => {
+  playerRole = e.target.value;
+  restart();
+  updateHelp();
+});
+
+function updateHelp() {
+  const h = {
+    loo: '<b>Taunt (6)</b> when the banner says so; <b>Quix (5)</b> on Truth #5 and #9; <b>Ordinance (3)</b> to heal; keep <b>Harmony (2)</b> and <b>Axiom (4)</b> up. You are zone <b>4</b>.',
+    ap: '<b>Seal (4)</b> before Truths #1–3 and #5–7 (the next cast needs it), then <b>Eden (5)</b> within ~5 s to break it; <b>Heal (3)</b> the party. Skills need you near the middle. You are zone <b>3</b>.',
+    lr: '<b>Empowerment (4)</b> keeps your damage taken -30%; <b>Anathema (5)</b> hits the boss; <b>Taunt (6)</b> when the banner says so. You are zone <b>2</b>.',
+  }[playerRole];
+  $('help').innerHTML = h;
+}
 
 // ---------------------------------------------------------------------- loop
 let last = performance.now();
@@ -643,13 +642,11 @@ function frame(now) {
   last = now;
   if (!paused) {
     const sdt = dt * speed;
-    // sub-step so fast-forwarded timers stay accurate
     const steps = Math.max(1, Math.ceil(sdt / 0.05));
     for (let i = 0; i < steps; i++) {
       S.fight.step((sdt / steps) * 1000);
       runBot();
-      updatePlayer(sdt / steps);
-      updateNpcs(sdt / steps);
+      updateChars(sdt / steps);
     }
     S.floaters.forEach((fl) => (fl.t += sdt));
     S.floaters = S.floaters.filter((fl) => fl.t < fl.life);
@@ -663,8 +660,10 @@ function frame(now) {
 
 async function main() {
   await loadAssets();
+  $('selClass').innerHTML = Object.entries(C.classes).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+  $('selClass').value = playerRole;
   restart();
-  buildSkillbar();
+  updateHelp();
   if (params.get('speed')) {
     speed = parseFloat(params.get('speed'));
     $('selSpeed').value = String(speed);
@@ -679,7 +678,7 @@ async function main() {
     last = t;
     frame(t);
   });
-  window.__sim = { get S() { return S; }, castKey, C, restart };
+  window.__sim = { get S() { return S; }, castKey, C, restart, get role() { return playerRole; } };
 }
 
 main().catch((e) => {

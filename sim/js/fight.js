@@ -43,6 +43,24 @@ const AP_ROTATION = {
   30: [2], 31: [3, 2], 32: [2], 33: [3, 2],
 };
 
+const LOO_ROTATION = {
+  1: [3, 2, 4, 5], 2: [3, 2, 4], 3: [3, 2, 4, 5], 4: [], 5: [3, 2, 4], 7: [2, 4], 8: [3], 9: [2, 4],
+  12: [2, 4, 3], 14: [4, 3, 2], 16: [], 17: [2, 4, 5], 18: [3], 19: [3, 2, 4], 21: [2, 4], 22: [], 23: [3, 2, 4],
+  24: [], 25: [3], 26: [], 27: [3, 4, 2], 28: [4, 3, 2], 31: [2, 4, 5], 32: [3], 33: [2, 4],
+};
+
+// player skill slots 2-6 per class (slot 1 is the auto attack)
+export const CLASS_SKILLS = {
+  loo: { 2: 'harmony', 3: 'ordinance', 4: 'axiom', 5: 'quix', 6: 'taunt' },
+  ap: { 2: 'commandment', 3: 'heal', 4: 'seal', 5: 'eden', 6: 'taunt' },
+  lr: { 2: 'shade', 3: 'wicked', 4: 'empowerment', 5: 'anathema', 6: 'taunt' },
+};
+export const SKILL_CD = {
+  harmony: 4000, ordinance: 6000, axiom: 4000, quix: 4000, taunt: 10000,
+  commandment: 2500, heal: 5000, seal: 12500, eden: 12500,
+  shade: 3000, wicked: 3000, empowerment: 3000, anathema: 6000,
+};
+
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => Math.floor(rnd(a, b + 1));
 
@@ -282,90 +300,17 @@ export class Fight {
     this.after(3400, () => this.h.boss?.('Idle'));
   }
 
-  // ------------------------------------------------------ scripted party members
-  apSkill(n) {
-    if (n === 3) this.apHeal();
-    else if (n === 4) this.apSeal();
-    else if (n === 5) this.apEden();
-    // 2 = Commandment (stacking damage buff, no effect on this model)
-  }
-
-  apHeal() {
-    this.after(250, () => {
-      this.setBuff('apHeal', true);
-      this.apHealUntil = this.t + 15000;
-      this.healParty(6682);
-      this.h.fx?.('heal', 'ap');
-    });
-  }
-
-  apSeal() {
-    const tok = ++this.ap.sealToken;
-    this.after(250, () => {
-      this.ap.reduction = 'seal';
-      this.h.fx?.('seal', 'ap');
-    });
-    this.after(250 + 5500, () => {
-      if (this.ap.sealToken === tok && this.ap.reduction === 'seal') this.apEden();
-    });
-    this.after(7250, () => {
-      if (this.ap.sealToken === tok && this.ap.reduction === 'seal') {
-        this.ap.reduction = null;
-        this.counters.notBroken++;
-      }
-    });
-  }
-
-  apEden() {
-    const tok = ++this.ap.edenToken;
-    this.after(250, () => {
-      this.ap.reduction = 'eden';
-      this.h.fx?.('eden', 'ap');
-    });
-    this.after(25250, () => {
-      if (this.ap.edenToken === tok && this.ap.reduction === 'eden') this.ap.reduction = null;
-    });
-  }
-
-  scriptedParty(idx, ability) {
-    (AP_ROTATION[idx] || []).forEach((s, i) => this.after(i * 500, () => this.apSkill(s)));
-    // Legion Revenant: keeps Empowerment (-30% damage taken) rolling off cooldown
-    this.after(750, () => {
-      if (this.t >= this.lrEmpowerReady) {
-        this.lrEmpowerUntil = this.t + 12250;
-        this.lrEmpowerReady = this.t + 3000;
-        this.h.fx?.('empower', 'lr');
-      }
-    });
-  }
-
-  // ----------------------------------------------------- Lord of Order (player)
-  skillReady(n) {
-    if (this.over) return false;
-    if (this.t < this.cd[n]) return false;
-    if (n >= 2 && this.stunned()) return false;
-    return true;
-  }
-
-  startCd(n, ms) {
-    this.cd[n] = this.t + ms;
-  }
-
-  globalCd() {
-    for (let n = 2; n <= 6; n++) if (this.cd[n] - this.t < 1000) this.cd[n] = Math.max(this.cd[n], this.t + LOO.gcd);
-  }
-
-  /** 2 Harmony, 3 Ordinance, 4 Axiom, 5 Quix, 6 Taunt. Returns true if cast. */
-  cast(n) {
-    if (!this.skillReady(n)) return false;
-    const me = this.playerRole;
-    switch (n) {
-      case 2:
-        this.startCd(2, LOO.harmony.cd);
+  // ------------------------------------------------- class skills (all roles)
+  // Every role's skill goes through doSkill(); the player calls it via cast()
+  // (cooldown / stasis / range checked), scripted party members call it directly.
+  doSkill(name, actor, manual) {
+    const t0 = this.t;
+    switch (name) {
+      case 'harmony':
         this.after(250, () => {
           this.setBuff('harmony', true);
           this.harmonyUntil = this.t + LOO.harmony.dur;
-          this.h.fx?.('harmony', me);
+          this.h.fx?.('harmony', actor);
         });
         this.after(250 + LOO.harmony.dur, () => {
           if (this.t >= this.harmonyUntil) {
@@ -374,29 +319,26 @@ export class Fight {
           }
         });
         break;
-      case 3:
-        this.startCd(3, LOO.ordinance.cd);
+      case 'ordinance':
         this.after(250, () => {
           this.ordinanceUntil = this.t + LOO.ordinance.dur;
           this.healParty(LOO.ordinance.heal);
-          this.h.fx?.('ordinance', me);
+          this.h.fx?.('ordinance', actor);
         });
         this.after(250 + LOO.ordinance.dur, () => {
           if (this.t >= this.ordinanceUntil) this.counters.ordinance++;
         });
         break;
-      case 4:
-        this.startCd(4, LOO.axiom.cd);
+      case 'axiom':
         this.after(250, () => {
           this.axiomUntil = this.t + LOO.axiom.dur;
-          this.h.fx?.('axiom', me);
+          this.h.fx?.('axiom', actor);
         });
         this.after(250 + LOO.axiom.dur, () => {
           if (this.t >= this.axiomUntil) this.counters.axiom++;
         });
         break;
-      case 5:
-        this.startCd(5, LOO.quix.cd);
+      case 'quix':
         this.after(250, () => {
           if (this.t < this.quixAvailableAt) {
             this.quixAvailableAt = this.t + LOO.quix.lockout; // spamming resets the lockout
@@ -404,17 +346,118 @@ export class Fight {
           }
           this.quixAvailableAt = this.t + LOO.quix.lockout;
           this.quixUntil = this.t + LOO.quix.dur;
-          this.h.fx?.('quix', me);
+          this.h.fx?.('quix', actor);
         });
         break;
-      case 6:
-        this.startCd(6, LOO.taunt.cd);
-        this.taunt = { role: me, until: this.t + LOO.taunt.dur };
-        this.h.fx?.('taunt', me);
+      case 'taunt':
+        this.taunt = { role: actor, until: t0 + LOO.taunt.dur };
+        this.h.fx?.('taunt', actor);
         break;
-      default:
-        return false;
+      // ---- Arch Paladin
+      case 'commandment':
+        this.h.fx?.('commandment', actor); // stacking damage buff, no effect on this model
+        break;
+      case 'heal':
+        this.after(250, () => {
+          this.setBuff('apHeal', true);
+          this.apHealUntil = this.t + 15000;
+          this.healParty(6682);
+          this.h.fx?.('heal', actor);
+        });
+        break;
+      case 'seal': {
+        const tok = ++this.ap.sealToken;
+        this.after(250, () => {
+          this.ap.reduction = 'seal';
+          this.h.fx?.('seal', actor);
+        });
+        if (!manual) {
+          this.after(250 + 5500, () => {
+            if (this.ap.sealToken === tok && this.ap.reduction === 'seal') this.doSkill('eden', actor, false);
+          });
+        }
+        this.after(7250, () => {
+          if (this.ap.sealToken === tok && this.ap.reduction === 'seal') {
+            this.ap.reduction = null;
+            this.counters.notBroken++;
+          }
+        });
+        break;
+      }
+      case 'eden': {
+        if (manual && this.ap.reduction !== 'seal') break; // nothing to break
+        const tok = ++this.ap.edenToken;
+        this.after(250, () => {
+          this.ap.reduction = 'eden';
+          this.h.fx?.('eden', actor);
+        });
+        this.after(25250, () => {
+          if (this.ap.edenToken === tok && this.ap.reduction === 'eden') this.ap.reduction = null;
+        });
+        break;
+      }
+      // ---- Legion Revenant
+      case 'shade':
+      case 'wicked':
+        this.h.fx?.(name, actor); // boss debuffs, no effect on this model
+        break;
+      case 'empowerment':
+        this.after(250, () => {
+          this.lrEmpowerUntil = this.t + 12000;
+          this.h.fx?.('empowerment', actor);
+        });
+        break;
+      case 'anathema': {
+        const d = Math.floor(6000 + Math.random() * 3000);
+        this.h.fx?.('anathema', actor);
+        if (manual) this.playerHit(d, d > 8000);
+        break;
+      }
     }
+  }
+
+  scriptedParty(idx) {
+    const p = this.playerRole;
+    if (p !== 'ap') (AP_ROTATION[idx] || []).forEach((s, i) => this.after(i * 500, () => this.doSkill({ 2: 'commandment', 3: 'heal', 4: 'seal', 5: 'eden' }[s], 'ap', false)));
+    if (p !== 'loo') (LOO_ROTATION[idx] || []).forEach((s, i) => this.after(i * 500, () => this.doSkill({ 2: 'harmony', 3: 'ordinance', 4: 'axiom', 5: 'quix' }[s], 'loo', false)));
+    if (p !== 'lr') {
+      // Legion Revenant keeps Empowerment (-30% damage taken) rolling off cooldown
+      this.after(750, () => {
+        if (this.t >= this.lrEmpowerReady) {
+          this.lrEmpowerReady = this.t + 3000;
+          this.doSkill('empowerment', 'lr', false);
+        }
+      });
+    }
+  }
+
+  // ------------------------------------------------------- player (any class)
+  skillName(n) {
+    return CLASS_SKILLS[this.playerRole]?.[n] ?? null;
+  }
+
+  skillReady(n) {
+    if (this.over) return false;
+    if (this.t < this.cd[n]) return false;
+    if (n >= 2 && this.stunned()) return false;
+    return true;
+  }
+
+  globalCd() {
+    for (let n = 2; n <= 6; n++) if (this.cd[n] - this.t < 1000) this.cd[n] = Math.max(this.cd[n], this.t + LOO.gcd);
+  }
+
+  /** Cast skill slot 2-6 of the player's class. Returns true if it went off. */
+  cast(n) {
+    const name = this.skillName(n);
+    if (!name || !this.skillReady(n)) return false;
+    // Arch Paladin skills 2, 4, 5, 6 need to be in the middle of the arena
+    if (this.playerRole === 'ap' && [2, 4, 5, 6].includes(n) && !(this.h.playerCentered?.() ?? true)) {
+      this.h.floater?.(this.playerRole, 'Too far from center', 'bad');
+      return false;
+    }
+    this.cd[n] = this.t + SKILL_CD[name];
+    this.doSkill(name, this.playerRole, true);
     this.globalCd();
     return true;
   }
@@ -439,7 +482,7 @@ export class Fight {
       case 'truth':
         {
           const requiresSeal = (r.truthN >= 1 && r.truthN <= 3) || (r.truthN >= 5 && r.truthN <= 7);
-          if (requiresSeal && this.playerRole !== 'ap') this.apSeal();
+          if (requiresSeal && this.playerRole !== 'ap') this.doSkill('seal', 'ap', false);
         }
         this.truth(r.truthN);
         r.truthN++;

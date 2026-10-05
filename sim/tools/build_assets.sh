@@ -51,10 +51,19 @@ im = Image.open(glob.glob(sys.argv[1] + "/*/1.png")[0]).convert("RGB")
 im.crop((526, 652, 1486, 1152)).save(sys.argv[2], quality=88)
 PY
 
-echo "== Lord of Order skill icons (LoO1-4, LoOaa, LoOp)"
-export_pack "$ASSETS" 0.3 icons LoO1 LoO2 LoO3 LoO4 LoOaa LoOp
+echo "== class skill icons (LoO, LR, AP) from Assets"
+export_pack "$ASSETS" 0.3 icons LoO1 LoO2 LoO3 LoO4 LoOaa LoOp LR1 LR2 LR3 LR4 LRaa LRp2 apal1 apal2 apal3 apal4
 
-echo "== Lord of Order cast effect (symbol 9333, Symbol3aaaaa_loo_757)"
+echo "== cast effect (symbol 9333, Symbol3aaaaa_loo_757)"
 export_pack "$ASSETS" 0.5 classfx 9333
+
+echo "== character: mcSkel from the recovered project's _assets/assets.swf, optional parts hidden"
+CHAR="$HERE/../../_assets/assets.swf"
+"${FFDEC[@]}" -swf2xml "$CHAR" "$WORK/char.xml" > /dev/null
+python3 "$HERE/clean_skeleton.py" "$WORK/char.xml" "$WORK/char_clean.xml"
+"${FFDEC[@]}" -xml2swf "$WORK/char_clean.xml" "$WORK/char_clean.swf" > /dev/null
+java -cp "$CP" SwfIndex "$WORK/char_clean.swf" 2408 | grep -v '^Picked' > "$WORK/chars.rects"
+"${FFDEC[@]}" -zoom 0.65 -selectid 2408 -format sprite:png -export sprite "$WORK/chars" "$WORK/char_clean.swf" > /dev/null
+python3 "$HERE/pack_sprites.py" "$WORK/chars" "$WORK/chars.rects" "$OUT/chars" 0.65 "8-16,54-68,622-633,703-722,911-931,932-958,495-502,810-827,828-849"
 
 echo "done -> $OUT"
