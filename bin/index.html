@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ultra Speaker simulator (Ruffle)</title>
+<style>body{margin:0;background:#111;color:#ccc;font:14px system-ui}#c{width:960px;height:500px;margin:12px auto}p{text-align:center}</style>
+</head>
+<body>
+<div id="c"></div>
+<p>Left-click to move · click the boss to target · skills 1–6 · options: <code>?class=ap|lr|loo&amp;bot=1&amp;speed=4</code></p>
+<script>
+  window.RufflePlayer = { config: { autoplay: "on", splashScreen: false, unmuteOverlay: "hidden",
+    allowScriptAccess: true, warnOnUnsupportedContent: false } };
+</script>
+<script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+<script>
+  // FlashVars come from this page's query string (e.g. index.html?class=ap&bot=1)
+  const player = window.RufflePlayer.newest().createPlayer();
+  document.getElementById("c").appendChild(player);
+  player.style.width = "960px";
+  player.style.height = "500px";
+  player.load({ url: "ultra_sim.swf", parameters: location.search.slice(1) });
+</script>
+</body>
+</html>

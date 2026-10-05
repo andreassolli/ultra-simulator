@@ -75,8 +75,14 @@ skills. Pick your class with the buttons top right; the other roles are scripted
 ./build.sh test     # bin/character_test.swf (the original character test)
 ```
 
-Open `bin/ultra_sim.swf` in Flash Player / AIR (`adl`) or Ruffle (that is how it was tested; keep `bin/runtime/` next
-to the SWF). Move by left-clicking the ground, click the boss to target it, skills on keys `1`–`6` or by clicking.
+Run it with Ruffle (how it was tested; the game loads `bin/runtime/*.swf` over HTTP so serve the folder):
+
+```sh
+cd bin && python3 -m http.server 8000     # then open http://localhost:8000/
+```
+
+`bin/index.html` loads Ruffle from unpkg. The Ruffle desktop app can also open `bin/ultra_sim.swf` directly, and so can
+Flash Player / AIR (`adl`); keep `bin/runtime/` next to the SWF. Move by left-clicking the ground, click the boss to target it, skills on keys `1`–`6` or by clicking.
 With no zone active everyone stacks in the middle; during Equal only the named role stays there and the rest move
 to the right of the box. Optional FlashVars: `class=loo|ap|lr`, `bot=1` (auto-pilot), `speed=4`.
 
