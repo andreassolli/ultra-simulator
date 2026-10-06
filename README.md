@@ -68,6 +68,16 @@ Try it: `index.html?boss=dage&class=ca&autoplay=1&bot=1&speed=4`.
 
 Try it: `index.html?boss=drakath&class=lr&autoplay=1&bot=1&speed=4`.
 
+## Damage maths (Dage and Drakath)
+
+Everything the players deal, heal and wait for in the Ultra Dage and Champion Drakath fights goes through `src/sim/Dmg.as`, which is the calculator's maths ([Shell1010/aqwdex](https://github.com/Shell1010/aqwdex), `backend/src/damage.rs` and `player.rs`):
+
+- `damage = source x type modifier x weapon boost x skill damage`; `AP1 = weapon dps + 0.1 AP`, `AP2 = 2 x AP1 x range` (same for spell power); physical = all-out x physical-out x crit, magical uses magic-out, true damage only the crit multiplier, DoT = all-out^2 x magic-out x DoT-out. Weapon: the calculator's default (85 dps, range 1, 51 % x 50 % boost).
+- Crit chance and crit damage, haste (`cooldown x (1 - haste)`, for skills and auto attacks), healing power, and the boss' resistances (Dage 50 % physical / magical) with the "damage over 150 000 / 75 000 is reduced to the excess ^ 0.8" cap.
+- Skill damage factor, damage source, cooldown and mana cost per skill come from `classes.json`; class passives (Unending Rage, Dark Scholar, Sacred Blessing ...) change the stats. Mana is spent and recovered as the class text says (the player's MP bar is real now); Legion Revenant also has Infinita Nox and Paladin Chronomancer Temporal Rift / Reprisal / Guardian Angel.
+- **Not available:** the two Google documents (the advanced-mechanics site and the damage doc) are behind a network block here, so the primary-stat conversions, the player's defence and healing rules are not from them. The calculator has no `AoE1`, `EX1`, `Chrono2`, `Avenger1` or `Leech1` damage source (they are taken as spell power / attack power, `Chrono2` is rebuilt from the skill text), and its `class_builds.json` is empty, so the stat totals are the calculator's own test build changed by the class passives.
+- **Calibrations:** an ultra build is much stronger than that test build, so each fight multiplies hits and heals by a `GEAR` constant (4.9 for Dage, 5.4 for Drakath) to keep the fights as long as they were; what the bosses deal to the party (armour on Drakath's autos, party HP, life steal, heal scale) was tuned the same way. Paste the documents' formulas and these can be replaced by the real ones.
+
 ## Next step
 
 Inspect:

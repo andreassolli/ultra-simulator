@@ -75,6 +75,7 @@ package sim
 
         // ---------------------------------------------------------------- state
         public var t:Number = 0;
+        public var mana:Number = 100; // 0-100, only the Dage / Drakath fights spend it
         public var playerRole:String;
         public var over:Object = null; // {result, reason}
         public var bossMaxHp:Number;

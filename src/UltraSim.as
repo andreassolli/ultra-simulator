@@ -35,6 +35,7 @@ package
     import flash.filters.GlowFilter;
 
     import ui.BuffAeternaNox;
+    import ui.BuffCog;
     import ui.BuffMagiaBurn;
     import ui.BuffNoxiousDecay;
     import ui.BuffSomber;
@@ -723,14 +724,19 @@ package
                 {name: "fury", icon: "Chavengea4", boss: false},
                 {name: "thinair", icon: "iea1", boss: false},
                 // Champion Drakath
-                {name: "power", glyph: ["P", 0xC8661A], fill: true, boss: true},
-                {name: "unleashed", glyph: ["U", 0x7A2A8A], fill: true, boss: true},
-                {name: "meteor", glyph: ["!", 0xC02A1A], fill: true, boss: true},
-                {name: "chaos", glyph: ["C", 0x5A2A8A], fill: true, boss: false},
-                {name: "cripple", glyph: ["X", 0x5A5A66], fill: true, boss: false},
+                {name: "power", icon: BuffCog, boss: true},
+                {name: "unleashed", icon: BuffCog, boss: true},
+                {name: "meteor", icon: BuffCog, boss: true},
+                {name: "chaos", icon: BuffCog, boss: false},
+                {name: "cripple", icon: BuffCog, boss: false},
                 {name: "depraved", icon: "LR3", boss: false},
                 {name: "vow", icon: "PallyChA2", boss: false},
-                {name: "intervention", icon: "PallyChA3", boss: false}
+                {name: "intervention", icon: "PallyChA3", boss: false},
+                {name: "wicked", icon: "LR2", boss: false},
+                {name: "rift", icon: "PallyChA1", boss: false},
+                {name: "angel", icon: "PallyChA3", boss: false},
+                {name: "nox", icon: BuffCog, boss: true},
+                {name: "reprisal", icon: "PallyChA1", boss: true}
             ];
             for each (var d:Object in defs)
             {
@@ -744,11 +750,7 @@ package
                 bg.y = -bb.y * k;
                 slot.addChild(bg);
                 var icon:DisplayObject;
-                if (d.glyph)
-                {
-                    icon = glyphBadge(d.glyph[0], d.glyph[1]);
-                }
-                else if (d.icon is String)
+                if (d.icon is String)
                 {
                     var AC:Class = assetsDomain.getDefinition(d.icon) as Class;
                     icon = new AC() as DisplayObject;
@@ -777,19 +779,6 @@ package
                 hudLayer.addChild(slot);
                 buffIcons[d.name] = {sp: slot, cnt: cnt, ov: ov, size: size, boss: d.boss};
             }
-        }
-
-        private static function glyphBadge(letter:String, color:uint):DisplayObject
-        {
-            var sp:Sprite = new Sprite();
-            sp.graphics.lineStyle(4, 0xFFFFFF, 0.55);
-            sp.graphics.beginFill(color, 1);
-            sp.graphics.drawCircle(50, 50, 46);
-            sp.graphics.endFill();
-            var t:TextField = Hud.label(letter, 60, 0xFFFFFF, true, "center", 100);
-            t.y = 6;
-            sp.addChild(t);
-            return sp;
         }
 
         /** Lay out the active effects in a row; `count` is the little number in the corner. */
@@ -1810,7 +1799,7 @@ package
             // Spider.swf status boxes: player and target (the boss)
             playerBox["strClass"].text = CLASS_NAMES[role];
             setBar(playerBox, "HP", "intHPbar", "strIntHP", f.hp[role] / f.maxHp(role), Fight.fmt(f.hp[role]));
-            setBar(playerBox, "MP", "intMPbar", "strIntMP", 1, "100");
+            setBar(playerBox, "MP", "intMPbar", "strIntMP", f.mana / 100, String(Math.round(f.mana)));
             setBar(playerBox, "SP", "intSPbar", "strIntSP", 1, "100");
             setBar(targetBox, "HP", "intHPbar", "strIntHP", f.bossHp / f.bossMaxHp, Fight.fmt(f.bossHp));
             setBar(targetBox, "MP", "intMPbar", "strIntMP", 1, "100");

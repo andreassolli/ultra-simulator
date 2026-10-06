@@ -4,7 +4,7 @@ package sim
      * Ultra Dage fight rules (Chaos Avenger / Classic Ninja).
      *
      * The boss' attacks, charge times, cooldowns, damage ranges, buffs / debuffs and the attack pattern are from the
-     * wiki guide (ultradage.mdx); the class skills from classes.json (cooldowns are scaled by HASTE below).
+     * wiki guide (ultradage.mdx); the class skills from classes.json (cooldowns shrink with the class' haste, see Dmg).
      * Numbers the guide does not give - party HP, the raid's damage, healing - are tuned so a correct run wins and
      * missed taunts / plates lose, see README. All times are in milliseconds.
      *
@@ -26,11 +26,20 @@ package sim
             siphon: 6000, flux: 15000, bulwark: 6000, fury: 35000,
             crosscut: 2000, shadowblade: 12000, shadowburn: 6000, thinair: 30000
         };
+        /** per skill: damage factor, damage source, mana cost (classes.json); flux always crits */
+        private static const SKILL:Object = {
+            siphon: {f: 1.2, src: "Leech1", mp: 50}, flux: {f: 1, src: "AP2", mp: 50, crit: true},
+            bulwark: {f: 1, src: "AP2", mp: 50}, fury: {f: 2.5, src: "AP2", mp: 50},
+            crosscut: {f: 1.5, src: "AP2", mp: 15}, shadowblade: {f: 0.5, src: "APSP2", mp: 25},
+            shadowburn: {f: 0.5, src: "APSP2", mp: 5}, thinair: {f: 0, src: "AP1", mp: 30}
+        };
         /**
-         * The guide expects a Flux for every Decaying Strike (they come 9 s apart) although Flux lists 15 s, so the
-         * players' haste / cooldown reduction is taken as 60 %.
+         * Ultra builds have far larger stats than the calculator's test build, so every hit and heal is multiplied by
+         * this to make the raid kill Dage in about the time it took before the calculator maths was put in.
          */
-        private static const HASTE:Number = 0.4;
+        private static const GEAR:Number = 4.9;
+        private static const RESIST:Number = 0.5;   // Dage: 50 % physical and magical resistance
+        private static const CAP:Number = 150000;   // "damage over 150 000 is reduced": excess ^ 0.8
 
         private static const CAST:Object = {auto: 500, decay: 500, zone: 3000, regen: 10000};
         private static const SLOT:Object = {auto: 2250, decay: 2250, zone: 4500, regen: 11500};
@@ -40,7 +49,6 @@ package sim
         private static const FOCUS_MS:int = 4000;
         private static const AETERNA_MS:int = 11000;
         private static const DECAY_MS:int = 11000;
-        private static const UNIT:Number = 2600; // damage of one "1.0x" skill hit
         private static const ALLY_LIFESTEAL:Number = 330; // hp per second each ally gets back
 
         private static const GCD:int = 400;
@@ -76,12 +84,15 @@ package sim
         private var allyAt:Number = 0;
         private var playerClass:String;
         private var introCue:Boolean = false;
+        private var me:Object;       // the player's stats (Dmg.profile)
+        private var ally:Object = Dmg.profile("dps");
 
         public function DageFight(host:IFightHost, role:String, bossHp:Number, raidDps:Array)
         {
             super(host, role, bossHp, raidDps);
             host2 = host;
             playerClass = role;
+            me = Dmg.profile(role);
             hp = {};
             somber = {};
             armor = {};
@@ -187,7 +198,7 @@ package sim
 
         override public function skillCdMs(name:String):Number
         {
-            return LISTED_CD[name] * HASTE;
+            return Dmg.cooldown(LISTED_CD[name], me.haste);
         }
 
         private function isTank(r:String):Boolean
@@ -281,7 +292,7 @@ package sim
             var m:Number = 1 / (1 + 0.1 * cloakStacks());
             m *= 1 + 0.1 * siphonCount();
             m *= t < bloodUntil ? 1.3 : 1;
-            return int(dmg * m);
+            return int(Dmg.taken(dmg * m, RESIST, CAP));
         }
 
         private function dmgBoss(dmg:Number, crit:Boolean, who:String):void
@@ -535,20 +546,24 @@ package sim
             return !over && t >= cd[n];
         }
 
-        override public function swingEvery():Number
+        /** haste in %: the class' own, Unstoppable Force (Fury Unleashed) +25, Thin Air +5 per hit */
+        private function haste():Number
         {
-            var base:Number = playerClass == "ca" ? 3.0 : 1.5;
-            var haste:Number = HASTE / (1 + 0.05 * (t < thinAirUntil ? thinAirHits : 0));
+            var h:Number = me.haste;
             if (playerClass == "ca" && t < furyUntil)
             {
-                haste /= 1.25;
+                h += 25;
             }
-            return base * haste;
+            if (t < thinAirUntil)
+            {
+                h += 5 * thinAirHits;
+            }
+            return h;
         }
 
-        private function crit():Boolean
+        override public function swingEvery():Number
         {
-            return Math.random() < (playerClass == "ca" ? 0.3 : 0.25);
+            return Dmg.cooldown(playerClass == "ca" ? 3000 : 1500, haste()) / 1000;
         }
 
         private function outMul():Number
@@ -556,15 +571,24 @@ package sim
             return t < furyUntil ? 1.5 : 1;
         }
 
+        private function variance():Number
+        {
+            return rnd(0.95, 1.05);
+        }
+
         override public function swing():Object
         {
-            var c:Boolean = crit();
-            var base:Number = UNIT * (playerClass == "ca" ? 1.3 : 0.8) * rnd(0.9, 1.1) * outMul() * (c ? 1.7 : 1);
-            if (playerClass == "ca" && branded)
+            var c:Boolean = Dmg.rollCrit(me);
+            var base:Number = Dmg.hit(me, playerClass == "ca" ? 1.3 : 0.8, playerClass == "ca" ? "Avenger1" : "AP1", "phys", c, hp[playerRole], GEAR) * variance() * outMul();
+            if (playerClass == "ca")
             {
-                branded = false;
-                base *= 2; // Chaos Greatsword on a Branded target
-                ravaged = Math.min(8, ravaged + 1);
+                mana = Math.min(100, mana + 60); // "recovers 60 mana on hit"
+                if (branded)
+                {
+                    branded = false;
+                    base *= 2; // Chaos Greatsword on a Branded target
+                    ravaged = Math.min(8, ravaged + 1);
+                }
             }
             var d:int = strike(base, "player");
             restore(playerRole, d * 0.1, false);
@@ -583,7 +607,14 @@ package sim
             {
                 return false;
             }
-            cd[n] = t + LISTED_CD[name] * HASTE;
+            var cost:Number = SKILL[name].mp;
+            if (mana < cost)
+            {
+                host2.floater(playerRole, "Not enough mana", "bad");
+                return false;
+            }
+            mana -= cost;
+            cd[n] = t + skillCdMs(name);
             doSkill(name);
             for (var k:int = 2; k <= 6; k++)
             {
@@ -595,10 +626,11 @@ package sim
             return true;
         }
 
-        private function skillDamage(factor:Number):void
+        private function skillDamage(name:String):void
         {
-            var c:Boolean = crit();
-            var d:Number = UNIT * factor * rnd(0.9, 1.1) * outMul() * (c ? 1.7 : 1);
+            var k:Object = SKILL[name];
+            var c:Boolean = k.crit ? true : Dmg.rollCrit(me);
+            var d:Number = Dmg.hit(me, k.f, k.src, name == "shadowblade" || name == "shadowburn" ? "magic" : "phys", c, hp[playerRole], GEAR) * variance() * outMul();
             dmgBoss(d, c, "player");
             restore(playerRole, strike(d, "player") * 0.1, false);
         }
@@ -609,7 +641,7 @@ package sim
             switch (name)
             {
                 case "siphon":
-                    skillDamage(1.2);
+                    skillDamage("siphon");
                     siphonStacks = pruned(siphonStacks);
                     if (live(siphonStacks) < 4)
                     {
@@ -619,18 +651,18 @@ package sim
                     restore(playerRole, 600, true); // drains life
                     break;
                 case "flux":
-                    skillDamage(1.0);
+                    skillDamage("flux");
                     tauntRole = "ca";
                     tauntUntil = t + FOCUS_MS;
                     branded = true;
                     break;
                 case "bulwark":
-                    skillDamage(1.0);
+                    skillDamage("bulwark");
                     bulwarkUntil = t + 15000;
                     branded = true;
                     break;
                 case "fury":
-                    skillDamage(2.5);
+                    skillDamage("fury");
                     if (ravaged > 0)
                     {
                         furyUntil = t + 10000;
@@ -643,11 +675,11 @@ package sim
                     branded = true;
                     break;
                 case "crosscut":
-                    skillDamage(1.5);
+                    skillDamage("crosscut");
                     break;
                 case "shadowblade":
                 case "shadowburn":
-                    skillDamage(0.5);
+                    skillDamage(name);
                     break;
                 case "thinair":
                     thinAirUntil = t + 30000;
@@ -830,24 +862,25 @@ package sim
                     bossHp = Math.min(bossMaxHp, bossHp + 55000);
                 }
             }
-            // the other two DPS and the class the player is not play on their own: raid damage every 0.6-1.1 s
+            // the other three characters play on their own: the calculator's hit of a standard build, at its haste
             if (t >= partyAt)
             {
-                var d:int = int(rnd(raidDps[0], raidDps[1]));
-                var live3:Number = 0;
+                var tick:Number = rnd(600, 1100);
+                var d:Number = 0;
+                var perHit:Number = Dmg.average(ally, 1.3, "AP2", "phys") * GEAR;
+                var hitsPerSec:Number = 1000 / Dmg.cooldown(1500, ally.haste);
                 for each (var w:String in DAGE_ROLES)
                 {
                     if (w != playerRole && alive(w))
                     {
-                        live3++;
+                        d += perHit * hitsPerSec * tick / 1000;
                     }
                 }
-                d = int(d * live3 / 3);
                 if (d > 0)
                 {
-                    dmgBoss(d, d > raidDps[0] + (raidDps[1] - raidDps[0]) * 0.7, "party");
+                    dmgBoss(d, false, "party");
                 }
-                partyAt = t + rnd(600, 1100);
+                partyAt = t + tick;
             }
         }
     }
