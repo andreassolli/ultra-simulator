@@ -112,7 +112,7 @@ package
 
 
         // skin / hair / eye tones applied to the colour-keyed layers of the equipped items
-        private static const COLORS:Object = {intColorSkin: 0xF0C9A0, intColorHair: 0xEBCB7A, intColorEye: 0x4A90D9};
+        private static const COLORS:Object = {intColorSkin: 0xF0C9A0, intColorHair: 0xFFCC99, intColorEye: 0x4A90D9};
 
         // ---- stand-in game client for the loaded SWFs --------------------------------------
         public var world:Object;

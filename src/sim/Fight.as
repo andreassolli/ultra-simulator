@@ -34,10 +34,10 @@ package sim
         private static const MAX_HP:Object = {
             ap: [3670, 4000, 4400],
             lr: [2910, 3090, 3310],
-            loo: [3205, 3445, 3735],
+            loo: [3505, 3745, 4035],
             dps: [2810, 2975, 3170]
         };
-        private static const START_HP:Object = {ap: 3670, lr: 2910, loo: 3205, dps: 2450};
+        private static const START_HP:Object = {ap: 3670, lr: 2910, loo: 3505, dps: 2450};
 
         private static const AP_ROTATION:Object = {
             1: [2, 4], 2: [2, 3], 3: [2], 4: [2], 5: [3, 2], 6: [2], 7: [4, 2], 8: [2, 3], 9: [2], 10: [4, 2],
@@ -194,23 +194,46 @@ package sim
             }
         }
 
+        /** the Dmg stats of the player's class (the numbers given for the project) */
+        private function stats():Object
+        {
+            return Dmg.profile(playerRole);
+        }
+
+        /** auto attack: cooldown, damage factor, damage source, type (classes.json) */
+        private static const AA:Object = {
+            loo: {cd: 2000, f: 0.7, src: "APSP1", type: "phys"},
+            ap: {cd: 2000, f: 1.1, src: "AP2", type: "phys"},
+            lr: {cd: 1500, f: 0.57, src: "AoE1", type: "magic"}
+        };
+        /** listed cooldowns (classes.json), shortened by the class' cooldown reduction; the taunt is not */
+        private static const LISTED_CD:Object = {
+            harmony: 8000, ordinance: 12000, axiom: 8000, quix: 8000, taunt: 10000,
+            commandment: 5000, heal: 10000, seal: 25000, eden: 25000,
+            shade: 6000, wicked: 6000, empowerment: 6000, anathema: 12000
+        };
+        /** every hit is multiplied by this: an ultra build is stronger than the stat blocks alone, tuned so the fight lasts as long as it did */
+        private static const GEAR:Number = 2.5;
+
         /** Seconds between the player's auto attacks. */
         public function swingEvery():Number
         {
-            return 1.33;
+            return Dmg.cooldown(AA[playerRole].cd, stats().haste) / 1000;
         }
 
         /** The player's next auto attack: {dmg, crit}. */
         public function swing():Object
         {
-            var d:int = int(Math.floor(1800 + Math.random() * 500));
-            return {dmg: d, crit: d > 2200};
+            var p:Object = stats();
+            var a:Object = AA[playerRole];
+            var c:Boolean = Dmg.rollCrit(p);
+            return {dmg: Dmg.hit(p, a.f, a.src, a.type, c, hp[playerRole], GEAR) * (0.95 + Math.random() * 0.1), crit: c};
         }
 
         /** Cooldown length of a skill by name, for the action bar overlay. */
         public function skillCdMs(name:String):Number
         {
-            return SKILL_CD[name];
+            return name == "taunt" ? LISTED_CD[name] : Dmg.cooldown(LISTED_CD[name], stats().haste);
         }
 
         /** The effects shown as buff icons, [{name, count, frac}]; null = the Ultra Speaker HUD builds them from the fields. */
@@ -572,11 +595,11 @@ package sim
                     });
                     break;
                 case "anathema":
-                    var d:int = int(Math.floor(6000 + Math.random() * 3000));
                     host.castFx("anathema", actor);
                     if (manual)
                     {
-                        playerHit(d, d > 8000);
+                        var ac:Boolean = Dmg.rollCrit(stats());
+                        playerHit(Dmg.hit(stats(), 3, "AoE1", "magic", ac, hp[playerRole], GEAR), ac);
                     }
                     break;
             }
@@ -650,7 +673,7 @@ package sim
                 host.floater(playerRole, "Too far from center", "bad");
                 return false;
             }
-            cd[n] = t + SKILL_CD[name];
+            cd[n] = t + skillCdMs(name);
             doSkill(name, playerRole, true);
             for (var k:int = 2; k <= 6; k++)
             {

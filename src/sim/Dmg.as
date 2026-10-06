@@ -37,7 +37,7 @@ package sim
                 dmgRes: 45, physRes: 0, magRes: 38.22, allOut: 100, physOut: 100, magOut: 138.22, dotOut: 75, healOut: 120, healIn: 100},
             lr: {ap: 282, sp: 1108, critChance: 31.63, critMod: 391.27, hit: 99.68, haste: 20.86, dodge: 19.87, hp: 2910,
                 dmgRes: 25, physRes: 0, magRes: 53.46, allOut: 100, physOut: 100, magOut: 193.46, dotOut: 75, healOut: 100, healIn: 100},
-            loo: {ap: 252, sp: 969, critChance: 20.70, critMod: 372.22, hit: 109.75, haste: 47.43, dodge: 17.78, hp: 3505,
+            loo: {ap: 252, sp: 969, critChance: 20.70, critMod: 372.22, hit: 1097.5, haste: 47.43, dodge: 17.78, hp: 3505,
                 dmgRes: 50, physRes: 0, magRes: 45.97, allOut: 100, physOut: 100, magOut: 145.97, dotOut: 75, healOut: 100, healIn: 100},
             ca: {ap: 1757, sp: 284, critChance: 76.02, critMod: 265.56, hit: 108.53, haste: 11.64, dodge: 20.03, hp: 4910,
                 dmgRes: 0, physRes: 35, magRes: 13.59, allOut: 115, physOut: 100, magOut: 100, dotOut: 100, healOut: 100, healIn: 50},
