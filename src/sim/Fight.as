@@ -212,6 +212,12 @@ package sim
             return SKILL_CD[name];
         }
 
+        /** The effects shown as buff icons, [{name, count, frac}]; null = the Ultra Speaker HUD builds them from the fields. */
+        public function activeBuffs():Array
+        {
+            return null;
+        }
+
         /** What the boss does next, for the "Next:" panel. */
         public function nextLabel():String
         {

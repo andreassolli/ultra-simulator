@@ -27,6 +27,7 @@ package
     import flash.utils.setTimeout;
 
     import sim.DageFight;
+    import sim.DrakathFight;
     import sim.Fight;
     import sim.Hud;
     import sim.IFightHost;
@@ -66,7 +67,7 @@ package
         private static const RIGHT_AT:Point = new Point(868, 410);
         private static const SAFE_A:Object = {x: 180.65, y: 220.55, w: 612.7, h: 294.7};
         private static const WALK:Object = {x0: 24, x1: 936, y0: 240, y1: 488};
-        private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0], ca: [-6, -2], cn: [6, -1], da: [-2, 2], db: [2, 0]};
+        private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0], ca: [-6, -2], cn: [6, -1], pc: [6, -1], da: [-2, 2], db: [2, 0]};
         private static const CHAR_SCALE:Number = 0.65;
         private static const STAGE_W:Number = 960;
         private static const STAGE_H:Number = 500;
@@ -75,13 +76,17 @@ package
         /** Selectable bosses: map / boss SWFs, party roles, boss spot and playable classes of each. */
         private static const BOSSES:Array = [
             {id: "speaker", name: "Ultra Speaker", classes: ["loo", "ap", "lr"],
-                mapSwf: "runtime/town-ultraspeaker.swf", bossSwf: "runtime/monster-UltraMalg.swf", bossClass: "UltraMalg", headClass: "mcHeadUltraMalg",
+                mapFrame: "Boss", mapSwf: "runtime/town-ultraspeaker.swf", bossSwf: "runtime/monster-UltraMalg.swf", bossClass: "UltraMalg", headClass: "mcHeadUltraMalg",
                 roles: ["ap", "lr", "loo", "dps"], pad: new Point(492.5, 315.7), home: new Point(470, 420), scale: 0.38,
                 loops: {ChargeALoop: [154, 172], PowerLoop: [95, 111], ChargeBLoop: [209, 228]}},
             {id: "dage", name: "Ultra Dage", classes: ["ca"],
-                mapSwf: "runtime/town-ultradage.swf", bossSwf: "runtime/monster-UltraDage.swf", bossClass: "UltraDage", headClass: "mcHeadUltraDage",
+                mapFrame: "Boss", idleStop: true, dieLabel: "Die", mapSwf: "runtime/town-ultradage.swf", bossSwf: "runtime/monster-UltraDage.swf", bossClass: "UltraDage", headClass: "mcHeadUltraDage",
                 roles: ["ca", "cn", "da", "db"], pad: new Point(480, 300), home: new Point(480, 410), scale: 0.6,
-                loops: {PowerLoop: [351, 363], ChargeLoop: [193, 208]}}
+                loops: {PowerLoop: [351, 363], ChargeLoop: [193, 208]}},
+            {id: "drakath", name: "Champion Drakath", classes: ["lr", "pc"], mapFrame: "r2", hideIdx: [1], idleStop: true, dieLabel: "Die",
+                mapSwf: "runtime/town-championdrakath.swf", bossSwf: "runtime/monster-DoubleDrak.swf", bossClass: "DoubleDrak", headClass: "mcHeadDoubleDrak",
+                roles: ["lr", "pc", "da", "db"], pad: new Point(480, 300), home: new Point(480, 410), scale: 0.5,
+                loops: {}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
         private static const PORTRAIT_CX:Number = 50;
@@ -90,8 +95,8 @@ package
 
         private static const ROLE_COLOR:Object = {ap: 0xE8D9A0, lr: 0xE0507A, loo: 0xE0B84A, dps: 0x5AA86A};
         private static const ROLE_FULL:Object = {ap: "Arch Paladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS",
-            ca: "Chaos Avenger", cn: "Classic Ninja", da: "DPS 1", db: "DPS 2"};
-        private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "Arch Paladin", lr: "Legion Revenant", ca: "Chaos Avenger", cn: "Classic Ninja"};
+            ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer", da: "DPS 1", db: "DPS 2"};
+        private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "Arch Paladin", lr: "Legion Revenant", ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer"};
 
         // skill bar: slot -> [label, icon class in Assets.swf]. The SWF ships aa + 4 numbered icons per class.
         private static const SKILLS:Object = {
@@ -100,6 +105,7 @@ package
             lr: [["Attack", "LRaa"], ["Shade", "LR1"], ["Wicked", "LR2"], ["Empowerment", "LR3"], ["Anathema", "LR4"], ["Taunt", null]],
             // Ultra Dage classes (classes.json): aa, four skills, potions. Flux (3) is the Chaos Avenger's taunt.
             ca: [["Greatsword", "Chavengeaa"], ["Siphon", "Chavengea1"], ["Flux", "Chavengea2"], ["Bulwark", "Chavengea3"], ["Fury", "Chavengea4"], ["Potions", "icu1"]],
+            pc: [["Hammer", "PallyChAA"], ["Rift", "PallyChA1"], ["Vow", "PallyChA2"], ["Intervention", "PallyChA3"], ["Retribution", "PallyChA4"], ["Taunt", null]],
             cn: [["Attack", "iwd1"], ["Crosscut", "imr1"], ["Shadowblade", "ied2"], ["Shadowburn", "ief2"], ["Thin Air", "iea1"], ["Potions", "icu1"]]
         };
 
@@ -243,7 +249,7 @@ package
             {
                 role = p["class"];
             }
-            initialBoss = p["boss"] == "dage" ? "dage" : "speaker";
+            initialBoss = p["boss"] == "dage" || p["boss"] == "drakath" ? p["boss"] : "speaker";
             botOn = p["bot"] == "1";
             hintsOn = p["hints"] != "0";
             if (p["speed"])
@@ -334,6 +340,15 @@ package
                     ExternalInterface.addCallback("setPaused", function(p:Boolean):void { paused = p; });
                     ExternalInterface.addCallback("startClass", function(r:String):void { newFight(r); });
                     ExternalInterface.addCallback("play", playGame);
+                    ExternalInterface.addCallback("mapChildren", function():String {
+                        var out:Array = [];
+                        for (var mi:int = 0; mi < mapMC.numChildren; mi++)
+                        {
+                            var mc:DisplayObject = mapMC.getChildAt(mi);
+                            out.push(mi + " " + getQualifiedClassName(mc) + " " + mc.name + " " + mc.visible + " " + Math.round(mc.x) + "," + Math.round(mc.y));
+                        }
+                        return out.join("\n");
+                    });
                 }
             }
             catch (err:Error)
@@ -356,7 +371,7 @@ package
             sc.map = m;
             m.visible = false;
             mapHolder.addChild(m);
-            m.gotoAndStop("Boss");
+            m.gotoAndStop(sc.def.mapFrame);
             // keep the painted backdrop and the zone clips, hide the map-editor furniture
             for (var i:int = 0; i < m.numChildren; i++)
             {
@@ -365,7 +380,7 @@ package
                 {
                     continue;
                 }
-                if (sc.def.id == "speaker" ? i > 0 : isFurniture(c))
+                if (sc.def.id == "speaker" ? i > 0 : (isFurniture(c) || (sc.def.hideIdx && sc.def.hideIdx.indexOf(i) >= 0)))
                 {
                     c.visible = false;
                 }
@@ -386,7 +401,7 @@ package
         private static function isFurniture(c:DisplayObject):Boolean
         {
             var cn:String = getQualifiedClassName(c);
-            for each (var key:String in ["Plate_", "Box_Generic", "Setup_Cell", "checkQS", "mcShadow", "mcWalkingArea", "Pad_", "comp_", "Popup", "mcCrystals"])
+            for each (var key:String in ["Plate_", "Box_Generic", "Setup_", "checkQS", "mcShadow", "mcWalkingArea", "Pad_", "comp_", "Popup", "mcCrystals"])
             {
                 if (cn.indexOf(key) >= 0)
                 {
@@ -414,7 +429,7 @@ package
                 targetRing.graphics.lineStyle(2, 0xFFD24A, 0.9);
                 targetRing.graphics.drawEllipse(-120, -10, 240, 28);
                 targetRing.scaleX = targetRing.scaleY = sc.def.scale / 0.3;
-                actorLayer.addChildAt(targetRing, 0);
+                // (no ring under the bosses)
             }
         }
 
@@ -706,7 +721,16 @@ package
                 {name: "decay", icon: BuffNoxiousDecay, fill: true, boss: false},
                 {name: "bulwark", icon: "Chavengea3", boss: false},
                 {name: "fury", icon: "Chavengea4", boss: false},
-                {name: "thinair", icon: "iea1", boss: false}
+                {name: "thinair", icon: "iea1", boss: false},
+                // Champion Drakath
+                {name: "power", glyph: ["P", 0xC8661A], fill: true, boss: true},
+                {name: "unleashed", glyph: ["U", 0x7A2A8A], fill: true, boss: true},
+                {name: "meteor", glyph: ["!", 0xC02A1A], fill: true, boss: true},
+                {name: "chaos", glyph: ["C", 0x5A2A8A], fill: true, boss: false},
+                {name: "cripple", glyph: ["X", 0x5A5A66], fill: true, boss: false},
+                {name: "depraved", icon: "LR3", boss: false},
+                {name: "vow", icon: "PallyChA2", boss: false},
+                {name: "intervention", icon: "PallyChA3", boss: false}
             ];
             for each (var d:Object in defs)
             {
@@ -884,7 +908,7 @@ package
             button("Fullscreen (F)", 836, 28, 118, toggleFullscreen);
         }
 
-        private static const CARD_ICON:Object = {loo: "LoOaa", ap: "apal1", lr: "LRaa", ca: "Chavengeaa", cn: "iwd1"};
+        private static const CARD_ICON:Object = {loo: "LoOaa", ap: "apal1", lr: "LRaa", ca: "Chavengeaa", cn: "iwd1", pc: "PallyChAA"};
 
         /** Boss + class selection and Play; the fight sits paused (and untouched) behind it until Play is pressed. */
         private function showStartScreen():void
@@ -913,7 +937,7 @@ package
                 var bl:TextField = Hud.label(bd.name, 14, sel ? 0xFFFFFF : 0x9BA6BD, true, "center", 200);
                 bl.y = 4;
                 bt.addChild(bl);
-                bt.x = STAGE_W / 2 - 210 + bi * 220;
+                bt.x = (STAGE_W - (BOSSES.length * 200 + (BOSSES.length - 1) * 20)) / 2 + bi * 220;
                 bt.y = 98;
                 bt.buttonMode = true;
                 bt.addEventListener(MouseEvent.MOUSE_DOWN, makeBossHandler(bd.id));
@@ -1128,7 +1152,18 @@ package
         private function newFight(r:String):void
         {
             role = r;
-            fight = bossId == "dage" ? new DageFight(this, role, 6500000, [26000, 34000]) : new Fight(this, role, 10000000, [42000, 52000]);
+            if (bossId == "dage")
+            {
+                fight = new DageFight(this, role, 6500000, [26000, 34000]);
+            }
+            else if (bossId == "drakath")
+            {
+                fight = new DrakathFight(this, role, 20000000, [70000, 90000]);
+            }
+            else
+            {
+                fight = new Fight(this, role, 10000000, [42000, 52000]);
+            }
             zoneRole = "";
             plateId = "";
             banner = "";
@@ -1182,7 +1217,7 @@ package
             bossLoop = loop;
             if (bossMC)
             {
-                if (bossId == "dage" && label == "Idle")
+                if (bossDef.idleStop && (label == "Idle" || label == "FIdle"))
                 {
                     bossMC.gotoAndStop(label); // Ruffle runs on from the Idle label into Walk; he would jog on the spot
                 }
@@ -1402,6 +1437,16 @@ package
 
         public function mechanic(holder:String, ability:String, truthN:int, zoneN:int):void
         {
+            if (bossId == "drakath")
+            {
+                // the boss is about to reach one of the player's taunt thresholds (truthN = millions of HP)
+                setBanner("TAUNT NOW (6) - before " + truthN + "M HP", 0xFF5B5B, 3200);
+                if (botOn)
+                {
+                    botQueue.push({at: fight.t, until: fight.t + 3000, k: 6});
+                }
+                return;
+            }
             if (bossId == "dage")
             {
                 // cue from the fight: the tauntable attack is about to land, Flux (3) is the Chaos Avenger's taunt
@@ -1444,7 +1489,7 @@ package
         {
             if (result == "win")
             {
-                bossMC.gotoAndPlay("Die");
+                bossMC.gotoAndPlay(bossId == "drakath" && DrakathFight(fight).phase == 2 ? "FDie" : "Die");
                 log("Victory - " + reason, "good");
             }
             else
@@ -1462,6 +1507,11 @@ package
                     showStartScreen();
                 }
             }, RETURN_MS);
+        }
+
+        public function showBanner(text:String, alert:Boolean, ms:Number):void
+        {
+            setBanner(text, alert ? 0xFF5B5B : 0xFFD24A, ms);
         }
 
         private function setBanner(text:String, color:uint, ms:Number):void
@@ -1709,7 +1759,7 @@ package
             {
                 bossMC.gotoAndPlay(bossLabel);
             }
-            targetRing.visible = targeted;
+            targetRing.visible = false; // no circle under the bosses
         }
 
         private function updateFx():void
@@ -1777,10 +1827,11 @@ package
             var active:Array = [];
             var remain:Function = function(until:Number):String { return String(Math.ceil((until - t) / 1000)); };
             var frac:Function = function(until:Number, total:Number):Number { return Math.max(0, Math.min(1, (until - t) / total)); };
-            var dage:DageFight = f as DageFight;
-            if (dage != null)
+            var custom:Array = f.activeBuffs();
+            var dage:Fight = custom != null ? f : null; // Dage / Drakath build their own effect list
+            if (custom != null)
             {
-                active = dage.activeBuffs();
+                active = custom;
             }
             // on the boss
             if (dage == null && f.currentTaunt() != null)
@@ -1880,7 +1931,7 @@ package
 
         private function botReact(holder:String, ability:String, truthN:int):void
         {
-            if (bossId == "dage")
+            if (bossId != "speaker")
             {
                 return;
             }
@@ -1915,6 +1966,11 @@ package
             if (bossId == "dage")
             {
                 runDageBot(f, a);
+                return;
+            }
+            if (bossId == "drakath")
+            {
+                runDrakathBot(f, a);
                 return;
             }
             for (var i:int = botQueue.length - 1; i >= 0; i--)
@@ -2019,6 +2075,45 @@ package
                 f.cast(3);
                 f.cast(4);
                 f.cast(5);
+            }
+        }
+
+        /** Auto-pilot for Champion Drakath: taunt on cue, stay by the boss, skills off cooldown. */
+        private function runDrakathBot(f:Fight, a:Object):void
+        {
+            for (var i:int = botQueue.length - 1; i >= 0; i--)
+            {
+                var q:Object = botQueue[i];
+                if (f.t > q.until)
+                {
+                    botQueue.splice(i, 1);
+                }
+                else if (f.t >= q.at && f.cast(q.k))
+                {
+                    botQueue.splice(i, 1);
+                }
+            }
+            var home:Point = spot(homeAt, role);
+            if (a.moveTo == null && Point.distance(new Point(a.mc.x, a.mc.y), home) > 20)
+            {
+                a.moveTo = home;
+            }
+            if (role == "lr")
+            {
+                f.cast(4);
+                f.cast(5);
+                f.cast(3);
+                f.cast(2);
+            }
+            else
+            {
+                if (f.hp[role] < f.maxHp(role) * 0.7)
+                {
+                    f.cast(4);
+                }
+                f.cast(3);
+                f.cast(5);
+                f.cast(2);
             }
         }
 

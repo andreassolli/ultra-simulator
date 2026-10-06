@@ -56,6 +56,18 @@ reorganized without extracting the SWF again.
 
 Try it: `index.html?boss=dage&class=ca&autoplay=1&bot=1&speed=4`.
 
+## Champion Drakath (Flash)
+
+`runtime/town-championdrakath.swf` and `runtime/monster-DoubleDrak.swf`; rules in `src/sim/DrakathFight.as` (stats and attacks from `championdrakath.mdx`, skills from `classes.json`).
+
+- **Classes:** Legion Revenant and Paladin Chronomancer (the JSON's "Obsidian Paladin Chronomancer": Hammer of Virtue, Radiant Rift, Holy Vow, Divine Intervention, Divine Retribution). Skill 6 is the taunt for both. The class you are not is played by the sim.
+- **Taunts:** Chaos Slam / Chaos Blast (exactly 3 000 / 3 500 true damage) trigger when Drakath has lost 2M HP again: 18, 16, 14, 12M, then (after the transformation at 10M) 8, 6 and 4M. The taunt (6 s) has to be active when the boss reaches the threshold: Legion Revenant 16M and 12M, Paladin Chronomancer 18M, 14M, 8M, 6M and 4M. Without it everyone takes the hit. Missing one of yours loses the fight; the other class' are done by the sim. Hints on show "TAUNT NOW" shortly before each of yours, and "Next:" says whose taunt is coming.
+- **Phase 2:** at 10M he transforms; damage dealt to him is cut to 55 % and his autos add Crippled. Each slam / blast adds a Gaining Power stack (+50 % auto damage). At 2M he charges Summoning Meteor for 20 s (he takes 8.5x damage): kill him in time or the fight is lost.
+- **Assumptions** (not in the guide): party HP (4800 for the two classes, 3600 for the DPS), the raid's damage, healing (life steal, the Paladin's Holy Vow / Divine Intervention) and armour on his autos.
+- No circle is drawn under any boss any more.
+
+Try it: `index.html?boss=drakath&class=lr&autoplay=1&bot=1&speed=4`.
+
 ## Next step
 
 Inspect:
@@ -111,7 +123,7 @@ cd bin && python3 -m http.server 8000     # then open http://localhost:8000/
 Flash Player / AIR (`adl`); keep `bin/runtime/` next to the SWF. Move by left-clicking the ground, click the boss to target it, skills on keys `1`–`6` or by clicking.
 With no zone active everyone stacks in the middle; during Equal only the named role stays there and the rest move
 to the right of the box. The game opens on a start screen: pick a class and press Play (or Enter); nothing runs until then, and Restart returns to it. About 3.5 s after victory or defeat the start screen comes back on its own with a fresh fight. The start screen also has a boss selector (Ultra Speaker / Ultra Dage); picking a boss swaps the map, the boss, the party and the class list.
-Optional FlashVars: `boss=dage` (start on Ultra Dage), `class=loo|ap|lr|ca|cn` (preselected class), `autoplay=1` (skip the start screen), `bot=1` (auto-pilot), `speed=4`, `hints=0`.
+Optional FlashVars: `boss=dage|drakath` (start on that boss), `class=loo|ap|lr|ca|pc` (preselected class), `autoplay=1` (skip the start screen), `bot=1` (auto-pilot), `speed=4`, `hints=0`.
 
 **Hints toggle** (button under the class buttons, or `H`): with hints on the game tells you whose zone it is, who must
 taunt, when to Quix / Seal, what the boss casts next and keeps an event log. With hints off all of that is hidden and you

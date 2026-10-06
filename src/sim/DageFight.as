@@ -670,7 +670,7 @@ package sim
         }
 
         /** What is on Dage / on the player, for the buff icons: {name, count, frac}. */
-        public function activeBuffs():Array
+        override public function activeBuffs():Array
         {
             var list:Array = [];
             var frac:Function = function(until:Number, total:Number):Number { return Math.max(0, Math.min(1, (until - t) / total)); };

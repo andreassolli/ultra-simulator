@@ -36,6 +36,9 @@ package sim
 
         function ended(result:String, reason:String):void;
 
+        /** A banner line over the boss, `alert` = red (do something now) instead of yellow. */
+        function showBanner(text:String, alert:Boolean, ms:Number):void;
+
         /** Ultra Dage: light the plate `id` ("a" | "b"), or switch the plates off with "". */
         function plate(id:String):void;
 
