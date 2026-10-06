@@ -115,7 +115,9 @@ package sim
         private var spiritsUntil:Number = 0;  // Spirits Within: 45 mana over 5 s
         private var depravedHeal:Number = 0;
         private var npcTauntedFor:Object = {};
-        private var healedFor:Object = {};
+        private var lrShield:Number = 0;        // Depraved Empowerment's Arcane Shield on the Legion Revenant
+        private var lrShieldUntil:Number = 0;
+        private var lrHotUntil:Number = 0;       // ... and its heal over time
 
         public function DrakathFight(host:IFightHost, role:String, bossHp:Number, raidDps:Array)
         {
@@ -123,6 +125,7 @@ package sim
             host2 = host;
             playerClass = role;
             me = Dmg.profile(role);
+            started = false; // the fight waits for the player's first skill
             hp = {};
             somber = {};
             armor = {};
@@ -188,6 +191,11 @@ package sim
             return false;
         }
 
+        override public function startHint():String
+        {
+            return "Use any skill to start the fight";
+        }
+
         override public function skillName(n:int):String
         {
             var c:Object = DRAK_SKILLS[playerClass];
@@ -222,6 +230,12 @@ package sim
                 return;
             }
             dmg = Math.max(0, Math.round(dmg));
+            if (role == "lr" && t < lrShieldUntil && lrShield > 0)
+            {
+                var soaked:Number = Math.min(dmg, lrShield);
+                lrShield -= soaked;
+                dmg -= soaked;
+            }
             hp[role] = Math.max(0, hp[role] - dmg);
             host2.floater(role, "-" + Fight.fmt(dmg), "dmg");
             if (role == playerRole && playerClass == "pc")
@@ -231,20 +245,7 @@ package sim
             if (hp[role] <= 0)
             {
                 host2.log(DRAK_NAMES[role] + " died (" + why + ")", "bad");
-                if (role == playerRole)
-                {
-                    finish("lose", DRAK_NAMES[role] + " died (" + why + ")");
-                    return;
-                }
-                var any:Boolean = false;
-                for each (var r:String in DRAK_ROLES)
-                {
-                    any = any || alive(r);
-                }
-                if (!any)
-                {
-                    finish("lose", "The party was wiped");
-                }
+                finish("lose", DRAK_NAMES[role] + " died (" + why + ")"); // anybody dying loses the fight
             }
         }
 
@@ -572,6 +573,7 @@ package sim
                 return false;
             }
             mana -= cost;
+            started = true; // the first skill starts the fight
             cd[n] = t + skillCdMs(name);
             doSkill(name, playerClass, true);
             for (var k:int = 2; k <= 6; k++)
@@ -646,7 +648,11 @@ package sim
                     infinitaNox();
                     break;
                 case "depraved":
-                    depravedUntil = t + 12000; // you and your allies: dodge / crit / damage +30 %; you: haste +20 %, crit damage +30 %, arcane shield
+                    depravedUntil = t + 12000; // you and your allies: dodge / crit / damage +30 %; you: haste +20 %, crit damage +30 %
+                    // Arcane Shield (30 % of the Spell Power) and the heal over time are what let the Legion Revenant live through the Chaos Slams
+                    lrShield = 0.3 * Dmg.profile("lr").sp * Dmg.WEAPON_BOOST;
+                    lrShieldUntil = t + 12000;
+                    lrHotUntil = t + 12000;
                     break;
                 case "anathema":
                     if (manual) strike(name, k.f, k.src, k.type, false, false);
@@ -796,12 +802,6 @@ package sim
             if (nextEvent < EVENTS.length)
             {
                 var e:Object = EVENTS[nextEvent];
-                // the Legion Revenant has to live through the 3 000 of a Chaos Slam: whoever heals tops it up just before
-                if ((e.kind == "slam" || e.kind == "blast") && TAUNTS.lr.indexOf(e.hp) >= 0 && !healedFor[e.hp] && bossHp - e.hp * 1000000 <= dps() * 2)
-                {
-                    healedFor[e.hp] = true;
-                    restore("lr", maxHp("lr"), "lr" == playerRole);
-                }
                 if ((e.kind == "slam" || e.kind == "blast") && TAUNTS[c].indexOf(e.hp) >= 0 && !npcTauntedFor[e.hp] && bossHp - e.hp * 1000000 <= dps() * 2.5)
                 {
                     npcTauntedFor[e.hp] = true;
@@ -844,7 +844,7 @@ package sim
         // ------------------------------------------------------------ engine
         override public function step(dtMs:Number):void
         {
-            if (over)
+            if (over || !started)
             {
                 return;
             }
@@ -903,9 +903,9 @@ package sim
                     {
                         restore(q, 0.2 * maxHp(q), false);
                     }
-                    if (q == "lr" && t < depravedUntil)
+                    if (q == "lr" && t < lrHotUntil)
                     {
-                        restore(q, 150, false); // Depravity heals over time
+                        restore(q, 0.1 * maxHp("lr"), false); // Depraved Empowerment heals over time
                     }
                 }
                 mana = Math.min(100, mana + (t < spiritsUntil ? 9 : 0)); // Spirits Within (45 over 5 s); the base regeneration runs every frame

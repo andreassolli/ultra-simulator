@@ -75,6 +75,7 @@ package sim
 
         // ---------------------------------------------------------------- state
         public var t:Number = 0;
+        public var started:Boolean = true; // false until the player uses a skill (Champion Drakath, Ultra Nulgath)
         public var mana:Number = 100; // 0-100, only the Dage / Drakath fights spend it
         public var playerRole:String;
         public var over:Object = null; // {result, reason}
@@ -253,6 +254,12 @@ package sim
         public function activeBuffs():Array
         {
             return null;
+        }
+
+        /** What to tell the player while the fight waits for their first skill. */
+        public function startHint():String
+        {
+            return "";
         }
 
         /** What the boss does next, for the "Next:" panel. */

@@ -36,6 +36,9 @@ package sim
 
         function ended(result:String, reason:String):void;
 
+        /** Ultra Nulgath: an animation label for the Overfiend Blade. */
+        function bladeAnim(label:String, loop:Boolean):void;
+
         /** A banner line over the boss, `alert` = red (do something now) instead of yellow. */
         function showBanner(text:String, alert:Boolean, ms:Number):void;
 

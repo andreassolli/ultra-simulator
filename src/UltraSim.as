@@ -31,6 +31,7 @@ package
     import sim.Fight;
     import sim.Hud;
     import sim.IFightHost;
+    import sim.NulgathFight;
 
     import flash.filters.GlowFilter;
 
@@ -86,7 +87,13 @@ package
             {id: "drakath", name: "Champion Drakath", classes: ["lr", "pc"], mapFrame: "r2", hideIdx: [1], idleStop: true, dieLabel: "Die",
                 mapSwf: "runtime/town-championdrakath.swf", bossSwf: "runtime/monster-DoubleDrak.swf", bossClass: "DoubleDrak", headClass: "mcHeadDoubleDrak",
                 roles: ["lr", "pc", "loo", "cs"], pad: new Point(800, 317), home: new Point(677, 377), scale: 0.72, charScale: 0.75, flip: true, originDy: 66,
-                loops: {}}
+                loops: {}},
+            {id: "nulgath", name: "Ultra Nulgath", classes: ["lr", "loo"], mapFrame: "Boss", idleStop: true, dieLabel: "Die",
+                mapSwf: "runtime/town-ultranulgath.swf", bossSwf: "runtime/monster-UltraNulgath.swf", bossClass: "UltraNulgath", headClass: "mcHeadUltraNulgath",
+                bladeSwf: "runtime/monster-OverfiendBlade.swf", bladeClass: "OverfiendBlade",
+                roles: ["lr", "loo", "ap", "cs"], pad: new Point(150, 350), home: new Point(745, 440), scale: 1.0, charScale: 1.4,
+                bladePad: new Point(367, 477), bladeScale: 1.35,
+                loops: {Chargeloop: [185, 206]}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
         private static const PORTRAIT_CX:Number = 50;
@@ -147,6 +154,7 @@ package
         private var fxLayer:Sprite = new Sprite();
         private var hudLayer:Sprite = new Sprite();
         private var bossMC:MovieClip;
+        private var bladeMC:MovieClip;
         private var targetRing:Shape = new Shape();
         private var runeMC:MovieClip;
         private var safeMC:MovieClip;
@@ -257,7 +265,7 @@ package
             {
                 role = p["class"];
             }
-            initialBoss = p["boss"] == "dage" || p["boss"] == "drakath" ? p["boss"] : "speaker";
+            initialBoss = p["boss"] == "dage" || p["boss"] == "drakath" || p["boss"] == "nulgath" ? p["boss"] : "speaker";
             glowText = p["fx"] != "0";
             cacheMap = p["cache"] == "1";
             botOn = p["bot"] == "1";
@@ -281,13 +289,17 @@ package
             mapHolder.onWalkClick = function():void {};
             mapLayer.addChild(mapHolder);
 
-            pending = 3 + 2 * BOSSES.length;
+            pending = 3 + 2 * BOSSES.length + 1; // + the Overfiend Blade
             for each (var bd:Object in BOSSES)
             {
                 var sc:Object = {def: bd};
                 bossScenes[bd.id] = sc;
                 sc.mapDomain = loadSwf(bd.mapSwf, makeLoaded(sc, "mapLoader"));
                 sc.domain = loadSwf(bd.bossSwf, makeLoaded(sc, "bossLoader"));
+                if (bd.bladeSwf)
+                {
+                    sc.bladeDomain = loadSwf(bd.bladeSwf, makeLoaded(sc, "bladeLoader"));
+                }
             }
             assetsDomain = loadSwf("runtime/Assets.swf", onAssetsLoaded);
             armorDomain = loadSwf("runtime/Armor.swf", onAssetsLoaded);
@@ -437,6 +449,20 @@ package
             b.mouseChildren = false;
             b.visible = false;
             actorLayer.addChild(b);
+            if (sc.def.bladeSwf)
+            {
+                var Blade:Class = sc.bladeDomain.getDefinition(sc.def.bladeClass) as Class;
+                var bl:MovieClip = new Blade() as MovieClip;
+                sc.blade = bl;
+                bl.onMove = false;
+                bl.scaleX = bl.scaleY = sc.def.bladeScale;
+                bl.x = sc.def.bladePad.x;
+                bl.y = sc.def.bladePad.y;
+                bl.mouseEnabled = false;
+                bl.mouseChildren = false;
+                bl.visible = false;
+                actorLayer.addChild(bl);
+            }
             if (sc.def.id == "speaker")
             {
                 targetRing.graphics.lineStyle(2, 0xFFD24A, 0.9);
@@ -453,6 +479,10 @@ package
             {
                 o.map.visible = false;
                 o.boss.visible = false;
+                if (o.blade)
+                {
+                    o.blade.visible = false;
+                }
             }
             var sc:Object = bossScenes[id];
             bossId = id;
@@ -465,6 +495,12 @@ package
             mapMC = sc.map;
             mapMC.cacheAsBitmap = cacheMap; // the painted backdrop is drawn once instead of every frame
             bossMC = sc.boss;
+            bladeMC = sc.blade;
+            if (bladeMC)
+            {
+                bladeMC.visible = true;
+                bladeAnim("Idle", false);
+            }
             runeMC = sc.rune;
             safeMC = sc.safe;
             safe2MC = sc.safe2;
@@ -745,6 +781,7 @@ package
                 {name: "cripple", icon: BuffCog, boss: false},
                 {name: "depraved", icon: "LR3", boss: false},
                 {name: "vow", icon: "PallyChA2", boss: false},
+                {name: "frailty", icon: BuffCog, boss: false},
                 {name: "intervention", icon: "PallyChA3", boss: false},
                 {name: "wicked", icon: "LR2", boss: false},
                 {name: "rift", icon: "PallyChA1", boss: false},
@@ -911,6 +948,7 @@ package
             button("Fullscreen (F)", 836, 28, 118, toggleFullscreen);
         }
 
+        private static const TAB_W:Number = 172;
         private static const CARD_ICON:Object = {loo: "LoOaa", ap: "apal1", lr: "LRaa", ca: "Chavengeaa", cn: "iwd1", pc: "PallyChAA"};
 
         /** Boss + class selection and Play; the fight sits paused (and untouched) behind it until Play is pressed. */
@@ -935,12 +973,12 @@ package
                 var bt:Sprite = new Sprite();
                 bt.graphics.lineStyle(sel ? 2 : 1, sel ? 0xFFD24A : 0x3A4560, 1);
                 bt.graphics.beginFill(sel ? 0x1d2433 : 0x10141f, 0.95);
-                bt.graphics.drawRoundRect(0, 0, 200, 30, 8, 8);
+                bt.graphics.drawRoundRect(0, 0, TAB_W, 30, 8, 8);
                 bt.graphics.endFill();
-                var bl:TextField = Hud.label(bd.name, 14, sel ? 0xFFFFFF : 0x9BA6BD, true, "center", 200);
+                var bl:TextField = Hud.label(bd.name, 13, sel ? 0xFFFFFF : 0x9BA6BD, true, "center", TAB_W);
                 bl.y = 4;
                 bt.addChild(bl);
-                bt.x = (STAGE_W - (BOSSES.length * 200 + (BOSSES.length - 1) * 20)) / 2 + bi * 220;
+                bt.x = (STAGE_W - (BOSSES.length * TAB_W + (BOSSES.length - 1) * 10)) / 2 + bi * (TAB_W + 10);
                 bt.y = 98;
                 bt.buttonMode = true;
                 bt.addEventListener(MouseEvent.MOUSE_DOWN, makeBossHandler(bd.id));
@@ -1173,6 +1211,10 @@ package
             {
                 fight = new DrakathFight(this, role, 20000000, [70000, 90000]);
             }
+            else if (bossId == "nulgath")
+            {
+                fight = new NulgathFight(this, role, 10000000, [0, 0]);
+            }
             else
             {
                 fight = new Fight(this, role, 10000000, [42000, 52000]);
@@ -1221,6 +1263,21 @@ package
         }
 
         // ---------------------------------------------------------------- IFightHost
+        public function bladeAnim(label:String, loop:Boolean):void
+        {
+            if (bladeMC)
+            {
+                if (label == "Idle")
+                {
+                    bladeMC.gotoAndStop(label);
+                }
+                else
+                {
+                    bladeMC.gotoAndPlay(label);
+                }
+            }
+        }
+
         public function bossAnim(label:String, loop:Boolean):void
         {
             if (fight && fight.over && fight.over.result == "win")
@@ -1454,6 +1511,16 @@ package
 
         public function mechanic(holder:String, ability:String, truthN:int, zoneN:int):void
         {
+            if (bossId == "nulgath")
+            {
+                // truthN: 1.. = which Behold (Legion Revenant) / seconds into the fight (Lord of Order)
+                setBanner(ability == "behold" ? "TAUNT NOW (6) - \"Behold the power of the Abyss!\"" : "TAUNT NOW (6) - Contract of the Abyss (" + (truthN == 5 ? "5 s into the fight" : "your debuff wears off") + ")", 0xFF5B5B, 3000);
+                if (botOn)
+                {
+                    botQueue.push({at: fight.t, until: fight.t + 3000, k: 6});
+                }
+                return;
+            }
             if (bossId == "drakath")
             {
                 // the boss is about to reach one of the player's taunt thresholds (truthN = millions of HP)
@@ -1716,7 +1783,7 @@ package
                 // swing at the boss when standing still near it
                 a.aaT -= dt;
                 var near:Boolean = Math.abs(bossPad.x - mc.x) <= 260 && Math.abs(bossPad.y - mc.y) <= 130;
-                if (!a.moving && near && a.aaT <= 0 && !f.over && (!isMe || targeted))
+                if (!a.moving && near && a.aaT <= 0 && !f.over && f.started && (!isMe || targeted))
                 {
                     a.aaT = isMe ? f.swingEvery() : 1.33;
                     face(a, bossPad.x >= mc.x ? 1 : -1);
@@ -1849,6 +1916,10 @@ package
         private function sortActors():void
         {
             var list:Array = [{y: bossPad.y, o: bossMC}];
+            if (bladeMC)
+            {
+                list.push({y: bossDef.bladePad.y, o: bladeMC});
+            }
             for each (var r:String in roles)
             {
                 list.push({y: actors[r].mc.y, o: actors[r].mc});
@@ -1958,6 +2029,10 @@ package
             logText.visible = hintsOn;
             logPanel.visible = hintsOn;
             bannerText.text = (hintsOn && banner != "" && f.t < bannerUntil) ? banner : "";
+            if (!f.started && hintsOn)
+            {
+                bannerText.text = f.startHint();
+            }
             bannerText.textColor = bannerColor;
             shoutText.text = (shout != "" && f.t < shoutUntil) ? shout : "";
             // skill cooldowns on the action bar
@@ -2033,6 +2108,11 @@ package
             if (bossId == "drakath")
             {
                 runDrakathBot(f, a);
+                return;
+            }
+            if (bossId == "nulgath")
+            {
+                runNulgathBot(f, a);
                 return;
             }
             for (var i:int = botQueue.length - 1; i >= 0; i--)
@@ -2145,6 +2225,57 @@ package
                 f.cast(3);
                 f.cast(4);
                 f.cast(5);
+            }
+        }
+
+        /** Auto-pilot for Ultra Nulgath: Quix on the Blade first (Lord of Order), taunt on cue, heal when somebody is low. */
+        private function runNulgathBot(f:Fight, a:Object):void
+        {
+            for (var i:int = botQueue.length - 1; i >= 0; i--)
+            {
+                var q:Object = botQueue[i];
+                if (f.t > q.until)
+                {
+                    botQueue.splice(i, 1);
+                }
+                else if (f.started && f.t >= q.at && f.cast(q.k))
+                {
+                    botQueue.splice(i, 1);
+                }
+            }
+            var home:Point = spot(homeAt, role);
+            if (a.moveTo == null && Point.distance(new Point(a.mc.x, a.mc.y), home) > 20)
+            {
+                a.moveTo = home;
+            }
+            if (!f.started)
+            {
+                f.cast(role == "loo" ? 5 : 2); // Lord of Order: Quix on the Blade starts the fight
+                return;
+            }
+            var lowest:Number = 1;
+            for each (var al:String in roles)
+            {
+                if (f.hp[al] > 0)
+                {
+                    lowest = Math.min(lowest, f.hp[al] / f.maxHp(al));
+                }
+            }
+            if (role == "loo")
+            {
+                if (lowest < 0.6)
+                {
+                    f.cast(3);
+                }
+                f.cast(2);
+                f.cast(4);
+            }
+            else
+            {
+                f.cast(4);
+                f.cast(5);
+                f.cast(3);
+                f.cast(2);
             }
         }
 

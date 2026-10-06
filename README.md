@@ -59,6 +59,16 @@ reorganized without extracting the SWF again.
 
 Everybody the player can be spends and regenerates mana like the class text says: Lord of Order, Arch Paladin and Legion Revenant get mana back from every hit they land (more for big hits compared to their HP, x1.5 on crits; Legion Revenant's auto attack gives 15), Chaos Avenger 60 per Chaos Greatsword hit, Paladin Chronomancer 14 per strike, 12 per hit taken and 45 over 5 s from Spirits Within. Every class also regenerates 4 per second. Skill costs are the JSON's `mp`; with too little mana a skill says "Not enough mana".
 
+## Ultra Nulgath (Flash)
+
+`runtime/town-ultranulgath.swf`, `monster-UltraNulgath.swf` and `monster-OverfiendBlade.swf`; rules in `src/sim/NulgathFight.as` (from `ultranulgath.mdx`). Classes: Legion Revenant and Lord of Order; the other of the two is played by the sim, with Arch Paladin and Chrono ShadowSlayer.
+
+- **Start:** the fight does not start until you use a skill (Champion Drakath works the same way). As Lord of Order that first skill has to be Quix (5) on the Overfiend Blade: without it the Blade's Sword Charge kills everybody 5 s in. Nobody attacks the Blade; it keeps hitting the party with its auto attacks.
+- **Taunts:** a Contract of the Abyss (every 7 s: 6, 13, 20, 27, 34 s) must hit somebody who taunted, and not somebody who still has the previous one (Frailty -> Despair -> Stagnation), so Lord of Order and Legion Revenant take turns. Lord of Order taunts 5 s in and each time his Frailty wears off (16 s, 30 s); Legion Revenant at each "Behold the power of the Abyss!" (9, 23, 37 s). The sim's class does its own. Hints on show "TAUNT NOW" for yours.
+- **Healing:** Lord of Order heals with Ordinance (3) when somebody is low (the bot does; the sim's Lord of Order does too).
+- **Length:** raid damage is tuned (`GEAR_LR` / `GEAR_LOO`) so the run takes about 38 seconds. Damage over 100 000 a hit is cut (excess ^ 0.8).
+- **Everywhere:** if any character dies, not just you, the fight is lost.
+
 ## Ultra Dage (Flash)
 
 `runtime/town-ultradage.swf` (map) and `runtime/monster-UltraDage.swf` (boss) are loaded next to the Ultra Speaker ones. Rules are in `src/sim/DageFight.as`; the pattern, damage ranges, charge times, buffs and debuffs are from the wiki guide (`ultradage.mdx`), the class skills from `classes.json`.

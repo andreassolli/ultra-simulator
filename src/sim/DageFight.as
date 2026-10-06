@@ -246,20 +246,7 @@ package sim
             host2.log(DAGE_NAMES[role] + " died (" + why + ")", "bad");
             host2.announce("Another soul to empower the Legion.");
             bossHp = Math.min(bossMaxHp, bossHp + 500000);
-            if (role == playerRole)
-            {
-                finish("lose", DAGE_NAMES[role] + " died (" + why + ")");
-                return;
-            }
-            var any:Boolean = false;
-            for each (var r:String in DAGE_ROLES)
-            {
-                any = any || alive(r);
-            }
-            if (!any)
-            {
-                finish("lose", "The party was wiped");
-            }
+            finish("lose", DAGE_NAMES[role] + " died (" + why + ")"); // anybody dying loses the fight
         }
 
         private function restore(role:String, amount:Number, shown:Boolean):void
