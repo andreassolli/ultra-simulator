@@ -1458,19 +1458,23 @@ package
             if (ability == "truth")
             {
                 var n:int = ((truthN - 1) % 9) + 1;
-                var needSeal:Boolean = (truthN >= 1 && truthN <= 3) || (truthN >= 5 && truthN <= 7);
+                var needSeal:Boolean = Fight.truthNeedsSeal(truthN);
                 if (role == "loo" && (n == 5 || n == 9))
                 {
                     setBanner("QUIX NOW - Truth #" + n + " (5)" + (mine ? " + TAUNT (6)" : ""), 0xFF5B5B, 2400);
                 }
-                else if (role == "ap" && needSeal)
+                else if (role == "ap" && needSeal && n != 2 && n != 6) // the Truths after the DPS and AP zones are sealed at the zone
                 {
                     setBanner("SEAL NOW (4) - Truth #" + truthN + (mine ? " + TAUNT (6)" : ""), 0xFF5B5B, 2400);
                 }
             }
+            else if (ability == "zone" && role == "ap" && (zoneN == 1 || zoneN == 3))
+            {
+                setBanner("SEAL NOW (4) - it covers the Truth that follows this zone", 0xFF5B5B, 3000);
+            }
             if (botOn)
             {
-                botReact(holder, ability, truthN);
+                botReact(holder, ability, truthN, zoneN);
             }
         }
 
@@ -1918,7 +1922,7 @@ package
             }
         }
 
-        private function botReact(holder:String, ability:String, truthN:int):void
+        private function botReact(holder:String, ability:String, truthN:int, zoneN:int = 0):void
         {
             if (bossId != "speaker")
             {
@@ -1936,11 +1940,16 @@ package
                 {
                     botQueue.push({at: at, until: at + 1400, k: 5});
                 }
-                if (role == "ap" && ((truthN >= 1 && truthN <= 3) || (truthN >= 5 && truthN <= 7)))
+                // seal Truths 2, 3, 4, 6, 7, 8 of the cycle; 2 and 6 (right after the DPS / AP zone) were sealed at the zone already
+                if (role == "ap" && Fight.truthNeedsSeal(truthN))
                 {
                     botQueue.push({at: at, until: at + 1400, k: 4});
-                    botQueue.push({at: fight.t + 5000, until: fight.t + 6500, k: 5});
                 }
+            }
+            else if (ability == "zone" && role == "ap" && (zoneN == 1 || zoneN == 3))
+            {
+                // still standing in the middle: seal now, it lasts into the Truth after the zone
+                botQueue.push({at: fight.t, until: fight.t + 1000, k: 4});
             }
         }
 
@@ -1990,6 +1999,11 @@ package
                 {
                     a.moveTo = home;
                 }
+            }
+            // Eden (5) right after the Truth hit the Seal, while the Seal is still up
+            if (role == "ap" && f.apReduction == "seal" && f.lastTruthHit >= f.apReductionUntil - 7000 && f.t > f.lastTruthHit)
+            {
+                f.cast(5);
             }
             var low:Boolean = false;
             for each (var r:String in roles)
@@ -2118,7 +2132,7 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+                ",\"gear\":\"" + gearState() + "\",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
         }
 
         private function hpJson():String

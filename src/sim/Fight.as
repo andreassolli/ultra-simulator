@@ -102,6 +102,7 @@ package sim
         public var cd:Array = [0, 0, 0, 0, 0, 0, 0];
         public var counters:Object = {harmony: 0, ordinance: 0, axiom: 0, seal: 0, quix: 0, notBroken: 0};
         public var ruleIdx:int = 0; // current position in PATTERN
+        public var lastTruthHit:Number = -99999; // when the last Truth landed
         public var raidDps:Array;
 
         private var host:IFightHost;
@@ -143,6 +144,13 @@ package sim
         private static function irnd(a:int, b:int):int
         {
             return int(Math.floor(rnd(a, b + 1)));
+        }
+
+        /** Truth number n (1-9 per cycle of four zones) needs a Seal: 2, 3, 4, 6, 7, 8. 5 and 9 need Quix, 1 nothing. */
+        public static function truthNeedsSeal(n:int):Boolean
+        {
+            var k:int = ((n - 1) % 9) + 1;
+            return k >= 2 && k <= 8 && k != 5;
         }
 
         public static function fmt(n:Number):String
@@ -206,12 +214,6 @@ package sim
             ap: {cd: 2000, f: 1.1, src: "AP2", type: "phys"},
             lr: {cd: 1500, f: 0.57, src: "AoE1", type: "magic"}
         };
-        /** listed cooldowns (classes.json), shortened by the class' cooldown reduction; the taunt is not */
-        private static const LISTED_CD:Object = {
-            harmony: 8000, ordinance: 12000, axiom: 8000, quix: 8000, taunt: 10000,
-            commandment: 5000, heal: 10000, seal: 25000, eden: 25000,
-            shade: 6000, wicked: 6000, empowerment: 6000, anathema: 12000
-        };
         /** every hit is multiplied by this: an ultra build is stronger than the stat blocks alone, tuned so the fight lasts as long as it did */
         private static const GEAR:Number = 2.5;
 
@@ -233,7 +235,8 @@ package sim
         /** Cooldown length of a skill by name, for the action bar overlay. */
         public function skillCdMs(name:String):Number
         {
-            return name == "taunt" ? LISTED_CD[name] : Dmg.cooldown(LISTED_CD[name], stats().haste);
+            // SKILL_CD is the listed cooldown halved: in a perfect run (Lord of Order never failing) everybody has a permanent 50 % cooldown reduction
+            return SKILL_CD[name];
         }
 
         /** The effects shown as buff icons, [{name, count, frac}]; null = the Ultra Speaker HUD builds them from the fields. */
@@ -357,15 +360,16 @@ package sim
         private function truth(n:int):void
         {
             last["truth"] = t;
-            // charge up (PowerUp -> PowerLoop), then Shadowflame timed to finish as the hit lands at 2.0 s
-            host.bossAnim("PowerUp", false);
-            after(710, function():void { host.bossAnim("PowerLoop", true); });
-            after(1250, function():void { host.bossAnim("Shadowflame", false); });
+            // Truth: ChargeB -> ChargeBLoop -> Attack2, timed so the hit lands at 2.0 s
+            host.bossAnim("ChargeB", false);
+            after(750, function():void { host.bossAnim("ChargeBLoop", true); });
+            after(1165, function():void { host.bossAnim("Attack2", false); });
             host.announce("I will make you see the truth.");
             var base:int = irnd(1447, 1766);
             var crit:Boolean = base > 1447 + 220;
             var holder:String = mech;
             after(2000, function():void {
+                lastTruthHit = t;
                 var k:int = ((n - 1) % 9) + 1;
                 var need:String = "";
                 if (k == 5 || k == 9)
@@ -410,10 +414,10 @@ package sim
         private function listen():void
         {
             last["listen"] = t;
-            // ChargeB -> ChargeBLoop, then Magic timed to finish as the stun lands at 2.0 s
-            host.bossAnim("ChargeB", false);
-            after(750, function():void { host.bossAnim("ChargeBLoop", true); });
-            after(1165, function():void { host.bossAnim("Magic", false); });
+            // Listen: ChargeA -> ChargeALoop -> Absorption, timed so the stun lands at 2.0 s
+            host.bossAnim("ChargeA", false);
+            after(880, function():void { host.bossAnim("ChargeALoop", true); });
+            after(1300, function():void { host.bossAnim("Absorption", false); });
             host.announce("You shall listen.");
             var holder:String = mech;
             after(2000, function():void {
@@ -428,7 +432,7 @@ package sim
                     host.log("Stasis - you cannot use skills 2-6 for 6s", "bad");
                 }
             });
-            after(2280, function():void { host.bossAnim("Idle", false); });
+            after(2100, function():void { host.bossAnim("Idle", false); });
         }
 
         private function equal(n:int):void
@@ -438,11 +442,11 @@ package sim
             host.announce("All stand equal beneath the eyes of the Eternal.");
             host.log("Equal - zone " + n + ": " + ROLE_NAMES[role] + " must stand inside", "bad");
             after(100, function():void {
-                host.bossAnim("ChargeA", false);
+                host.bossAnim("PowerUp", false);
                 host.zone(true, role);
             });
-            after(900, function():void { host.bossAnim("ChargeALoop", true); });
-            after(2600, function():void { host.bossAnim("Absorption", false); });
+            after(810, function():void { host.bossAnim("PowerLoop", true); });
+            after(2200, function():void { host.bossAnim("Magic", false); });
             after(3000, function():void {
                 var dmg:int = irnd(2411, 2946);
                 var inZone:Boolean = host.playerInZone();
@@ -717,7 +721,7 @@ package sim
                     autoAttack();
                     break;
                 case "truth":
-                    var needsSeal:Boolean = (truthN >= 1 && truthN <= 3) || (truthN >= 5 && truthN <= 7);
+                    var needsSeal:Boolean = truthNeedsSeal(truthN);
                     if (needsSeal && playerRole != "ap")
                     {
                         doSkill("seal", "ap", false);
