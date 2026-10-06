@@ -72,6 +72,8 @@ package sim
         private static const QUIX_LOCKOUT:int = 25000;
         private static const TAUNT_DUR:int = 6000;
         private static const GCD:int = 400;
+        /** the Speaker's autos and Truths hit harder than the first calibration (they felt too weak) */
+        private static const DAMAGE_BOOST:Number = 1.4;
 
         // ---------------------------------------------------------------- state
         public var t:Number = 0;
@@ -369,7 +371,7 @@ package sim
             after(850, function():void {
                 for each (var role:String in ROLES)
                 {
-                    var dmg:Number = base * (1 + 0.07 * somber[role]) * (1 - armor[role]) * (1 - reductionFor(role, false));
+                    var dmg:Number = base * DAMAGE_BOOST * (1 + 0.07 * somber[role]) * (1 - armor[role]) * (1 - reductionFor(role, false));
                     hurt(role, Math.ceil(dmg), "Auto attack", crit ? "crit" : "dmg");
                     somber[role]++;
                 }
@@ -429,7 +431,7 @@ package sim
                 {
                     magiaBurnUntil = t + 18000; // Magia Burn debuff on the tank who takes the Truth
                 }
-                var dmg:Number = base * (1 - armor[holder]) * (1 - reductionFor(holder, true));
+                var dmg:Number = base * DAMAGE_BOOST * (1 - armor[holder]) * (1 - reductionFor(holder, true));
                 hurt(holder, Math.ceil(dmg), "Truth", crit ? "crit" : "dmg");
             });
             after(2120, function():void { host.bossAnim("Idle", false); });

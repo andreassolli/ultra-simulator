@@ -64,7 +64,7 @@ package sim
         private static const METEOR_MS:int = 20000;
         private static const PHASE2_RESIST:Number = 0.55; // damage dealt to Drakath after the transformation
         private static const METEOR_TAKEN:Number = 8.5;   // "increases their damage taken by 750 %"
-        private static const LIFESTEAL:Number = 300;      // hp per second every character gets back
+        private static const LIFESTEAL:Number = 150;      // hp per second every character gets back
         private static const ARMOR:Number = 0.08;         // what is left of the listed physical damage
         private static const GCD:int = 400;
         // Paladin Chronomancers gain mana when they strike an enemy, when they are struck, and from Spirits Within (45 over 5 s)
@@ -449,7 +449,7 @@ package sim
                     {
                         continue;
                     }
-                    var d:Number = rnd(1285, 1570) * (1 + 0.5 * power) * ARMOR * (Dmg.takenMul(Dmg.profile(r), false) / 0.55) * (t < chaosUntil ? 2 : 1);
+                    var d:Number = rnd(410, 490) * (1 + 0.5 * power) * (phase == 2 ? 1.4 : 1) * Dmg.takenMul(Dmg.profile(r), false) * (t < chaosUntil ? 2 : 1) * (r == playerRole ? 1 : 0.55); // base auto ~450; the sim's characters heal / avoid part of it
                     if (t < ordinanceUntil)
                     {
                         d *= 0.7; // Ordinance

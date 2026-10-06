@@ -48,7 +48,7 @@ package sim
         {
             return playerClass == "loo" ? GEAR_LOO : GEAR_LR;
         }
-        private static const BLADE_ARMOR:Number = 0.2; // what is left of the Blade's listed damage (tuned)
+        private static const BLADE_ARMOR:Number = 0.3; // what is left of the Blade's listed damage (tuned)
         private static const LIFESTEAL:Number = 300;
         private static const HEAL_BOOST:Number = 1.4;
         private static const GCD:int = 400;
@@ -363,7 +363,7 @@ package sim
                     {
                         continue;
                     }
-                    var d:Number = rnd(1750, 2150) * BLADE_ARMOR * (Dmg.takenMul(Dmg.profile(r), false) / 0.55) * (t < frailUntil[r] ? 2 : 1);
+                    var d:Number = rnd(1750, 2150) * BLADE_ARMOR * (Dmg.takenMul(Dmg.profile(r), false) / 0.55) * (t < frailUntil[r] ? 2 : 1) * (r == playerRole ? 1 : 0.6);
                     if (t < ordUntil)
                     {
                         d *= 0.7; // Ordinance

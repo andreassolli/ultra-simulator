@@ -175,6 +175,7 @@ package
         private var crystalBars:Array = [];
         private var crystalTexts:Array = [];
         private var targetSel:String = "boss";     // Ultra Gramiel: "boss" | "cl" | "cr"
+        private var gramielP2:Boolean = false;     // start screen option / FlashVar p2=1: Ultra Gramiel starts at Phase 2
         private var chatField:TextField;
         private var chatHint:TextField;
         private var bubbles:Object = {};
@@ -292,6 +293,7 @@ package
             glowText = p["fx"] != "0";
             cacheMap = p["cache"] == "1";
             botOn = p["bot"] == "1";
+            gramielP2 = p["p2"] == "1";
             hintsOn = p["hints"] != "0";
             if (p["speed"])
             {
@@ -1158,6 +1160,28 @@ package
                 playGame();
             });
             startScreen.addChild(play);
+            if (bossId == "gramiel")
+            {
+                var st:Sprite = new Sprite();
+                st.graphics.lineStyle(1, 0x3A4560, 1);
+                st.graphics.beginFill(0x10141f, 0.95);
+                st.graphics.drawRoundRect(0, 0, 190, 36, 8, 8);
+                st.graphics.endFill();
+                var stl:TextField = Hud.label("Start: " + (gramielP2 ? "Phase 2 (crystals dead)" : "Phase 1"), 13, 0xFFFFFF, true, "center", 190);
+                stl.y = 8;
+                st.addChild(stl);
+                st.x = 614;
+                st.y = 358;
+                st.buttonMode = true;
+                st.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
+                    e.stopPropagation();
+                    gramielP2 = !gramielP2;
+                    removeChild(startScreen);
+                    newFight(role);
+                    showStartScreen();
+                });
+                startScreen.addChild(st);
+            }
             var help:TextField = Hud.label("Left-click: move / target the boss  |  1-6: skills  |  H: hints  |  F: fullscreen", 12, 0x9BA6BD, false, "center", STAGE_W);
             help.y = 424;
             startScreen.addChild(help);
@@ -1364,9 +1388,10 @@ package
             else if (bossId == "gramiel")
             {
                 fight = new GramielFight(this, role, 7500000, [0, 0]);
-                if (loaderInfo.parameters["p2"] == "1")
+                (fight as GramielFight).startAtPhase2 = gramielP2;
+                if (gramielP2)
                 {
-                    (fight as GramielFight).crystalHp = {cl: 3, cr: 3}; // for tests: skip most of Phase 1
+                    fight.targetSel = "boss";
                 }
                 targetSel = fight.targetSel;
                 selectTarget(targetSel);
@@ -1383,6 +1408,7 @@ package
                     crystalMCs[ci].x = bossDef.crystalPads[ci].x;
                     crystalMCs[ci].y = bossDef.crystalPads[ci].y;
                     crystalAnim(ci == 0 ? "cl" : "cr", "Idle", false);
+                    crystalMCs[ci].visible = !gramielP2; // starting at Phase 2: the crystals are already gone
                 }
             }
             else
@@ -2779,8 +2805,15 @@ package
                     }
                     else if (q.chat)
                     {
-                        say(role, q.chat);
-                        f.chat(q.chat);
+                        if (f.phase == 2 && f.t < f.auraUntil)
+                        {
+                            done = false; // wait for Gramiel's aura icon to fade before asking for a taunt
+                        }
+                        else
+                        {
+                            say(role, q.chat);
+                            f.chat(q.chat);
+                        }
                     }
                     else if (q.k)
                     {

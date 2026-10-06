@@ -60,6 +60,7 @@ package sim
         public var scorchedUntil:Number = 0;           // the player's Ancestor's Flame
         public var embraceUntil:Number = 0;
         public var hotUntil:Number = 0;
+        public var startAtPhase2:Boolean = false;      // the start screen's option: begin right when the crystals die
         public var chargeN:int = 0;                    // Crystal Charges so far
         public var casts:Object = {hits: 0, taunted: 0};
 
@@ -155,7 +156,7 @@ package sim
 
         override public function startHint():String
         {
-            return "Use a skill to start the fight - target a Grace Crystal (click) and keep both crystals even";
+            return startAtPhase2 ? "Use a skill to start Phase 2 (Gramiel transforms for 5 s)" : "Use a skill to start the fight - target a Grace Crystal (click) and keep both crystals even";
         }
 
         override public function maxHp(role:String):int
@@ -239,6 +240,13 @@ package sim
         private function begin():void
         {
             started = true;
+            if (startAtPhase2)
+            {
+                crystalHp = {cl: 0, cr: 0};
+                targetSel = "boss";
+                startPhase2();
+                return;
+            }
             host2.log("Phase 1: keep both Grace Crystals even and taunt every Crystal Charge (chat: 1 or 2)", "");
             host2.bossAnim("Idle", false);
             p1Next();
@@ -470,7 +478,7 @@ package sim
             {
                 if (alive(r))
                 {
-                    hurt(r, listed(130, 160, r), "Grace Crystal", false);
+                    hurt(r, rnd(27, 33) * Dmg.takenMul(Dmg.profile(r == "sh" ? "shaman" : r), false), "Grace Crystal", false); // the default monster damage 27-33
                     if (over)
                     {
                         return;
@@ -1121,7 +1129,7 @@ package sim
             {
                 return targetSel;
             }
-            if (phase != 1 || (draining && t - drainStartAt > 600))
+            if (startAtPhase2 || phase != 1 || (draining && t - drainStartAt > 600))
             {
                 return "boss";
             }
