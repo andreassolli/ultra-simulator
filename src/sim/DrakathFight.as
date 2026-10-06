@@ -67,6 +67,9 @@ package sim
         private static const LIFESTEAL:Number = 300;      // hp per second every character gets back
         private static const ARMOR:Number = 0.08;         // what is left of the listed physical damage
         private static const GCD:int = 400;
+        // Paladin Chronomancers gain mana when they strike an enemy, when they are struck, and from Spirits Within (45 over 5 s)
+        private static const PC_STRIKE_MP:Number = 10;
+        private static const PC_STRUCK_MP:Number = 8;
 
         // ---- state shared with the HUD ------------------------------------------------------------
         public var phase:int = 1;
@@ -220,6 +223,10 @@ package sim
             dmg = Math.max(0, Math.round(dmg));
             hp[role] = Math.max(0, hp[role] - dmg);
             host2.floater(role, "-" + Fight.fmt(dmg), "dmg");
+            if (role == playerRole && playerClass == "pc")
+            {
+                gainMana(PC_STRUCK_MP);
+            }
             if (hp[role] <= 0)
             {
                 host2.log(DRAK_NAMES[role] + " died (" + why + ")", "bad");
@@ -455,10 +462,7 @@ package sim
                     {
                         d *= 0.7; // Arcane Shield
                     }
-                    if (r == "pc" && playerClass == "pc")
-                    {
-                        mana = Math.min(100, mana + 3); // struck: Paladin Chronomancers gain mana
-                    }
+
                     hit(r, d, "Auto attack");
                     if (over)
                     {
@@ -536,7 +540,7 @@ package sim
             else
             {
                 d = Dmg.hit(o, 0.15, "intHP", "phys", false, hp[playerRole], GEAR);
-                mana = Math.min(100, mana + 3);
+                gainMana(PC_STRIKE_MP); // strikes an enemy
             }
             return {dmg: d * rnd(0.95, 1.05), crit: c};
         }
@@ -577,7 +581,22 @@ package sim
         {
             var o:Object = myMe();
             var c:Boolean = force || (!noCrit && Dmg.rollCrit(o));
-            dmgBoss(Dmg.hit(o, factor, src, type, c, hp[playerRole], GEAR) * rnd(0.95, 1.05), c, "player");
+            var d:Number = Dmg.hit(o, factor, src, type, c, hp[playerRole], GEAR) * rnd(0.95, 1.05);
+            dmgBoss(d, c, "player");
+            if (playerClass == "lr")
+            {
+                // "regain mana from all hits landed, more if it's a critical strike, based on the damage relative to their own HP"
+                gainMana(Math.min(25, Math.max(2, d / maxHp("lr") * 20)) * (c ? 1.5 : 1));
+            }
+            else
+            {
+                gainMana(PC_STRIKE_MP);
+            }
+        }
+
+        private function gainMana(n:Number):void
+        {
+            mana = Math.min(100, mana + n);
         }
 
         private function infinitaNox():void
@@ -663,6 +682,7 @@ package sim
                     var stacks:int = Math.max(1, live(riftStacks));
                     if (manual)
                     {
+                        gainMana(PC_STRIKE_MP);
                         dmgBoss(sum * (0.45 + 0.1 * stacks) * stacks / 4 + Dmg.hit(myMe(), 0.45, "SP1", "magic", false, 0, GEAR) * 0.25, false, "player");
                     }
                     riftStacks = [];

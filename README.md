@@ -64,7 +64,8 @@ Try it: `index.html?boss=dage&class=ca&autoplay=1&bot=1&speed=4`.
 - **Taunts:** Chaos Slam / Chaos Blast (exactly 3 000 / 3 500 true damage) trigger when Drakath has lost 2M HP again: 18, 16, 14, 12M, then (after the transformation at 10M) 8, 6 and 4M. The taunt (6 s) has to be active when the boss reaches the threshold: Legion Revenant 16M and 12M, Paladin Chronomancer 18M, 14M, 8M, 6M and 4M. Without it everyone takes the hit. Missing one of yours loses the fight; the other class' are done by the sim. Hints on show "TAUNT NOW" shortly before each of yours, and "Next:" says whose taunt is coming.
 - **Phase 2:** at 10M he transforms; damage dealt to him is cut to 55 % and his autos add Crippled. Each slam / blast adds a Gaining Power stack (+50 % auto damage). At 2M he charges Summoning Meteor for 20 s (he takes 8.5x damage): kill him in time or the fight is lost.
 - **Assumptions** (not in the guide): party HP (4800 for the two classes, 3600 for the DPS), the raid's damage, healing (life steal, the Paladin's Holy Vow / Divine Intervention) and armour on his autos.
-- No circle is drawn under any boss any more.
+- No circle is drawn under any boss any more. Drakath stands on the right of the platform and looks left, the party stands next to him (as in the game).
+- **Mana:** Legion Revenant recovers 15 on each auto attack and, on every other hit, more the bigger the hit is compared to its HP (x1.5 on a crit). Paladin Chronomancer gains 10 for each strike, 8 each time it is struck and 45 over 5 s from Spirits Within after Divine Retribution, plus 2 per second.
 
 Try it: `index.html?boss=drakath&class=lr&autoplay=1&bot=1&speed=4`.
 

@@ -86,7 +86,7 @@ package
                 loops: {PowerLoop: [351, 363], ChargeLoop: [193, 208]}},
             {id: "drakath", name: "Champion Drakath", classes: ["lr", "pc"], mapFrame: "r2", hideIdx: [1], idleStop: true, dieLabel: "Die",
                 mapSwf: "runtime/town-championdrakath.swf", bossSwf: "runtime/monster-DoubleDrak.swf", bossClass: "DoubleDrak", headClass: "mcHeadDoubleDrak",
-                roles: ["lr", "pc", "loo", "ap"], pad: new Point(480, 300), home: new Point(480, 410), scale: 0.5,
+                roles: ["lr", "pc", "loo", "ap"], pad: new Point(770, 372), home: new Point(670, 385), scale: 0.65, flip: true, originDy: 60,
                 loops: {}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
@@ -418,9 +418,10 @@ package
             var b:MovieClip = new Boss() as MovieClip;
             sc.boss = b;
             b.onMove = false;
-            b.scaleX = b.scaleY = sc.def.scale;
+            b.scaleX = (sc.def.flip ? -1 : 1) * sc.def.scale; // Drakath stands on the right and looks left
+            b.scaleY = sc.def.scale;
             b.x = sc.def.pad.x;
-            b.y = sc.def.pad.y;
+            b.y = sc.def.pad.y + (sc.def.originDy ? sc.def.originDy : 0);
             b.mouseEnabled = false;
             b.mouseChildren = false;
             b.visible = false;
@@ -1185,7 +1186,7 @@ package
                 safe2MC.gotoAndStop("off");
             }
             bossMC.x = bossPad.x;
-            bossMC.y = bossPad.y;
+            bossMC.y = bossPad.y + (bossDef.originDy ? bossDef.originDy : 0); // the clip's origin is below its feet
             bossAnim("Idle", false);
             buildActors();
             startTime = getTimer();
@@ -2132,7 +2133,7 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+                ",\"gear\":\"" + gearState() + "\",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
         }
 
         private function hpJson():String
