@@ -48,6 +48,13 @@ reorganized without extracting the SWF again.
 
 `bin/play.html` runs `ultra_sim.swf` with a copy of Ruffle that lives in `bin/ruffle/` (nothing is downloaded). Browsers do not let a page opened from a file load the game's other files, so start it with the little server: `python3 bin/serve.py` (or double-click `serve.py`) opens `http://localhost:8000/play.html`. The address takes the options below, e.g. `play.html?boss=drakath&class=pc&hints=0`. `bin/index.html` is the same page with Ruffle loaded from the internet.
 
+## Controls and speed
+
+- **Sprint:** hold Space while clicking to walk to the point at 480 instead of 250 pixels per second. A sprint costs 50 of the green stamina bar; the bar refills (20 per second) while you stand still.
+- **Skills:** click the slot or press 1-6. The game takes the keyboard focus by itself, so the keys work from the first frame.
+- **If it is slow or uses the whole GPU** (the big vector bosses and a full-screen window are a lot of pixels): `play.html` already renders at about 1280 pixels wide and lets the browser scale it up (`?res=1` for the window's full resolution, `?res=0.5` for less); Ruffle's own quality can be lowered with `?rq=low` (no anti-aliasing, about 1.5x faster in a software-rendering test; `medium` / `high` look the same here); `?fx=0` draws the combat text without the glow. In a software-rendering test a 1920x1000 window went from 0.5 to 3 frames per second just from the capped resolution. Hud bars and the cooldown wipes are only redrawn when their value changes.
+- **Newer Ruffle:** the bundled copy is 0.6.0. The nightly build (`npm pack @ruffle-rs/ruffle@nightly`, unpack its files into `bin/ruffle/`) works with the game too but measured about the same speed here; changes that are not merged into Ruffle yet would have to be built from its source (Rust), which was not possible in this environment.
+
 ## Mana
 
 Everybody the player can be spends and regenerates mana like the class text says: Lord of Order, Arch Paladin and Legion Revenant get mana back from every hit they land (more for big hits compared to their HP, x1.5 on crits; Legion Revenant's auto attack gives 15), Chaos Avenger 60 per Chaos Greatsword hit, Paladin Chronomancer 10 per strike, 8 per hit taken and 45 over 5 s from Spirits Within. Every class also regenerates 2 per second. Skill costs are the JSON's `mp`; with too little mana a skill says "Not enough mana".

@@ -1,6 +1,7 @@
 package sim
 {
     import flash.display.Shape;
+    import flash.utils.Dictionary;
     import flash.display.Sprite;
     import flash.text.TextField;
     import flash.text.TextFormat;
@@ -28,9 +29,18 @@ package sim
         }
 
         /** Draw a health / resource bar into a Shape. */
+        /** what each Shape was last drawn with: unchanged bars / wipes are not tessellated again every frame */
+        private static var drawn:Dictionary = new Dictionary(true);
+
         public static function bar(g:Shape, w:Number, h:Number, frac:Number, top:uint, bottom:uint):void
         {
             frac = Math.max(0, Math.min(1, frac));
+            var key:String = Math.round(w * frac) + "/" + w + "/" + h + "/" + top;
+            if (drawn[g] == key)
+            {
+                return;
+            }
+            drawn[g] = key;
             g.graphics.clear();
             g.graphics.beginFill(0x10131c);
             g.graphics.drawRect(0, 0, w, h);
@@ -51,6 +61,12 @@ package sim
          */
         public static function pie(g:Shape, r:Number, remaining:Number, color:uint = 0x000000, alpha:Number = 0.62):void
         {
+            var key:String = Math.round(remaining * 96) + "/" + Math.round(r) + "/" + color;
+            if (drawn[g] == key)
+            {
+                return;
+            }
+            drawn[g] = key;
             g.graphics.clear();
             if (remaining <= 0)
             {

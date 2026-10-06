@@ -173,6 +173,14 @@ package
         private var startScreen:Sprite;
         private var cards:Object = {};
         private var simSpeed:Number = 1;
+        private var cacheMap:Boolean = false;
+        private var glowText:Boolean = true; // FlashVars fx=0: plain combat text (cheaper to draw)
+        private var stamina:Number = 100;      // the green bar: a sprint (Space + click) costs SPRINT_COST, standing still refills it
+        private var spaceHeld:Boolean = false;
+        private static const SPRINT_COST:Number = 50;
+        private static const STAMINA_REGEN:Number = 20; // per second while standing still
+        private static const WALK_SPEED:Number = 250;
+        private static const SPRINT_SPEED:Number = 480;
         private var botOn:Boolean = false;
         private var botQueue:Array = [];
         private var lastTime:int;
@@ -250,6 +258,8 @@ package
                 role = p["class"];
             }
             initialBoss = p["boss"] == "dage" || p["boss"] == "drakath" ? p["boss"] : "speaker";
+            glowText = p["fx"] != "0";
+            cacheMap = p["cache"] == "1";
             botOn = p["bot"] == "1";
             hintsOn = p["hints"] != "0";
             if (p["speed"])
@@ -260,9 +270,9 @@ package
             addChild(actorLayer);
             addChild(fxLayer);
             addChild(hudLayer);
-            loadingText = Hud.label("Loading...", 18, 0xFFFFFF, true);
-            loadingText.x = 400;
-            loadingText.y = 240;
+            loadingText = Hud.label("Loading...", 18, 0xFFFFFF, true, "center", STAGE_W);
+            loadingText.x = 0;
+            loadingText.y = (STAGE_H - 24) / 2;
             addChild(loadingText);
 
             mapHolder = new MovieClip();
@@ -327,6 +337,8 @@ package
             selectBoss(initialBoss);
             stage.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
             stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+            stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp);
+            stage.focus = stage; // keys work from the first frame
             lastTime = getTimer();
             startTime = lastTime;
             addEventListener(Event.ENTER_FRAME, onFrame);
@@ -451,6 +463,7 @@ package
             bossLoops = bossDef.loops;
             bossDomain = sc.domain;
             mapMC = sc.map;
+            mapMC.cacheAsBitmap = cacheMap; // the painted backdrop is drawn once instead of every frame
             bossMC = sc.boss;
             runeMC = sc.rune;
             safeMC = sc.safe;
@@ -687,6 +700,7 @@ package
             actBar.x = 0;
             actBar.x = STAGE_W / 2 - (actBar["blank0"].getBounds(actBar).left + actBar["blank5"].getBounds(actBar).right) / 2;
             actBar.y = STAGE_H - actBar["blank0"].getBounds(actBar).bottom - 6; // on the map, no black strip below
+            actBar.addEventListener(MouseEvent.MOUSE_DOWN, onBarDown);
             g.addChild(actBar);
             buildButtons();
         }
@@ -1121,20 +1135,30 @@ package
                 if (cdt)
                 {
                     cdt.text = "";
+                    cdt.mouseEnabled = false; // the countdown sits on top of the slot, clicks must go through it
                     actBar.setChildIndex(cdt, actBar.numChildren - 1);
                 }
                 slot.buttonMode = true;
-                slot.addEventListener(MouseEvent.MOUSE_DOWN, makeSlotHandler(i + 1));
                 skillSlots.push({sp: slot, cd: cd, txt: cdt, icon: icon, key: key, r: b.width / 2});
             }
         }
 
-        private function makeSlotHandler(k:int):Function
+        /** a click on a skill slot uses the skill (the slot under the mouse, whatever is drawn on top of it) */
+        private function onBarDown(e:MouseEvent):void
         {
-            return function(e:MouseEvent):void {
-                e.stopPropagation();
-                castKey(k);
-            };
+            if (startScreen && startScreen.parent)
+            {
+                return;
+            }
+            for (var i:int = 0; i < skillSlots.length; i++)
+            {
+                if (skillSlots[i].sp.getBounds(stage).contains(stage.mouseX, stage.mouseY))
+                {
+                    e.stopPropagation(); // not a walk click
+                    castKey(i + 1);
+                    return;
+                }
+            }
         }
 
         // ================================================================ fight lifecycle
@@ -1155,6 +1179,7 @@ package
             }
             zoneRole = "";
             plateId = "";
+            stamina = 100;
             banner = "";
             shout = "";
             overText.text = "";
@@ -1347,7 +1372,10 @@ package
             ti.autoSize = "center";
             ti.text = label;
             ti.textColor = color;
-            ti.filters = [new GlowFilter(glow, 1, 5, 5, 5, 1, false, false)];
+            if (glowText)
+            {
+                ti.filters = [new GlowFilter(glow, 1, 5, 5, 5, 1, false, false)];
+            }
             clip.mouseEnabled = false;
             clip.mouseChildren = false;
             clip.x = x;
@@ -1530,7 +1558,7 @@ package
                 moveToBoss(); // click the boss: target it and walk into range
                 return;
             }
-            a.moveTo = new Point(clamp(stage.mouseX, WALK.x0, WALK.x1), clamp(stage.mouseY, WALK.y0, WALK.y1));
+            beginWalk(a, new Point(clamp(stage.mouseX, WALK.x0, WALK.x1), clamp(stage.mouseY, WALK.y0, WALK.y1)));
         }
 
         private function onKeyDown(e:KeyboardEvent):void
@@ -1541,6 +1569,11 @@ package
                 {
                     playGame();
                 }
+                return;
+            }
+            if (e.keyCode == 32)
+            {
+                spaceHeld = true;
                 return;
             }
             var k:int = e.keyCode - 48; // keys 1-6
@@ -1562,10 +1595,30 @@ package
             }
         }
 
+        /** the player's clicks: with Space held and enough stamina the walk is a sprint */
+        private function beginWalk(a:Object, to:Point):void
+        {
+            a.moveTo = to;
+            a.sprint = false;
+            if (spaceHeld && stamina >= SPRINT_COST)
+            {
+                stamina -= SPRINT_COST;
+                a.sprint = true;
+            }
+        }
+
+        private function onKeyUp(e:KeyboardEvent):void
+        {
+            if (e.keyCode == 32)
+            {
+                spaceHeld = false;
+            }
+        }
+
         private function moveToBoss():void
         {
             targeted = true;
-            actors[role].moveTo = new Point(bossPad.x - 90, bossPad.y + 70);
+            beginWalk(actors[role], new Point(bossPad.x - 90, bossPad.y + 70));
         }
 
         private function castKey(k:int):Boolean
@@ -1588,8 +1641,11 @@ package
         }
 
         // ===================================================================== update
+        private var frameCount:int = 0;
+
         private function onFrame(e:Event):void
         {
+            frameCount++;
             var now:int = getTimer();
             var dt:Number = Math.min((now - lastTime) / 1000, 0.1);
             lastTime = now;
@@ -1648,7 +1704,15 @@ package
                 {
                     goal = spot(homeAt, r);
                 }
-                stepActor(a, goal, dt, isMe ? 250 : 300);
+                stepActor(a, goal, dt, isMe ? (a.sprint ? SPRINT_SPEED : WALK_SPEED) : 300);
+                if (isMe)
+                {
+                    if (!a.moving)
+                    {
+                        stamina = Math.min(100, stamina + STAMINA_REGEN * dt);
+                        a.sprint = false;
+                    }
+                }
                 // swing at the boss when standing still near it
                 a.aaT -= dt;
                 var near:Boolean = Math.abs(bossPad.x - mc.x) <= 260 && Math.abs(bossPad.y - mc.y) <= 130;
@@ -1804,7 +1868,7 @@ package
             playerBox["strClass"].text = CLASS_NAMES[role];
             setBar(playerBox, "HP", "intHPbar", "strIntHP", f.hp[role] / f.maxHp(role), Fight.fmt(f.hp[role]));
             setBar(playerBox, "MP", "intMPbar", "strIntMP", f.mana / 100, String(Math.round(f.mana)));
-            setBar(playerBox, "SP", "intSPbar", "strIntSP", 1, "100");
+            setBar(playerBox, "SP", "intSPbar", "strIntSP", stamina / 100, String(Math.round(stamina)));
             setBar(targetBox, "HP", "intHPbar", "strIntHP", f.bossHp / f.bossMaxHp, Fight.fmt(f.bossHp));
             setBar(targetBox, "MP", "intMPbar", "strIntMP", 1, "100");
             for (var r:String in partyPanels)
@@ -2132,7 +2196,7 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
         }
 
         private function box(d:DisplayObject):String

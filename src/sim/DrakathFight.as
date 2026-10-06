@@ -39,7 +39,7 @@ package sim
             taunt: {f: 0, src: "AP1", mp: 0, type: "phys"}
         };
         /** every hit and heal is multiplied by this: see GEAR in DageFight (tuned so the fight lasts about as long as before the calculator maths) */
-        private static const GEAR:Number = 6.6;
+        private static const GEAR:Number = 10;
         private static const CAP:Number = 75000; // "damage over 75 000 is reduced": excess ^ 0.8
         private static const HEAL_SCALE:Number = 0.35; // what is left of a heal after the boss' damage was tuned (see README)
 

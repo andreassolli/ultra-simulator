@@ -6,7 +6,7 @@
 <title>Ultra simulator (Ruffle, offline)</title>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
-  #c { position: fixed; inset: 0; }
+  #c { position: fixed; left: 0; top: 0; transform-origin: 0 0; }
   ruffle-player { width: 100%; height: 100%; }
   #warn { display: none; position: fixed; inset: 0; color: #fff; padding: 40px; font-size: 18px; line-height: 1.5; }
   #warn code { background: #222; padding: 2px 6px; border-radius: 4px; }
@@ -23,6 +23,9 @@
 <script>
   window.RufflePlayer = { config: { autoplay: "on", splashScreen: false, unmuteOverlay: "hidden",
     allowScriptAccess: true, warnOnUnsupportedContent: false, letterbox: "on" } };
+  // rq = Ruffle's quality (low | medium | high | best), res = render resolution factor (see below)
+  const urlOpts = new URLSearchParams(location.search);
+  if (urlOpts.get("rq")) { window.RufflePlayer.config.quality = urlOpts.get("rq"); }
   if (location.protocol === "file:") { document.getElementById("warn").style.display = "block"; }
 </script>
 <script src="ruffle/ruffle.js"></script>
@@ -33,6 +36,26 @@
     const player = window.RufflePlayer.newest().createPlayer();
     window.player = player;
     document.getElementById("c").appendChild(player);
+    // Render resolution: the player is laid out smaller and scaled up by the browser, so a big window or a hi-dpi screen does
+    // not mean millions of pixels for the GPU. Default: at most about 1280 pixels wide; ?res=1 for full resolution, ?res=0.5 for less.
+    const box = document.getElementById("c");
+    const fitGame = () => {
+      let res = parseFloat(urlOpts.get("res"));
+      if (!(res > 0)) res = Math.min(1, 1280 / (window.innerWidth * (window.devicePixelRatio || 1)));
+      box.style.width = Math.round(window.innerWidth * res) + "px";
+      box.style.height = Math.round(window.innerHeight * res) + "px";
+      box.style.transform = "scale(" + (1 / res) + ")";
+    };
+    fitGame();
+    window.addEventListener("resize", fitGame);
+    // keyboard focus from the start: the keys work without a first click
+    player.setAttribute("tabindex", "0");
+    const focusGame = () => { try { player.focus(); } catch (e) {} };
+    focusGame();
+    const focusTimer = setInterval(focusGame, 250);
+    setTimeout(() => clearInterval(focusTimer), 30000);
+    window.addEventListener("focus", focusGame);
+    window.addEventListener("pointerdown", () => setTimeout(focusGame, 0));
     player.load({ url: "ultra_sim.swf", parameters: location.search.slice(1) });
     // the game's Fullscreen button / F key call this
     window.toggleGameFullscreen = function () {

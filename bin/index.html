@@ -23,6 +23,14 @@
   const player = window.RufflePlayer.newest().createPlayer();
   window.player = player; // handy for tests: player.getState(), player.setBot(true) ...
   document.getElementById("c").appendChild(player);
+  // keyboard focus from the start: the keys work without a first click
+  player.setAttribute("tabindex", "0");
+  const focusGame = () => { try { player.focus(); } catch (e) {} };
+  focusGame();
+  const focusTimer = setInterval(focusGame, 250);
+  setTimeout(() => clearInterval(focusTimer), 30000);
+  window.addEventListener("focus", focusGame);
+  window.addEventListener("pointerdown", () => setTimeout(focusGame, 0));
   player.load({ url: "ultra_sim.swf", parameters: location.search.slice(1) });
   // Full screen: the game's "Fullscreen (F)" button and F key call this (a SWF cannot enter browser full screen itself in Ruffle)
   window.toggleGameFullscreen = function () {
