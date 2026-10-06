@@ -71,7 +71,8 @@ package sim
         private var p2Seq:int = 0;
         private var gloryUntil:Number = 0;
         private var glory:int = 0;
-        private var chargeAt:Number = 9000;
+        private var nextChargeAt:Number = -1;
+        private var nextGroup:int = 1;
         private var crystalAaAt:Number = 3000;
         private var crystalAaSeen:Boolean = false;
         private var unstableAt:Number = 0;
@@ -253,6 +254,27 @@ package sim
             var token:int = p1Token;
             var seq:int = p1Seq % 16;
             p1Seq++;
+            if (seq == 0)
+            {
+                // exactly two Crystal Charges before each Grace Drain: group 1, then group 2
+                nextChargeAt = t + 7000;
+                nextGroup = 1;
+                later(7000, function():void {
+                    if (token == p1Token && !over && phase == 1)
+                    {
+                        crystalCharge(1);
+                        nextChargeAt = t + 14000;
+                        nextGroup = 2;
+                    }
+                });
+                later(21000, function():void {
+                    if (token == p1Token && !over && phase == 1)
+                    {
+                        crystalCharge(2);
+                        nextChargeAt = -1;
+                    }
+                });
+            }
             if (seq == 15)
             {
                 startDrain();
@@ -356,11 +378,10 @@ package sim
         }
 
         // --------------------------------------------------------- Phase 1: the crystals
-        private function crystalCharge():void
+        private function crystalCharge(group:int):void
         {
             chargeN++;
             chargeBusyUntil = t + 5300;
-            var group:int = (chargeN % 2 == 1) ? 1 : 2;
             host2.announce("The Grace Crystal prepares a defense shattering attack!");
             host2.mechanic(playerRole, "charge", group, chargeN);
             var token:int = p1Token;
@@ -837,6 +858,10 @@ package sim
         /** the player's attack on his target: Phase 1 = `hits` hits of 1 damage, Phase 2 = real damage */
         private function playerStrike(dmg:Number, crit:Boolean, hits:int):void
         {
+            if (!host2.inPlace(playerRole))
+            {
+                return; // not next to the target
+            }
             if (phase == 1)
             {
                 for (var i:int = 0; i < hits; i++)
@@ -878,6 +903,11 @@ package sim
             if (mana < cost)
             {
                 host2.floater(playerRole, "Not enough mana", "bad");
+                return false;
+            }
+            if (phase != 15 && !host2.inPlace(playerRole))
+            {
+                host2.floater(playerRole, "Move next to your target", "bad");
                 return false;
             }
             mana -= cost;
@@ -977,6 +1007,10 @@ package sim
         /** Flame / Hydrophobia hit up to three targets: both crystals, and Gramiel too when he is the target */
         private function aoeHit(sel:String):void
         {
+            if (!host2.inPlace(playerRole))
+            {
+                return;
+            }
             hitTarget(playerRole, "cl", false);
             hitTarget(playerRole, "cr", false);
             if (sel == "boss")
@@ -1048,15 +1082,36 @@ package sim
                 {
                     return "Shield: " + shield + " hits left - hit him";
                 }
-                var inS:Number = Math.max(0, Math.ceil((chargeAt - t) / 1000));
-                var g:int = (chargeN % 2 == 0) ? 1 : 2;
-                return "Charge in " + inS + " s - send " + g;
+                if (nextChargeAt < 0)
+                {
+                    return "Grace Drain is coming";
+                }
+                return "Crystal Charge in " + Math.max(0, Math.ceil((nextChargeAt - t) / 1000)) + " s - send " + nextGroup;
             }
             if (phase == 15)
             {
                 return "Gramiel transforms...";
             }
             return holder == null ? "Taunt Gramiel (6)" : G_NAMES[holder] + " holds him (" + holderHits + " hits)" + (cued ? " - send " + (nextCueRole == "sh" ? "nothing: taunt yourself (6)" : G_NAMES[nextCueRole]) : "");
+        }
+
+        /** what `role` is attacking right now: "boss" | "cl" | "cr" (the characters stand next to it and face it) */
+        public function targetOf(role:String):String
+        {
+            if (role == playerRole)
+            {
+                return targetSel;
+            }
+            if (phase != 1 || (draining && t - drainStartAt > 600))
+            {
+                return "boss";
+            }
+            var sel:String = SIDE[role];
+            if (crystalHp[sel] <= 0)
+            {
+                sel = sel == "cl" ? "cr" : "cl";
+            }
+            return sel;
         }
 
         // ------------------------------------------------------------ the sim's characters
@@ -1072,15 +1127,14 @@ package sim
                 var w:Object = wobble[r];
                 var mult:Number = 1 + w.amp * Math.sin(t / w.period * 6.28 + w.phase);
                 var rate:Number = RATE[r] * mult;
-                var sel:String = SIDE[r];
+                var sel:String = targetOf(r);
                 if (draining)
                 {
-                    sel = t - drainStartAt > 800 ? "boss" : sel;
                     rate *= 1.4;
                 }
-                if (sel != "boss" && crystalHp[sel] <= 0)
+                if (!host2.inPlace(r))
                 {
-                    sel = sel == "cl" ? "cr" : "cl";
+                    continue; // still walking to its target
                 }
                 acc[r] += rate * dtMs / 1000;
                 while (acc[r] >= 1)
@@ -1170,24 +1224,11 @@ package sim
                         return;
                     }
                 }
-                if (t >= chargeAt)
-                {
-                    if (draining || t < drainEndedAt + 1500)
-                    {
-                        chargeAt = Math.max(chargeAt, t + 700);
-                    }
-                    else
-                    {
-                        chargeAt = t + 14000;
-                        crystalCharge();
-                    }
-                }
                 npcHits(dtMs);
                 if (over)
                 {
                     return;
                 }
-                balanceHint();
             }
             else
             {

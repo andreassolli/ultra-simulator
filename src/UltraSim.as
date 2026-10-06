@@ -481,6 +481,10 @@ package
             {
                 fight.targetSel = sel;
             }
+            if (actors[role])
+            {
+                actors[role].follow = true; // walk next to the new target
+            }
             var crystal:Boolean = sel != "boss";
             var domain:ApplicationDomain = crystal ? bossScenes[bossId].crystalDomain : bossDomain;
             setFace(targetBox["mcHead"], new (domain.getDefinition(crystal ? bossDef.crystalHead : bossDef.headClass) as Class)() as DisplayObject);
@@ -1275,7 +1279,7 @@ package
                     var C:Class = assetsDomain.getDefinition(defs[i][1]) as Class;
                     icon = new C() as DisplayObject;
                     var ib:Rectangle = icon.getBounds(icon);
-                    var k:Number = (b.width * 0.86) / Math.max(ib.width, ib.height);
+                    var k:Number = (b.width * (role == "sh" ? 0.58 : 0.86)) / Math.max(ib.width, ib.height);
                     icon.scaleX = icon.scaleY = k;
                     icon.x = cx - (ib.x + ib.width / 2) * k;
                     icon.y = cy - (ib.y + ib.height / 2) * k;
@@ -1418,6 +1422,17 @@ package
             bossMC.y = bossPad.y + (bossDef.originDy ? bossDef.originDy : 0); // the clip's origin is below its feet
             bossAnim("Idle", false);
             buildActors();
+            if (bossId == "gramiel")
+            {
+                actors[role].follow = true;
+                for each (var sr:String in roles)
+                {
+                    var sp0:Point = gramielStation(sr, (fight as GramielFight).targetOf(sr));
+                    actors[sr].mc.x = sp0.x;
+                    actors[sr].mc.y = sp0.y;
+                    face(actors[sr], gramielDir(sr));
+                }
+            }
             startTime = getTimer();
             buildParty();
             buildSkillbar();
@@ -2022,6 +2037,7 @@ package
         private function beginWalk(a:Object, to:Point):void
         {
             a.moveTo = to;
+            a.follow = false;
             a.sprint = false;
             if (spaceHeld && stamina >= SPRINT_COST)
             {
@@ -2129,7 +2145,11 @@ package
                 }
                 var isMe:Boolean = (r == role);
                 var goal:Point = null;
-                if (isMe)
+                if (bossId == "gramiel")
+                {
+                    goal = f.over ? null : ((isMe && !a.follow) ? a.moveTo : gramielStation(r, (f as GramielFight).targetOf(r)));
+                }
+                else if (isMe)
                 {
                     goal = f.over ? null : a.moveTo;
                 }
@@ -2156,11 +2176,15 @@ package
                 }
                 // swing at the boss when standing still near it
                 a.aaT -= dt;
-                var near:Boolean = Math.abs(bossPad.x - mc.x) <= 260 && Math.abs(bossPad.y - mc.y) <= 130;
+                var near:Boolean = bossId == "gramiel" ? inPlace(r) : (Math.abs(bossPad.x - mc.x) <= 260 && Math.abs(bossPad.y - mc.y) <= 130);
+                if (bossId == "gramiel" && near)
+                {
+                    face(a, gramielDir(r)); // standing next to its target, facing it
+                }
                 if (!a.moving && near && a.aaT <= 0 && !f.over && f.started && (!isMe || targeted))
                 {
                     a.aaT = isMe ? f.swingEvery() : 1.33;
-                    face(a, bossPad.x >= mc.x ? 1 : -1);
+                    face(a, bossId == "gramiel" ? gramielDir(r) : (bossPad.x >= mc.x ? 1 : -1));
                     pose(a, isMe ? "RifleAttack" : "Attack1", 0.7);
                     if (isMe && !f.stunned())
                     {
@@ -2330,6 +2354,11 @@ package
             {
                 setBar(targetBox, "HP", "intHPbar", "strIntHP", 1, "1,000,000"); // the Overfiend Blade (1 000 000 HP) is never attacked
             }
+            else if (bossId == "gramiel" && targetSel == "boss" && (f as GramielFight).draining)
+            {
+                var sh:int = (f as GramielFight).shield;
+                setBar(targetBox, "HP", "intHPbar", "strIntHP", sh / 20, "Safeguard " + sh + "/20");
+            }
             else if (bossId == "gramiel" && targetSel != "boss")
             {
                 var gh:Number = (f as GramielFight).crystalHp[targetSel];
@@ -2463,6 +2492,50 @@ package
             }
         }
 
+        /** Ultra Gramiel: where `r` stands to attack `sel` - beside the crystal (on its inner side) or in a row below Gramiel */
+        private function gramielStation(r:String, sel:String):Point
+        {
+            var gf:GramielFight = fight as GramielFight;
+            var idx:int = 0;
+            var n:int = 0;
+            for each (var q:String in roles)
+            {
+                if (q == role ? sel == gf.targetSel : gf.targetOf(q) == sel)
+                {
+                    if (q == r)
+                    {
+                        idx = n;
+                    }
+                    n++;
+                }
+            }
+            if (sel == "boss")
+            {
+                return new Point(bossPad.x + (idx - (n - 1) / 2) * 62, bossPad.y + 46);
+            }
+            var i:int = sel == "cl" ? 0 : 1;
+            var c:MovieClip = crystalMCs[i];
+            return new Point(c.x + (i == 0 ? 1 : -1) * (62 + 52 * idx), c.y + 14 + (idx % 2) * 9);
+        }
+
+        private function gramielDir(r:String):int
+        {
+            var sel:String = (fight as GramielFight).targetOf(r);
+            var x:Number = sel == "boss" ? bossPad.x : crystalMCs[sel == "cl" ? 0 : 1].x;
+            return x >= actors[r].mc.x ? 1 : -1;
+        }
+
+        public function inPlace(r:String):Boolean
+        {
+            var a:Object = actors[r];
+            if (!a || a.moving || !(fight is GramielFight))
+            {
+                return false;
+            }
+            var p:Point = gramielStation(r, (fight as GramielFight).targetOf(r));
+            return Point.distance(new Point(a.mc.x, a.mc.y), p) <= 45;
+        }
+
         /** crystal HP bars (the left / right one is the one you keep even), the selected one outlined, and the chat bubbles */
         private function updateGramielHud(f:GramielFight):void
         {
@@ -2471,7 +2544,7 @@ package
                 var side:String = i == 0 ? "cl" : "cr";
                 var c:MovieClip = crystalMCs[i];
                 var left:Number = f.crystalHp[side];
-                var on:Boolean = bossId == "gramiel" && f.phase == 1 && left > 0;
+                var on:Boolean = false; // the crystals' HP is only shown in the target frame, after clicking them
                 crystalBars[i].visible = crystalTexts[i].visible = on;
                 if (on)
                 {
@@ -2698,7 +2771,7 @@ package
                     }
                     else if (q.k)
                     {
-                        done = f.cast(q.k);
+                        done = inPlace(role) && f.cast(q.k);
                     }
                     if (done)
                     {
@@ -2720,14 +2793,14 @@ package
             {
                 // keep the crystals even: hit the one with more HP left
                 var diff:int = f.crystalHp.cl - f.crystalHp.cr;
-                if (f.crystalHp.cl <= 0 || diff <= -4)
+                if (f.crystalHp.cl <= 0 || diff <= -12)
                 {
                     if (targetSel != "cr")
                     {
                         selectTarget("cr");
                     }
                 }
-                else if (f.crystalHp.cr <= 0 || diff >= 4)
+                else if (f.crystalHp.cr <= 0 || diff >= 12)
                 {
                     if (targetSel != "cl")
                     {
@@ -2738,6 +2811,10 @@ package
             else if (f.phase == 1 && !f.draining && targetSel == "boss")
             {
                 selectTarget(f.crystalHp.cl > f.crystalHp.cr ? "cl" : "cr");
+            }
+            if (!inPlace(role))
+            {
+                return;
             }
             if (f.mana >= 30)
             {
