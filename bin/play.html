@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultra simulator (Ruffle, offline)</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
+  #c { position: fixed; inset: 0; }
+  ruffle-player { width: 100%; height: 100%; }
+  #warn { display: none; position: fixed; inset: 0; color: #fff; padding: 40px; font-size: 18px; line-height: 1.5; }
+  #warn code { background: #222; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="c"></div>
+<div id="warn">
+  <h2>Start the game through the little web server</h2>
+  <p>Browsers do not let a page opened from a file load the game's other files (the maps, bosses and items).<br>
+  Run <code>python3 serve.py</code> (or double-click <code>serve.py</code>) in this folder; it opens this page at <code>http://localhost:8000/play.html</code>.</p>
+</div>
+<!-- Ruffle itself is in ./ruffle (nothing is downloaded) -->
+<script>
+  window.RufflePlayer = { config: { autoplay: "on", splashScreen: false, unmuteOverlay: "hidden",
+    allowScriptAccess: true, warnOnUnsupportedContent: false, letterbox: "on" } };
+  if (location.protocol === "file:") { document.getElementById("warn").style.display = "block"; }
+</script>
+<script src="ruffle/ruffle.js"></script>
+<script>
+  // Options go in the address: play.html?boss=drakath&class=lr&bot=1&speed=4&hints=0&autoplay=1
+  // boss = speaker | dage | drakath, class = loo | ap | lr | ca | pc
+  if (location.protocol !== "file:") {
+    const player = window.RufflePlayer.newest().createPlayer();
+    window.player = player;
+    document.getElementById("c").appendChild(player);
+    player.load({ url: "ultra_sim.swf", parameters: location.search.slice(1) });
+    // the game's Fullscreen button / F key call this
+    window.toggleGameFullscreen = function () {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+      return true;
+    };
+  }
+</script>
+</body>
+</html>

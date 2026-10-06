@@ -139,6 +139,18 @@ package sim
             return d;
         }
 
+        /**
+         * Mana a hit gives back to Lord of Order, Arch Paladin and Legion Revenant ("from all hits landed, especially on crits, the
+         * amount depends on the damage relative to their own HP"): bigger hits give more, up to 15, and a crit gives half again.
+         */
+        public static function manaFor(dmg:Number, crit:Boolean, maxHp:Number):Number
+        {
+            return Math.min(15, Math.max(3, dmg / maxHp * 25)) * (crit ? 1.5 : 1);
+        }
+
+        /** Mana every class regenerates on its own, per second. */
+        public static const MANA_REGEN:Number = 2;
+
         /** Cooldown after haste, in ms. */
         public static function cooldown(listedMs:Number, hastePct:Number):Number
         {

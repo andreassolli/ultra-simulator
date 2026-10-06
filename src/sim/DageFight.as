@@ -768,6 +768,7 @@ package sim
                 return;
             }
             t += dtMs;
+            mana = Math.min(100, mana + Dmg.MANA_REGEN * dtMs / 1000);
             var guard:int = 0;
             while (guard++ < 1000)
             {

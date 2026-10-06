@@ -44,6 +44,14 @@ reorganized without extracting the SWF again.
 - `sets`
 - `tooltip`
 
+## Running it offline (play.html)
+
+`bin/play.html` runs `ultra_sim.swf` with a copy of Ruffle that lives in `bin/ruffle/` (nothing is downloaded). Browsers do not let a page opened from a file load the game's other files, so start it with the little server: `python3 bin/serve.py` (or double-click `serve.py`) opens `http://localhost:8000/play.html`. The address takes the options below, e.g. `play.html?boss=drakath&class=pc&hints=0`. `bin/index.html` is the same page with Ruffle loaded from the internet.
+
+## Mana
+
+Everybody the player can be spends and regenerates mana like the class text says: Lord of Order, Arch Paladin and Legion Revenant get mana back from every hit they land (more for big hits compared to their HP, x1.5 on crits; Legion Revenant's auto attack gives 15), Chaos Avenger 60 per Chaos Greatsword hit, Paladin Chronomancer 10 per strike, 8 per hit taken and 45 over 5 s from Spirits Within. Every class also regenerates 2 per second. Skill costs are the JSON's `mp`; with too little mana a skill says "Not enough mana".
+
 ## Ultra Dage (Flash)
 
 `runtime/town-ultradage.swf` (map) and `runtime/monster-UltraDage.swf` (boss) are loaded next to the Ultra Speaker ones. Rules are in `src/sim/DageFight.as`; the pattern, damage ranges, charge times, buffs and debuffs are from the wiki guide (`ultradage.mdx`), the class skills from `classes.json`.

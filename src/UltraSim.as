@@ -69,7 +69,6 @@ package
         private static const SAFE_A:Object = {x: 180.65, y: 220.55, w: 612.7, h: 294.7};
         private static const WALK:Object = {x0: 24, x1: 936, y0: 240, y1: 488};
         private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0], ca: [-6, -2], cn: [6, -1], pc: [6, -1], da: [-2, 2], db: [2, 0]};
-        private static const CHAR_SCALE:Number = 0.65;
         private static const STAGE_W:Number = 960;
         private static const STAGE_H:Number = 500;
         private static const BUFFS_PER_ROW:int = 4;
@@ -78,15 +77,15 @@ package
         private static const BOSSES:Array = [
             {id: "speaker", name: "Ultra Speaker", classes: ["loo", "ap", "lr"],
                 mapFrame: "Boss", mapSwf: "runtime/town-ultraspeaker.swf", bossSwf: "runtime/monster-UltraMalg.swf", bossClass: "UltraMalg", headClass: "mcHeadUltraMalg",
-                roles: ["ap", "lr", "loo", "dps"], pad: new Point(492.5, 315.7), home: new Point(470, 420), scale: 0.38,
+                roles: ["ap", "lr", "loo", "dps"], pad: new Point(492.5, 335), home: new Point(480, 345), scale: 0.43, charScale: 0.42,
                 loops: {ChargeALoop: [154, 172], PowerLoop: [95, 111], ChargeBLoop: [209, 228]}},
             {id: "dage", name: "Ultra Dage", classes: ["ca"],
                 mapFrame: "Boss", idleStop: true, dieLabel: "Die", mapSwf: "runtime/town-ultradage.swf", bossSwf: "runtime/monster-UltraDage.swf", bossClass: "UltraDage", headClass: "mcHeadUltraDage",
-                roles: ["ca", "cn", "da", "db"], pad: new Point(480, 300), home: new Point(480, 410), scale: 0.6,
+                roles: ["ca", "cn", "da", "db"], pad: new Point(486, 288), home: new Point(480, 302), scale: 0.78, charScale: 0.75, flip: true,
                 loops: {PowerLoop: [351, 363], ChargeLoop: [193, 208]}},
             {id: "drakath", name: "Champion Drakath", classes: ["lr", "pc"], mapFrame: "r2", hideIdx: [1], idleStop: true, dieLabel: "Die",
                 mapSwf: "runtime/town-championdrakath.swf", bossSwf: "runtime/monster-DoubleDrak.swf", bossClass: "DoubleDrak", headClass: "mcHeadDoubleDrak",
-                roles: ["lr", "pc", "loo", "ap"], pad: new Point(770, 372), home: new Point(670, 385), scale: 0.65, flip: true, originDy: 60,
+                roles: ["lr", "pc", "loo", "ap"], pad: new Point(800, 317), home: new Point(677, 377), scale: 0.72, charScale: 0.75, flip: true, originDy: 66,
                 loops: {}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
@@ -509,7 +508,7 @@ package
             {
                 var a:Object = {role: r, moveTo: null, moving: false, aaT: Math.random() * 1.3, pose: "", poseUntil: 0};
                 var holder:MovieClip = new MovieClip();
-                holder._avatarScaling = CHAR_SCALE;
+                holder._avatarScaling = bossDef.charScale;
                 holder.ActiveSet = {
                     itemLinks: {Armor: "", Weapon: "", Cape: "", Helmet: "", Hair: "", Pet: "", Ground: ""},
                     itemShow: {Weapon: true, Cape: true, Helmet: true, Robe: true, "Back Robe": true},
@@ -523,7 +522,7 @@ package
                 var p:Point = spot(homeAt, r);
                 mc.x = p.x;
                 mc.y = p.y;
-                mc.scale(CHAR_SCALE);
+                mc.scale(bossDef.charScale);
                 mc.pname.ti.text = ROLE_FULL[r] + (r == role ? " (you)" : "");
                 mc.mouseEnabled = false;
                 mc.mouseChildren = false;
@@ -1310,7 +1309,7 @@ package
             if (r != null && actors[r])
             {
                 x = actors[r].mc.x + (Math.random() - 0.5) * 24;
-                y = actors[r].mc.y - 108;
+                y = actors[r].mc.y - 108 * bossDef.charScale / 0.65;
             }
             showNumber(x, y, text, kind);
         }
@@ -1392,7 +1391,7 @@ package
                     var clip:MovieClip = new C() as MovieClip;
                     clip.mouseEnabled = false;
                     clip.x = actors[who].mc.x;
-                    clip.y = actors[who].mc.y - 50;
+                    clip.y = actors[who].mc.y - 50 * bossDef.charScale / 0.65;
                     fxLayer.addChild(clip);
                     fxClips.push(clip);
                 }
@@ -1919,7 +1918,7 @@ package
                 var a:Object = actors[who];
                 Hud.bar(a.bar, 56, 6, f.hp[who] / f.maxHp(who), 0x6FE08A, 0x1D8A3A);
                 a.bar.x = a.mc.x - 28;
-                a.bar.y = a.mc.y - 104;
+                a.bar.y = a.mc.y - 104 * bossDef.charScale / 0.65;
             }
         }
 
@@ -2133,7 +2132,13 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+        }
+
+        private function box(d:DisplayObject):String
+        {
+            var b:Rectangle = d.getBounds(this);
+            return "[" + Math.round(b.x) + "," + Math.round(b.y) + "," + Math.round(b.width) + "," + Math.round(b.height) + "]";
         }
 
         private function hpJson():String

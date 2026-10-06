@@ -214,6 +214,13 @@ package sim
             ap: {cd: 2000, f: 1.1, src: "AP2", type: "phys"},
             lr: {cd: 1500, f: 0.57, src: "AoE1", type: "magic"}
         };
+        /** mana cost of the player's skills (classes.json) */
+        private static const MP:Object = {
+            harmony: 20, ordinance: 20, axiom: 20, quix: 30, taunt: 0,
+            commandment: 10, heal: 40, seal: 20, eden: 40,
+            shade: 10, wicked: 15, empowerment: 15, anathema: 20
+        };
+
         /** every hit is multiplied by this: an ultra build is stronger than the stat blocks alone, tuned so the fight lasts as long as it did */
         private static const GEAR:Number = 2.5;
 
@@ -229,7 +236,10 @@ package sim
             var p:Object = stats();
             var a:Object = AA[playerRole];
             var c:Boolean = Dmg.rollCrit(p);
-            return {dmg: Dmg.hit(p, a.f, a.src, a.type, c, hp[playerRole], GEAR) * (0.95 + Math.random() * 0.1), crit: c};
+            var d:Number = Dmg.hit(p, a.f, a.src, a.type, c, hp[playerRole], GEAR) * (0.95 + Math.random() * 0.1);
+            // Legion Revenant: "recovers 15 mana on hit"; the others by the damage compared to their HP
+            mana = Math.min(100, mana + (playerRole == "lr" ? 15 : Dmg.manaFor(d, c, p.hp)));
+            return {dmg: d, crit: c};
         }
 
         /** Cooldown length of a skill by name, for the action bar overlay. */
@@ -603,7 +613,9 @@ package sim
                     if (manual)
                     {
                         var ac:Boolean = Dmg.rollCrit(stats());
-                        playerHit(Dmg.hit(stats(), 3, "AoE1", "magic", ac, hp[playerRole], GEAR), ac);
+                        var ad:Number = Dmg.hit(stats(), 3, "AoE1", "magic", ac, hp[playerRole], GEAR);
+                        playerHit(ad, ac);
+                        mana = Math.min(100, mana + Dmg.manaFor(ad, ac, stats().hp));
                     }
                     break;
             }
@@ -677,6 +689,12 @@ package sim
                 host.floater(playerRole, "Too far from center", "bad");
                 return false;
             }
+            if (mana < MP[name])
+            {
+                host.floater(playerRole, "Not enough mana", "bad");
+                return false;
+            }
+            mana -= MP[name];
             cd[n] = t + skillCdMs(name);
             doSkill(name, playerRole, true);
             for (var k:int = 2; k <= 6; k++)
@@ -748,6 +766,7 @@ package sim
                 return;
             }
             t += dtMs;
+            mana = Math.min(100, mana + Dmg.MANA_REGEN * dtMs / 1000);
             var guard:int = 0;
             while (guard++ < 1000)
             {

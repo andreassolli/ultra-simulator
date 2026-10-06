@@ -586,7 +586,7 @@ package sim
             if (playerClass == "lr")
             {
                 // "regain mana from all hits landed, more if it's a critical strike, based on the damage relative to their own HP"
-                gainMana(Math.min(25, Math.max(2, d / maxHp("lr") * 20)) * (c ? 1.5 : 1));
+                gainMana(Dmg.manaFor(d, c, maxHp("lr")));
             }
             else
             {
@@ -842,6 +842,7 @@ package sim
                 return;
             }
             t += dtMs;
+            mana = Math.min(100, mana + Dmg.MANA_REGEN * dtMs / 1000);
             var guard:int = 0;
             while (guard++ < 1000)
             {
@@ -900,7 +901,7 @@ package sim
                         restore(q, 150, false); // Depravity heals over time
                     }
                 }
-                mana = Math.min(100, mana + 2 + (t < spiritsUntil ? 9 : 0)); // base regeneration, Spirits Within
+                mana = Math.min(100, mana + (t < spiritsUntil ? 9 : 0)); // Spirits Within (45 over 5 s); the base regeneration runs every frame
                 if (t < dotUntil && playerClass == "lr")
                 {
                     dmgBoss(Dmg.hit(myMe(), 0.15, "AoE1", "dot", false, 0, GEAR), false, "player"); // Atramentous Shade's damage over time
