@@ -2628,11 +2628,11 @@ package
             }
             if (chartMC)
             {
-                var h:Number = chartBig ? 470 : 290;
+                var h:Number = chartBig ? 470 : 252;
                 chartMC.height = h;
                 chartMC.scaleX = chartMC.scaleY;
-                chartMC.x = chartBig ? (STAGE_W - chartMC.width) / 2 : STAGE_W - chartMC.width - 4;
-                chartMC.y = chartBig ? 14 : 112;
+                chartMC.x = chartBig ? (STAGE_W - chartMC.width) / 2 : 4; // left, under the party frames (the right side is for clicking)
+                chartMC.y = chartBig ? 14 : 238;
                 chartMC.alpha = chartBig ? 0.97 : 0.88;
             }
         }

@@ -253,7 +253,7 @@ Monsters without listed stats use the default secondary stats (hit 90 %, haste 3
 
 ## Ultra Speaker: charts and strict mechanics
 
-- With tips on, the right edge shows the chart of your role: the Arch Paladin chart, the Lord of Order chart, and (no Legion Revenant chart was supplied) the taunt chart for the Legion Revenant. Press **C** to enlarge / shrink it; turning tips off (H) hides it.
+- With tips on, the left side, under the party frames, shows the chart of your role: the Arch Paladin chart, the Lord of Order chart, and (no Legion Revenant chart was supplied) the taunt chart for the Legion Revenant. Press **C** to enlarge / shrink it; turning tips off (H) hides it.
 - Legion Revenant has to use Decay (2) when the Equal Zone appears (within its 3 s); missing it loses. A Truth that needed the Arch Paladin's Seal and did not get it loses.
 
 ## Ultra Gramiel Phase 2 timing
