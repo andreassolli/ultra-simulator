@@ -40,6 +40,8 @@ package
 
     import ui.BuffAeternaNox;
     import ui.BuffCog;
+    import ui.BuffGramielAura;
+    import ui.BuffVendettaShield;
     import ui.BuffMagiaBurn;
     import ui.BuffNoxiousDecay;
     import ui.BuffSomber;
@@ -763,7 +765,7 @@ package
             }
             head.backhair.addChild(new (helmDomain.getDefinition("SteelSeasVisage_backhair") as Class)() as DisplayObject);
             head.backhair.visible = true;
-            playerBox["strName"].text = "Hero";
+            playerBox["strName"].text = "Proxy";
             playerBox["strLevel"].text = "100";
             targetBox["strClass"].text = "Boss";
             targetBox["strLevel"].text = "100";
@@ -911,7 +913,8 @@ package
                 // Ultra Gramiel
                 {name: "safeguard", icon: BuffCog, boss: true},
                 {name: "invuln", icon: BuffCog, boss: true},
-                {name: "vendetta", icon: BuffCog, boss: false},
+                {name: "vendetta", icon: BuffVendettaShield, fill: true, boss: false},
+                {name: "aura", icon: BuffGramielAura, fill: true, boss: false},
                 {name: "shattered", icon: BuffCog, boss: false},
                 {name: "embrace", icon: "iea1", boss: false},
                 {name: "scorched", icon: "ief1", boss: false},
@@ -1778,7 +1781,7 @@ package
             var mine:Boolean = (holder == role);
             if (holder != null && label != "")
             {
-                setBanner(mine ? "TAUNT NOW - " + label + " on YOU (6)" : ROLE_FULL[holder] + " holds the boss - " + label, mine ? 0xFF5B5B : 0xFFD24A, 2400);
+                setBanner(mine ? "TAUNT NOW - " + label + " on YOU (6)" : ROLE_FULL[holder] + " taunts the boss - " + label, mine ? 0xFF5B5B : 0xFFD24A, 2400);
             }
             if (ability == "truth")
             {
@@ -1840,7 +1843,7 @@ package
                     setBanner("TAUNT GRAMIEL (6) now - then pass it on after two hits", 0xFF5B5B, 3600);
                     if (botOn)
                     {
-                        botQueue.push({at: t + 400, until: t + 3000, k: 6});
+                        botQueue.push({at: t + 400, until: t + 16000, k: 6});
                     }
                     break;
                 case "pass":
@@ -2781,7 +2784,7 @@ package
                     }
                     else if (q.k)
                     {
-                        done = inPlace(role) && f.cast(q.k);
+                        done = inPlace(role) && (q.k != 6 || f.phase == 1 || f.t >= f.auraUntil) && f.cast(q.k);
                     }
                     if (done)
                     {

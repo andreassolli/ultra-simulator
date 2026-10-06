@@ -11,7 +11,7 @@ package sim
      * (Lord of Order on the right + Legion Revenant on the left); the same pair twice in a row gets Grace Shattered twice. If a Crystal dies
      * more than 5 s before the other one (Crystal Unstable) the fight is lost, so the player has to balance his hits between the two.
      *
-     * Phase 2 (7 500 000 HP, damage over 125 000 reduced): Celestial Ruin (tauntable) on whoever holds the boss, each hit is a Vendetta
+     * Phase 2 (7 500 000 HP, damage over 125 000 reduced): Celestial Ruin (tauntable) on whoever taunts the boss, each hit is a Vendetta
      * stack (45 s); more than four hits in a row on the same character lose. The player taunts first and then types "LOO" / "SC" / "LR" to
      * have the next one taunt. Death's Door (60 % of current HP) every four auto attacks on everybody with Vendetta, Grace Unleashed after
      * three of them (kills five stacks) and Celestial Vanquish at 70 / 40 / 10 % (everybody needs a Vendetta stack, then they are cleared).
@@ -38,7 +38,7 @@ package sim
         private static const SHIELD:int = 20;
         private static const TAUNT_MS:int = 7000;
         private static const CAP:Number = 125000;
-        private static const GEAR:Number = 5;            // tuned so Phase 2 takes about three minutes
+        private static const GEAR:Number = 7;            // tuned so each leg between Celestial Vanquishes lasts about 25 s
         private static const ARMOR:Number = 0.2 / 0.55;  // what is left of the listed monster damage (as in the Nulgath fight)
         private static const REFLECT_K:Number = 0.1;     // Burning Ward: listed reflect x this x the character's damage taken
         private static const REGEN:Number = 0.065;       // of max HP per second: lifesteal, potions, the other healers
@@ -563,6 +563,8 @@ package sim
 
         // ---------------------------------------------------------------- Phase 2
         private var unleashing:Boolean = false;
+        public var auraUntil:Number = 0;                // Grace Unleashed's icon: no taunting until it fades
+        public var tauntedLeg:Object = {sh: false, lr: false, sc: false, loo: false}; // who has taunted since the last Celestial Vanquish
 
         private function startPhase2():void
         {
@@ -668,6 +670,7 @@ package sim
         private function graceUnleashed():void
         {
             unleashing = true;
+            auraUntil = t + 8000;
             host2.announce("All servants of the 'Liberator' must die!");
             host2.bossAnim("Charge1", false);
             later(900, function():void { host2.bossAnim("ChargeLoop1", true); });
@@ -742,8 +745,9 @@ package sim
                 {
                     vendetta[q] = [];
                 }
-                holderHits = 0; // whoever holds him keeps the aggro until the Shaman takes it again
+                holderHits = 0; // whoever taunts him keeps the aggro until the Shaman takes it again
                 cued = false;
+                tauntedLeg = {sh: false, lr: false, sc: false, loo: false};
                 host2.log("Vendetta cleared - taunt again, starting with you", "");
                 host2.mechanic(playerRole, "p2start", 0, 0);
             });
@@ -761,6 +765,17 @@ package sim
             }
             else if (phase == 2 || phase == 15)
             {
+                if (t < auraUntil)
+                {
+                    finish("lose", G_NAMES[role] + " taunted while Gramiel's aura was still up: wait for the icon to fade");
+                    return;
+                }
+                if (tauntedLeg[role])
+                {
+                    finish("lose", G_NAMES[role] + " taunted twice before the Shadow Fiend: everybody taunts once between the thresholds");
+                    return;
+                }
+                tauntedLeg[role] = true;
                 if (holder != role)
                 {
                     holderHits = 0;
@@ -1047,6 +1062,10 @@ package sim
             }
             // on us
             var n:int = stacks(playerRole);
+            if (t < auraUntil)
+            {
+                list.push({name: "aura", count: "", frac: frac(auraUntil, 8000)});
+            }
             if (n > 0)
             {
                 list.push({name: "vendetta", count: String(n), frac: -1});
@@ -1092,7 +1111,7 @@ package sim
             {
                 return "Gramiel transforms...";
             }
-            return holder == null ? "Taunt Gramiel (6)" : G_NAMES[holder] + " holds him (" + holderHits + " hits)" + (cued ? " - send " + (nextCueRole == "sh" ? "nothing: taunt yourself (6)" : G_NAMES[nextCueRole]) : "");
+            return holder == null ? "Taunt Gramiel (6)" : G_NAMES[holder] + " taunts him (" + holderHits + " hits)" + (cued ? " - send " + (nextCueRole == "sh" ? "nothing: taunt yourself (6)" : G_NAMES[nextCueRole]) : "");
         }
 
         /** what `role` is attacking right now: "boss" | "cl" | "cr" (the characters stand next to it and face it) */
@@ -1268,6 +1287,11 @@ package sim
         {
             if (phase != 2 || holder == null || t < invulnUntil || cued || holderHits < 2)
             {
+                return;
+            }
+            if (tauntedLeg.sh && tauntedLeg.lr && tauntedLeg.sc && tauntedLeg.loo)
+            {
+                cued = true; // everybody has taunted: wait for the Shadow Fiend
                 return;
             }
             cued = true;
