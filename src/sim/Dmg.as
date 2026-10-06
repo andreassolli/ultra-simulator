@@ -43,6 +43,13 @@ package sim
                 dmgRes: 0, physRes: 35, magRes: 13.59, allOut: 115, physOut: 100, magOut: 100, dotOut: 100, healOut: 100, healIn: 50},
             ap: {ap: 877, sp: 877, critChance: 29.94, critMod: 372.22, hit: 108.69, haste: 11.64, dodge: 21.64, hp: 3670,
                 dmgRes: 45, physRes: 0, magRes: 40.13, allOut: 120, physOut: 100, magOut: 140.13, dotOut: 75, healOut: 100, healIn: 100},
+            // Chrono ShadowSlayer (classes.json: "Chrono ShadowHunter"): Valiance weapon, Lucky class, Forge helm, Penitence cape. Same
+            // enhancements and the same Full Hybrid stat split as the ArchPaladin, so the same primaries (STR 316, INT 316, DEX 167,
+            // END 167, WIS 68, LCK 350); Blessed Ammunition makes the Luck x1.2 = 420, Sharpshooter +10 % crit chance, Reinforced Chamber
+            // +10 % damage. From those with the calculator's conversions (hybrid: AP / SP = 2 x STR / INT + 0.7 x Luck, crit multiplier
+            // 150 + 5 x Luck x 0.127, Luck +70 on the ArchPaladin's crit / hit chance, magic resistance and boost from Intellect, HP 2000 + 5 x END):
+            cs: {ap: 926, sp: 926, critChance: 42.61, critMod: 416.7, hit: 109.58, haste: 11.64, dodge: 22.5, hp: 2835,
+                dmgRes: 0, physRes: 0, magRes: 40.13, allOut: 110, physOut: 100, magOut: 140.13, dotOut: 75, healOut: 100, healIn: 100},
             shaman: {ap: 152, sp: 1706, critChance: 39.69, critMod: 300.48, hit: 103.35, haste: 32.34, dodge: 23.96, hp: 3125,
                 dmgRes: 0, physRes: 0, magRes: 80, allOut: 115, physOut: 100, magOut: 222.78, dotOut: 75, healOut: 100, healIn: 50}
         };
@@ -145,11 +152,11 @@ package sim
          */
         public static function manaFor(dmg:Number, crit:Boolean, maxHp:Number):Number
         {
-            return Math.min(15, Math.max(3, dmg / maxHp * 25)) * (crit ? 1.5 : 1);
+            return Math.min(22, Math.max(4.5, dmg / maxHp * 37)) * (crit ? 1.5 : 1);
         }
 
         /** Mana every class regenerates on its own, per second. */
-        public static const MANA_REGEN:Number = 2;
+        public static const MANA_REGEN:Number = 4;
 
         /** Cooldown after haste, in ms. */
         public static function cooldown(listedMs:Number, hastePct:Number):Number

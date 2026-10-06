@@ -68,7 +68,7 @@ package
         private static const RIGHT_AT:Point = new Point(868, 410);
         private static const SAFE_A:Object = {x: 180.65, y: 220.55, w: 612.7, h: 294.7};
         private static const WALK:Object = {x0: 24, x1: 936, y0: 240, y1: 488};
-        private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0], ca: [-6, -2], cn: [6, -1], pc: [6, -1], da: [-2, 2], db: [2, 0]};
+        private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0], ca: [-6, -2], cn: [6, -1], pc: [6, -1], cs: [-6, -2], da: [-2, 2], db: [2, 0]};
         private static const STAGE_W:Number = 960;
         private static const STAGE_H:Number = 500;
         private static const BUFFS_PER_ROW:int = 4;
@@ -77,7 +77,7 @@ package
         private static const BOSSES:Array = [
             {id: "speaker", name: "Ultra Speaker", classes: ["loo", "ap", "lr"],
                 mapFrame: "Boss", mapSwf: "runtime/town-ultraspeaker.swf", bossSwf: "runtime/monster-UltraMalg.swf", bossClass: "UltraMalg", headClass: "mcHeadUltraMalg",
-                roles: ["ap", "lr", "loo", "dps"], pad: new Point(492.5, 335), home: new Point(480, 345), scale: 0.43, charScale: 0.42,
+                roles: ["ap", "lr", "loo", "dps"], pad: new Point(492.5, 305), home: new Point(480, 315), scale: 0.43, charScale: 0.42,
                 loops: {ChargeALoop: [154, 172], PowerLoop: [95, 111], ChargeBLoop: [209, 228]}},
             {id: "dage", name: "Ultra Dage", classes: ["ca"],
                 mapFrame: "Boss", idleStop: true, dieLabel: "Die", mapSwf: "runtime/town-ultradage.swf", bossSwf: "runtime/monster-UltraDage.swf", bossClass: "UltraDage", headClass: "mcHeadUltraDage",
@@ -85,7 +85,7 @@ package
                 loops: {PowerLoop: [351, 363], ChargeLoop: [193, 208]}},
             {id: "drakath", name: "Champion Drakath", classes: ["lr", "pc"], mapFrame: "r2", hideIdx: [1], idleStop: true, dieLabel: "Die",
                 mapSwf: "runtime/town-championdrakath.swf", bossSwf: "runtime/monster-DoubleDrak.swf", bossClass: "DoubleDrak", headClass: "mcHeadDoubleDrak",
-                roles: ["lr", "pc", "loo", "ap"], pad: new Point(800, 317), home: new Point(677, 377), scale: 0.72, charScale: 0.75, flip: true, originDy: 66,
+                roles: ["lr", "pc", "loo", "cs"], pad: new Point(800, 317), home: new Point(677, 377), scale: 0.72, charScale: 0.75, flip: true, originDy: 66,
                 loops: {}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
@@ -95,7 +95,7 @@ package
 
         private static const ROLE_COLOR:Object = {ap: 0xE8D9A0, lr: 0xE0507A, loo: 0xE0B84A, dps: 0x5AA86A};
         private static const ROLE_FULL:Object = {ap: "Arch Paladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS",
-            ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer", da: "DPS 1", db: "DPS 2"};
+            ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer", cs: "Chrono ShadowSlayer", da: "DPS 1", db: "DPS 2"};
         private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "Arch Paladin", lr: "Legion Revenant", ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer"};
 
         // skill bar: slot -> [label, icon class in Assets.swf]. The SWF ships aa + 4 numbered icons per class.
@@ -2177,7 +2177,15 @@ package
             }
             else
             {
-                if (f.hp[role] < f.maxHp(role) * 0.7)
+                var lowest:Number = 1;
+                for each (var al:String in roles)
+                {
+                    if (f.hp[al] > 0)
+                    {
+                        lowest = Math.min(lowest, f.hp[al] / f.maxHp(al));
+                    }
+                }
+                if (lowest < 0.7)
                 {
                     f.cast(4);
                 }

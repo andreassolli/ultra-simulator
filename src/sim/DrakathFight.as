@@ -18,8 +18,8 @@ package sim
      */
     public class DrakathFight extends Fight
     {
-        public static const DRAK_ROLES:Array = ["lr", "pc", "loo", "ap"];
-        public static const DRAK_NAMES:Object = {lr: "Legion Revenant", pc: "Paladin Chronomancer", loo: "Lord of Order", ap: "Arch Paladin"};
+        public static const DRAK_ROLES:Array = ["lr", "pc", "loo", "cs"];
+        public static const DRAK_NAMES:Object = {lr: "Legion Revenant", pc: "Paladin Chronomancer", loo: "Lord of Order", cs: "Chrono ShadowSlayer"};
 
         /** player skill slots 2-6 (slot 1 is the auto attack, slot 6 the taunt) */
         public static const DRAK_SKILLS:Object = {
@@ -39,7 +39,7 @@ package sim
             taunt: {f: 0, src: "AP1", mp: 0, type: "phys"}
         };
         /** every hit and heal is multiplied by this: see GEAR in DageFight (tuned so the fight lasts about as long as before the calculator maths) */
-        private static const GEAR:Number = 10;
+        private static const GEAR:Number = 15;
         private static const CAP:Number = 75000; // "damage over 75 000 is reduced": excess ^ 0.8
         private static const HEAL_SCALE:Number = 0.35; // what is left of a heal after the boss' damage was tuned (see README)
 
@@ -54,7 +54,7 @@ package sim
         private static const TAUNTS:Object = {lr: [16, 12], pc: [18, 14, 8, 6, 4]};
 
         /** max HP at level 100 (see Dmg): Lord of Order's Harmony and the Arch Paladin's heal buff add to it, as in the Ultra Speaker fight */
-        private static const START_HP:Object = {lr: 2910, pc: 4970, loo: 3505, ap: 3670};
+        private static const START_HP:Object = {lr: 2910, pc: 4970, loo: 3505, cs: 2835};
         private static const HARMONY_HP:Number = 0.062;
         private static const APHEAL_HP:Number = 0.0756;
         private static const AUTO_EVERY:int = 2250;
@@ -68,8 +68,8 @@ package sim
         private static const ARMOR:Number = 0.08;         // what is left of the listed physical damage
         private static const GCD:int = 400;
         // Paladin Chronomancers gain mana when they strike an enemy, when they are struck, and from Spirits Within (45 over 5 s)
-        private static const PC_STRIKE_MP:Number = 10;
-        private static const PC_STRUCK_MP:Number = 8;
+        private static const PC_STRIKE_MP:Number = 14;
+        private static const PC_STRUCK_MP:Number = 12;
 
         // ---- state shared with the HUD ------------------------------------------------------------
         public var phase:int = 1;
@@ -115,6 +115,7 @@ package sim
         private var spiritsUntil:Number = 0;  // Spirits Within: 45 mana over 5 s
         private var depravedHeal:Number = 0;
         private var npcTauntedFor:Object = {};
+        private var healedFor:Object = {};
 
         public function DrakathFight(host:IFightHost, role:String, bossHp:Number, raidDps:Array)
         {
@@ -391,6 +392,13 @@ package sim
                 }
             }
             power++;
+            // whoever took the 3000 is nearly dead: the Paladin Chronomancer (when the sim plays it) answers with Holy Vow at once
+            later(300, function():void {
+                if (playerClass != "pc" && alive("pc"))
+                {
+                    healAll(healing("pc", "vow"), false);
+                }
+            });
             host2.log((blast ? "Chaos Blast" : "Chaos Slam") + " at " + e.hp + "M - " + (holder != null ? DRAK_NAMES[holder] + " took it" : "everyone took it") + ", Gaining Power x" + power, holder != null ? "good" : "bad");
             later(1100, function():void { idle(); });
         }
@@ -779,13 +787,6 @@ package sim
                     host2.castFx("ordinance", "loo");
                 }
             }
-            if (alive("ap") && t >= npcApHealAt)
-            {
-                npcApHealAt = t + 5000;
-                buffMax("apheal", t + 15000);
-                healAll(6682 * HEAL_SCALE, false);
-                host2.castFx("heal", "ap");
-            }
             var c:String = npcClass();
             if (!alive(c))
             {
@@ -795,6 +796,12 @@ package sim
             if (nextEvent < EVENTS.length)
             {
                 var e:Object = EVENTS[nextEvent];
+                // the Legion Revenant has to live through the 3 000 of a Chaos Slam: whoever heals tops it up just before
+                if ((e.kind == "slam" || e.kind == "blast") && TAUNTS.lr.indexOf(e.hp) >= 0 && !healedFor[e.hp] && bossHp - e.hp * 1000000 <= dps() * 2)
+                {
+                    healedFor[e.hp] = true;
+                    restore("lr", maxHp("lr"), "lr" == playerRole);
+                }
                 if ((e.kind == "slam" || e.kind == "blast") && TAUNTS[c].indexOf(e.hp) >= 0 && !npcTauntedFor[e.hp] && bossHp - e.hp * 1000000 <= dps() * 2.5)
                 {
                     npcTauntedFor[e.hp] = true;
