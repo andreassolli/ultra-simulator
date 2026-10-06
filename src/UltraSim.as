@@ -2057,7 +2057,17 @@ package
         private function moveToBoss():void
         {
             targeted = true;
-            beginWalk(actors[role], new Point(bossPad.x - 90, bossPad.y + 70));
+            if (bossId == "gramiel")
+            {
+                actors[role].follow = true; // walk next to the current target (crystal or Gramiel)
+                return;
+            }
+            if (targetBlade && bladeMC)
+            {
+                beginWalk(actors[role], new Point(clamp(bossDef.bladePad.x + 90, WALK.x0, WALK.x1), clamp(bossDef.bladePad.y + 10, WALK.y0, WALK.y1)));
+                return;
+            }
+            beginWalk(actors[role], new Point(clamp(bossPad.x - 90, WALK.x0, WALK.x1), clamp(bossPad.y + 70, WALK.y0, WALK.y1)));
         }
 
         private function castKey(k:int):Boolean
