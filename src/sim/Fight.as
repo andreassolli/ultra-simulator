@@ -77,6 +77,7 @@ package sim
         public var t:Number = 0;
         public var started:Boolean = false; // the fight starts with the player's first skill
         public var targetIsBlade:Boolean = false; // Ultra Nulgath: the Overfiend Blade is the player's target
+        public var targetSel:String = "boss"; // Ultra Gramiel: the player's target, "boss" | "cl" | "cr" (left / right Grace Crystal)
         public var mana:Number = 100; // 0-100, only the Dage / Drakath fights spend it
         public var playerRole:String;
         public var over:Object = null; // {result, reason}
@@ -255,6 +256,11 @@ package sim
         public function activeBuffs():Array
         {
             return null;
+        }
+
+        /** A line the player typed in the chat field (Ultra Gramiel: tells the others to taunt). */
+        public function chat(text:String):void
+        {
         }
 
         /** What to tell the player while the fight waits for their first skill. */

@@ -95,6 +95,17 @@ Everybody the player can be spends and regenerates mana like the class text says
 - **Length:** raid damage is tuned (`GEAR_LR` / `GEAR_LOO`) so the run takes about 38 seconds. Damage over 100 000 a hit is cut (excess ^ 0.8).
 - **Everywhere:** if any character dies, not just you, the fight is lost.
 
+## Ultra Gramiel (Flash)
+
+`runtime/town-ultragramiel.swf`, `monster-UltraGramiel.swf` and `monster-GraceCrystal.swf` (two crystals); rules in `src/sim/GramielFight.as` (from `ultragramiel.mdx`). The only class you can play is the **Shaman** (classes.json: Ancestor's Flame 2, Hydrophobia 3, Dry Lightning 4, Elemental Embrace 5, Taunt 6); Legion Revenant, **StoneCrusher** and Lord of Order are played by the sim. StoneCrusher is not in `classes.json`, so its stats are assumed (strength build, 5 200 HP, some resistances; see `Dmg.as`).
+
+- **Targets:** click Gramiel or a Grace Crystal (or press Tab to cycle left crystal / right crystal / Gramiel); your attacks and skills go to the target and the target frame shows its HP. The crystal bars above them show who is ahead.
+- **Phase 1:** every attack on a crystal (400 HP) is 1 damage and reflects Burning Ward damage back to the attacker; Gramiel himself also only takes 1 per hit. Keep both crystals even: if one dies and the other is not dead 5 s later (Crystal Unstable) the fight is lost. The other three hit their own crystal (Legion Revenant + StoneCrusher left, you + Lord of Order right) at a rate that drifts, so you have to steer your hits to whichever crystal is ahead. Every 14 s "The Grace Crystal prepares a defense shattering attack!" has to be taunted on both crystals, by a different pair each time: press Enter, type **1** (you + StoneCrusher: you must have the *right* crystal targeted and use Taunt 6) or **2** (Legion Revenant + Lord of Order) and press Enter. Using the same pair twice in a row gives Grace Shattered twice and loses.
+- **Grace Drain:** after the third Grace Burst Gramiel charges for 5 s; click him and attack until the 20-hit Safeguard shield breaks (everybody else does, too), then go back to the crystals. An unbroken shield loses the fight.
+- **Phase 2:** once both crystals are dead Gramiel transforms (5 s). Then taunt him yourself (6); each Celestial Ruin on the holder is one Vendetta stack. After he has been hit twice type **LOO** (Lord of Order taunts), then **SC** (StoneCrusher), then **LR** (Legion Revenant), then taunt yourself again; five hits in a row on the same character lose, so does an untaunted attack, Grace Unleashed on five stacks, and a character without a stack at Celestial Vanquish (70 / 40 / 10 %). The words are matched loosely ("lord of order", "stone", "legion" ...).
+- **Start / death:** no fight starts until you use a skill; any character dying loses.
+- **Tuned:** the hit rates, regeneration, the reflect size and the raid damage (`GEAR`) are tuned so Phase 1 takes about a minute and a half and Phase 2 about two and a half minutes.
+
 ## Ultra Dage (Flash)
 
 `runtime/town-ultradage.swf` (map) and `runtime/monster-UltraDage.swf` (boss) are loaded next to the Ultra Speaker ones. Rules are in `src/sim/DageFight.as`; the pattern, damage ranges, charge times, buffs and debuffs are from the wiki guide (`ultradage.mdx`), the class skills from `classes.json`.

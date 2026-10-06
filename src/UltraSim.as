@@ -22,6 +22,8 @@ package
     import flash.system.ApplicationDomain;
     import flash.system.LoaderContext;
     import flash.text.TextField;
+    import flash.text.TextFieldType;
+    import flash.text.TextFormat;
     import flash.utils.getQualifiedClassName;
     import flash.utils.getTimer;
     import flash.utils.setTimeout;
@@ -29,6 +31,7 @@ package
     import sim.DageFight;
     import sim.DrakathFight;
     import sim.Fight;
+    import sim.GramielFight;
     import sim.Hud;
     import sim.IFightHost;
     import sim.NulgathFight;
@@ -69,7 +72,7 @@ package
         private static const RIGHT_AT:Point = new Point(868, 410);
         private static const SAFE_A:Object = {x: 180.65, y: 220.55, w: 612.7, h: 294.7};
         private static const WALK:Object = {x0: 24, x1: 936, y0: 240, y1: 488};
-        private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0], ca: [-6, -2], cn: [6, -1], pc: [6, -1], cs: [-6, -2], da: [-2, 2], db: [2, 0]};
+        private static const STACK:Object = {ap: [-6, -2], lr: [6, -1], dps: [-2, 2], loo: [2, 0], ca: [-6, -2], cn: [6, -1], pc: [6, -1], cs: [-6, -2], da: [-2, 2], db: [2, 0], sh: [-2, 2], sc: [-6, -2]};
         private static const STAGE_W:Number = 960;
         private static const STAGE_H:Number = 500;
         private static const BUFFS_PER_ROW:int = 4;
@@ -93,7 +96,13 @@ package
                 bladeSwf: "runtime/monster-OverfiendBlade.swf", bladeClass: "OverfiendBlade",
                 roles: ["lr", "loo", "ap", "cs"], pad: new Point(150, 350), home: new Point(745, 440), scale: 1.0, charScale: 1.4,
                 bladePad: new Point(367, 477), bladeScale: 1.35,
-                loops: {Chargeloop: [185, 206]}}
+                loops: {Chargeloop: [185, 206]}},
+            {id: "gramiel", name: "Ultra Gramiel", classes: ["sh"], mapFrame: "r2", idleStop: true, dieLabel: "Die",
+                mapSwf: "runtime/town-ultragramiel.swf", bossSwf: "runtime/monster-UltraGramiel.swf", bossClass: "UltraGramiel", headClass: "mcHeadUltraGramiel",
+                crystalSwf: "runtime/monster-GraceCrystal.swf", crystalClass: "GraceCrystal", crystalHead: "mcHeadGraceCrystal",
+                roles: ["sh", "lr", "sc", "loo"], pad: new Point(480, 300), home: new Point(480, 400), scale: 0.8, charScale: 0.8,
+                crystalPads: [new Point(300, 330), new Point(660, 330)], crystalScale: 0.7, crystalBarY: 222, stack: {lr: [-150, -4], sc: [-78, 6], sh: [62, 6], loo: [138, -3]},
+                loops: {ChargeLoop1: [151, 164], ChargeLoop2: [213, 230]}, crystalLoops: {ChargeLoop: [157, 177]}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
         private static const PORTRAIT_CX:Number = 50;
@@ -102,8 +111,8 @@ package
 
         private static const ROLE_COLOR:Object = {ap: 0xE8D9A0, lr: 0xE0507A, loo: 0xE0B84A, dps: 0x5AA86A};
         private static const ROLE_FULL:Object = {ap: "Arch Paladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS",
-            ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer", cs: "Chrono ShadowSlayer", da: "DPS 1", db: "DPS 2"};
-        private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "Arch Paladin", lr: "Legion Revenant", ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer"};
+            ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer", cs: "Chrono ShadowSlayer", da: "DPS 1", db: "DPS 2", sh: "Shaman", sc: "StoneCrusher"};
+        private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "Arch Paladin", lr: "Legion Revenant", ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer", sh: "Shaman"};
 
         // skill bar: slot -> [label, icon class in Assets.swf]. The SWF ships aa + 4 numbered icons per class.
         private static const SKILLS:Object = {
@@ -113,7 +122,9 @@ package
             // Ultra Dage classes (classes.json): aa, four skills, potions. Flux (3) is the Chaos Avenger's taunt.
             ca: [["Greatsword", "Chavengeaa"], ["Siphon", "Chavengea1"], ["Flux", "Chavengea2"], ["Bulwark", "Chavengea3"], ["Fury", "Chavengea4"], ["Potions", "icu1"]],
             pc: [["Hammer", "PallyChAA"], ["Rift", "PallyChA1"], ["Vow", "PallyChA2"], ["Intervention", "PallyChA3"], ["Retribution", "PallyChA4"], ["Taunt", null]],
-            cn: [["Attack", "iwd1"], ["Crosscut", "imr1"], ["Shadowblade", "ied2"], ["Shadowburn", "ief2"], ["Thin Air", "iea1"], ["Potions", "icu1"]]
+            cn: [["Attack", "iwd1"], ["Crosscut", "imr1"], ["Shadowblade", "ied2"], ["Shadowburn", "ief2"], ["Thin Air", "iea1"], ["Potions", "icu1"]],
+            // Ultra Gramiel's DPS (classes.json: Shaman); slot 6 is the taunt
+            sh: [["Attack", "iwd1"], ["Ancestor's Flame", "ief1"], ["Hydrophobia", "iew1"], ["Dry Lightning", "iee2"], ["Elemental Embrace", "iea1"], ["Taunt", null]]
         };
 
 
@@ -156,6 +167,15 @@ package
         private var bossMC:MovieClip;
         private var bladeMC:MovieClip;
         private var targetBlade:Boolean = false; // Ultra Nulgath: the clicked Overfiend Blade is the target
+        private var crystalMCs:Array = [];         // Ultra Gramiel: the left / right Grace Crystal clips
+        private var crystalLabel:Array = ["Idle", "Idle"];
+        private var crystalLoop:Array = [false, false];
+        private var crystalBars:Array = [];
+        private var crystalTexts:Array = [];
+        private var targetSel:String = "boss";     // Ultra Gramiel: "boss" | "cl" | "cr"
+        private var chatField:TextField;
+        private var chatHint:TextField;
+        private var bubbles:Object = {};
         private var targetRing:Shape = new Shape();
         private var runeMC:MovieClip;
         private var safeMC:MovieClip;
@@ -266,7 +286,7 @@ package
             {
                 role = p["class"];
             }
-            initialBoss = p["boss"] == "dage" || p["boss"] == "drakath" || p["boss"] == "nulgath" ? p["boss"] : "speaker";
+            initialBoss = ["dage", "drakath", "nulgath", "gramiel"].indexOf(p["boss"]) >= 0 ? p["boss"] : "speaker";
             glowText = p["fx"] != "0";
             cacheMap = p["cache"] == "1";
             botOn = p["bot"] == "1";
@@ -290,7 +310,7 @@ package
             mapHolder.onWalkClick = function():void {};
             mapLayer.addChild(mapHolder);
 
-            pending = 3 + 2 * BOSSES.length + 1; // + the Overfiend Blade
+            pending = 3 + 2 * BOSSES.length + 2; // + the Overfiend Blade, the Grace Crystal
             for each (var bd:Object in BOSSES)
             {
                 var sc:Object = {def: bd};
@@ -300,6 +320,10 @@ package
                 if (bd.bladeSwf)
                 {
                     sc.bladeDomain = loadSwf(bd.bladeSwf, makeLoaded(sc, "bladeLoader"));
+                }
+                if (bd.crystalSwf)
+                {
+                    sc.crystalDomain = loadSwf(bd.crystalSwf, makeLoaded(sc, "crystalLoader"));
                 }
             }
             assetsDomain = loadSwf("runtime/Assets.swf", onAssetsLoaded);
@@ -448,6 +472,24 @@ package
             targetBox["strName"].text = blade ? "Overfiend Blade" : bossDef.name;
         }
 
+        /** Ultra Gramiel: the target frame shows Gramiel ("boss") or the left / right Grace Crystal */
+        private function selectTarget(sel:String):void
+        {
+            targetSel = sel;
+            targetBlade = false;
+            if (fight)
+            {
+                fight.targetSel = sel;
+            }
+            var crystal:Boolean = sel != "boss";
+            var domain:ApplicationDomain = crystal ? bossScenes[bossId].crystalDomain : bossDomain;
+            setFace(targetBox["mcHead"], new (domain.getDefinition(crystal ? bossDef.crystalHead : bossDef.headClass) as Class)() as DisplayObject);
+            targetBox["mcHead"].head.hair.visible = false;
+            targetBox["mcHead"].head.helm.visible = false;
+            targetBox["mcHead"].backhair.visible = false;
+            targetBox["strName"].text = !crystal ? bossDef.name : (sel == "cl" ? "Grace Crystal (left)" : "Grace Crystal (right)");
+        }
+
         private function buildBoss(sc:Object):void
         {
             var Boss:Class = sc.domain.getDefinition(sc.def.bossClass) as Class;
@@ -476,6 +518,24 @@ package
                 bl.visible = false;
                 actorLayer.addChild(bl);
             }
+            if (sc.def.crystalSwf)
+            {
+                var Crystal:Class = sc.crystalDomain.getDefinition(sc.def.crystalClass) as Class;
+                sc.crystals = [];
+                for (var ci:int = 0; ci < 2; ci++)
+                {
+                    var cr:MovieClip = new Crystal() as MovieClip;
+                    cr.onMove = false;
+                    cr.scaleX = cr.scaleY = sc.def.crystalScale;
+                    cr.x = sc.def.crystalPads[ci].x;
+                    cr.y = sc.def.crystalPads[ci].y;
+                    cr.mouseEnabled = false;
+                    cr.mouseChildren = false;
+                    cr.visible = false;
+                    actorLayer.addChild(cr);
+                    sc.crystals.push(cr);
+                }
+            }
             if (sc.def.id == "speaker")
             {
                 targetRing.graphics.lineStyle(2, 0xFFD24A, 0.9);
@@ -496,6 +556,10 @@ package
                 {
                     o.blade.visible = false;
                 }
+                for each (var oc:MovieClip in (o.crystals ? o.crystals : []))
+                {
+                    oc.visible = false;
+                }
             }
             var sc:Object = bossScenes[id];
             bossId = id;
@@ -514,6 +578,16 @@ package
                 bladeMC.visible = true;
                 bladeAnim("Idle", false);
             }
+            crystalMCs = sc.crystals ? sc.crystals : [];
+            for (var cj:int = 0; cj < crystalMCs.length; cj++)
+            {
+                crystalMCs[cj].visible = true;
+                crystalAnim(cj == 0 ? "cl" : "cr", "Idle", false);
+            }
+            if (chatField)
+            {
+                chatField.visible = chatHint.visible = bossId == "gramiel";
+            }
             runeMC = sc.rune;
             safeMC = sc.safe;
             safe2MC = sc.safe2;
@@ -529,6 +603,7 @@ package
             // the target frame's face and name
             targetBlade = false;
             showTarget(false);
+            targetSel = "boss";
             plateId = "";
             bossAnim("Idle", false);
             newFight(role);
@@ -545,7 +620,8 @@ package
 
         private function spot(base:Point, r:String):Point
         {
-            return new Point(base.x + STACK[r][0], base.y + STACK[r][1]);
+            var st:Object = bossDef.stack ? bossDef.stack : STACK;
+            return new Point(base.x + st[r][0], base.y + st[r][1]);
         }
 
         private function buildActors():void
@@ -749,6 +825,36 @@ package
             actBar.addEventListener(MouseEvent.MOUSE_DOWN, onBarDown);
             g.addChild(actBar);
             buildButtons();
+            // Ultra Gramiel: crystal HP bars and the chat field
+            for (var cb:int = 0; cb < 2; cb++)
+            {
+                var bar:Shape = new Shape();
+                bar.visible = false;
+                fxLayer.addChild(bar);
+                crystalBars.push(bar);
+                var ctx:TextField = Hud.label("", 11, 0xFFFFFF, true, "center", 120);
+                ctx.visible = false;
+                fxLayer.addChild(ctx);
+                crystalTexts.push(ctx);
+            }
+            chatHint = Hud.label("Enter = chat   1: you + SC   2: LR + LoO", 10, 0xD8DEEA, false, "left", 230);
+            chatHint.x = 8;
+            chatHint.y = 452;
+            chatField = new TextField();
+            chatField.type = TextFieldType.INPUT;
+            chatField.defaultTextFormat = new TextFormat("_sans", 13, 0xFFFFFF);
+            chatField.background = true;
+            chatField.backgroundColor = 0x10141f;
+            chatField.border = true;
+            chatField.borderColor = 0x3A4560;
+            chatField.maxChars = 40;
+            chatField.x = 8;
+            chatField.y = 470;
+            chatField.width = 230;
+            chatField.height = 22;
+            chatField.visible = chatHint.visible = false;
+            g.addChild(chatHint);
+            g.addChild(chatField);
         }
 
         /**
@@ -797,7 +903,15 @@ package
                 {name: "rift", icon: "PallyChA1", boss: false},
                 {name: "angel", icon: "PallyChA3", boss: false},
                 {name: "nox", icon: BuffCog, boss: true},
-                {name: "reprisal", icon: "PallyChA1", boss: true}
+                {name: "reprisal", icon: "PallyChA1", boss: true},
+                // Ultra Gramiel
+                {name: "safeguard", icon: BuffCog, boss: true},
+                {name: "invuln", icon: BuffCog, boss: true},
+                {name: "vendetta", icon: BuffCog, boss: false},
+                {name: "shattered", icon: BuffCog, boss: false},
+                {name: "embrace", icon: "iea1", boss: false},
+                {name: "scorched", icon: "ief1", boss: false},
+                {name: "hot", icon: "iew1", boss: false}
             ];
             for each (var d:Object in defs)
             {
@@ -959,7 +1073,7 @@ package
         }
 
         private static const TAB_W:Number = 172;
-        private static const CARD_ICON:Object = {loo: "LoOaa", ap: "apal1", lr: "LRaa", ca: "Chavengeaa", cn: "iwd1", pc: "PallyChAA"};
+        private static const CARD_ICON:Object = {loo: "LoOaa", ap: "apal1", lr: "LRaa", ca: "Chavengeaa", cn: "iwd1", pc: "PallyChAA", sh: "iwd1"};
 
         /** Boss + class selection and Play; the fight sits paused (and untouched) behind it until Play is pressed. */
         private function showStartScreen():void
@@ -1092,6 +1206,19 @@ package
             paused = false;
             lastTime = getTimer();
             refocus(); // the Play button the focus was on is gone: without this the keys 1-6 do nothing until the next click on the map
+        }
+
+        private function sendChat():void
+        {
+            var text:String = chatField.text.replace(/^\s+|\s+$/g, "");
+            chatField.text = "";
+            refocus();
+            if (text == "" || fight.over || !fight.started)
+            {
+                return;
+            }
+            say(role, text);
+            fight.chat(text);
         }
 
         private function toggleHints():void
@@ -1227,6 +1354,30 @@ package
             {
                 fight = new NulgathFight(this, role, 10000000, [0, 0]);
             }
+            else if (bossId == "gramiel")
+            {
+                fight = new GramielFight(this, role, 7500000, [0, 0]);
+                if (loaderInfo.parameters["p2"] == "1")
+                {
+                    (fight as GramielFight).crystalHp = {cl: 3, cr: 3}; // for tests: skip most of Phase 1
+                }
+                targetSel = fight.targetSel;
+                selectTarget(targetSel);
+                for each (var bb:Object in bubbles)
+                {
+                    if (bb.sp.parent)
+                    {
+                        bb.sp.parent.removeChild(bb.sp);
+                    }
+                }
+                bubbles = {};
+                for (var ci:int = 0; ci < crystalMCs.length; ci++)
+                {
+                    crystalMCs[ci].x = bossDef.crystalPads[ci].x;
+                    crystalMCs[ci].y = bossDef.crystalPads[ci].y;
+                    crystalAnim(ci == 0 ? "cl" : "cr", "Idle", false);
+                }
+            }
             else
             {
                 fight = new Fight(this, role, 10000000, [42000, 52000]);
@@ -1288,6 +1439,53 @@ package
                     bladeMC.gotoAndPlay(label);
                 }
             }
+        }
+
+        public function crystalAnim(side:String, label:String, loop:Boolean):void
+        {
+            var i:int = side == "cl" ? 0 : 1;
+            if (i >= crystalMCs.length)
+            {
+                return;
+            }
+            crystalLabel[i] = label;
+            crystalLoop[i] = loop;
+            if (label == "Idle")
+            {
+                crystalMCs[i].gotoAndStop(label);
+            }
+            else
+            {
+                crystalMCs[i].gotoAndPlay(label);
+            }
+        }
+
+        /** a chat line over the character's head (and in the log) */
+        public function say(r:String, text:String):void
+        {
+            log(ROLE_FULL[r] + ": " + text, "");
+            if (!actors[r])
+            {
+                return;
+            }
+            var old:Object = bubbles[r];
+            if (old && old.sp.parent)
+            {
+                old.sp.parent.removeChild(old.sp);
+            }
+            var sp:Sprite = new Sprite();
+            var tf:TextField = Hud.label(text, 12, 0x15110a, true);
+            tf.x = 6;
+            tf.y = 3;
+            sp.graphics.beginFill(0xFFF3C4, 0.95);
+            sp.graphics.lineStyle(1, 0x3A2F14, 1);
+            sp.graphics.drawRoundRect(0, 0, tf.width + 12, 22, 8, 8);
+            sp.graphics.endFill();
+            sp.addChild(tf);
+            sp.mouseEnabled = false;
+            sp.mouseChildren = false;
+            fxLayer.addChild(sp);
+            bubbles[r] = {sp: sp, until: getTimer() + 3200, w: tf.width + 12};
         }
 
         public function bossAnim(label:String, loop:Boolean):void
@@ -1533,6 +1731,11 @@ package
                 }
                 return;
             }
+            if (bossId == "gramiel")
+            {
+                gramielCue(ability, truthN, zoneN);
+                return;
+            }
             if (bossId == "drakath")
             {
                 // the boss is about to reach one of the player's taunt thresholds (truthN = millions of HP)
@@ -1585,10 +1788,78 @@ package
             }
         }
 
+        /** Ultra Gramiel: the cues of the fight (banner text and, on auto-pilot, the player's answer) */
+        private function gramielCue(ability:String, n:int, extra:int):void
+        {
+            var t:Number = fight.t;
+            var gf:GramielFight = fight as GramielFight;
+            switch (ability)
+            {
+                case "charge":
+                    setBanner(n == 1 ? "CRYSTAL CHARGE - type 1 (Enter) and TAUNT (6) the RIGHT crystal" : "CRYSTAL CHARGE - type 2 (Enter): Legion Revenant + Lord of Order taunt", 0xFF5B5B, 3800);
+                    if (botOn)
+                    {
+                        if (n == 1)
+                        {
+                            botQueue.push({at: t + 300, target: "cr"});
+                            botQueue.push({at: t + 400, chat: "1"});
+                            botQueue.push({at: t + 900, until: t + 3000, k: 6});
+                        }
+                        else
+                        {
+                            botQueue.push({at: t + 600, chat: "2"});
+                        }
+                    }
+                    break;
+                case "drain":
+                    setBanner("GRACE DRAIN - click Gramiel and attack him until his shield breaks", 0xFF5B5B, 4800);
+                    if (botOn)
+                    {
+                        botQueue.push({at: t + 450, target: "boss"});
+                    }
+                    break;
+                case "unstable":
+                    setBanner("CRYSTAL UNSTABLE - destroy the other crystal within 5 s!", 0xFF5B5B, 4800);
+                    break;
+                case "p2start":
+                    setBanner("TAUNT GRAMIEL (6) now - then pass it on after two hits", 0xFF5B5B, 3600);
+                    if (botOn)
+                    {
+                        botQueue.push({at: t + 400, until: t + 3000, k: 6});
+                    }
+                    break;
+                case "pass":
+                    var nr:String = GramielFight.nextInOrder(gf.holder);
+                    setBanner(nr == "sh" ? "TAUNT (6) yourself now" : "Two hits taken - type " + (nr == "loo" ? "LOO" : (nr == "sc" ? "SC" : "LR")) + " (Enter)", 0xFF5B5B, 3600);
+                    if (botOn)
+                    {
+                        if (nr == "sh")
+                        {
+                            botQueue.push({at: t + 300, until: t + 3000, k: 6});
+                        }
+                        else
+                        {
+                            botQueue.push({at: t + 300, chat: nr == "loo" ? "LOO" : (nr == "sc" ? "SC" : "LR")});
+                        }
+                    }
+                    break;
+                case "vanquish":
+                    setBanner("Celestial Vanquish - everybody needs a Vendetta stack; taunt again when it fades", 0xFFD24A, 4800);
+                    break;
+            }
+        }
+
         public function ended(result:String, reason:String):void
         {
             if (result == "win")
             {
+                if (bossId == "gramiel")
+                {
+                    for (var ci:int = 0; ci < crystalMCs.length; ci++)
+                    {
+                        crystalAnim(ci == 0 ? "cl" : "cr", "Die", false);
+                    }
+                }
                 bossMC.gotoAndPlay(bossId == "drakath" && DrakathFight(fight).phase == 2 ? "FDie" : "Die");
                 log("Victory - " + reason, "good");
             }
@@ -1636,6 +1907,10 @@ package
 
         private function onMouseDown(e:MouseEvent):void
         {
+            if (chatField && e.target == chatField)
+            {
+                return; // a click in the chat field keeps its focus
+            }
             refocus();
             if (!ready || fight.over || (startScreen && startScreen.parent))
             {
@@ -1644,6 +1919,25 @@ package
             var a:Object = actors[role];
             var mx:Number = stage.mouseX;
             var my:Number = stage.mouseY;
+            if (bossId == "gramiel")
+            {
+                for (var ci:int = 0; ci < crystalMCs.length; ci++)
+                {
+                    var cm:MovieClip = crystalMCs[ci];
+                    if (cm.hitTestPoint(mx, my, true) || (Math.abs(mx - cm.x) <= 46 && my >= cm.y - 150 * bossDef.crystalScale && my <= cm.y + 20))
+                    {
+                        selectTarget(ci == 0 ? "cl" : "cr");
+                        return;
+                    }
+                }
+                if (bossMC.hitTestPoint(mx, my, true) || (Math.abs(mx - bossPad.x) <= 110 && my >= 40 && my <= bossPad.y + 30))
+                {
+                    selectTarget("boss");
+                    return;
+                }
+                beginWalk(a, new Point(clamp(stage.mouseX, WALK.x0, WALK.x1), clamp(stage.mouseY, WALK.y0, WALK.y1)));
+                return;
+            }
             // the wings' pixels, or the boss' body column (the clip is mostly glow and gaps)
             if (bladeMC && bladeMC.visible && bladeMC.hitTestPoint(mx, my, true))
             {
@@ -1670,6 +1964,30 @@ package
                 {
                     playGame();
                 }
+                return;
+            }
+            if (chatField && stage.focus == chatField)
+            {
+                if (e.keyCode == 13)
+                {
+                    sendChat();
+                }
+                else if (e.keyCode == 27)
+                {
+                    chatField.text = "";
+                    refocus();
+                }
+                return; // typing: no skill / move keys
+            }
+            if (e.keyCode == 13 && chatField && chatField.visible)
+            {
+                stage.focus = chatField;
+                return;
+            }
+            if (e.keyCode == 9 && bossId == "gramiel")
+            {
+                var order:Array = ["cl", "cr", "boss"];
+                selectTarget(order[(order.indexOf(targetSel) + 1) % 3]);
                 return;
             }
             if (e.keyCode == 32)
@@ -1738,6 +2056,7 @@ package
                 return true;
             }
             fight.targetIsBlade = targetBlade;
+            fight.targetSel = targetSel;
             return fight.cast(k);
         }
 
@@ -1755,6 +2074,18 @@ package
             if (targetBlade && fight.started)
             {
                 showTarget(false); // after the opening Quix the target is Nulgath again
+            }
+            if (bossId == "gramiel")
+            {
+                var gf:GramielFight = fight as GramielFight;
+                if (gf.phase != 1 && targetSel != "boss")
+                {
+                    selectTarget("boss"); // the crystals are gone
+                }
+                else if (gf.phase == 1 && targetSel != "boss" && gf.crystalHp[targetSel] <= 0)
+                {
+                    selectTarget(targetSel == "cl" ? "cr" : "cl"); // the destroyed crystal is no target any more
+                }
             }
             var now:int = getTimer();
             var dt:Number = Math.min((now - lastTime) / 1000, 0.1);
@@ -1926,6 +2257,14 @@ package
             {
                 bossMC.gotoAndPlay(bossLabel);
             }
+            for (var ci:int = 0; ci < crystalMCs.length; ci++)
+            {
+                var cl:Object = bossDef.crystalLoops;
+                if (crystalLoop[ci] && cl[crystalLabel[ci]] && crystalMCs[ci].currentFrame >= cl[crystalLabel[ci]][1])
+                {
+                    crystalMCs[ci].gotoAndPlay(crystalLabel[ci]);
+                }
+            }
             targetRing.visible = false; // no circle under the bosses
         }
 
@@ -1963,6 +2302,10 @@ package
             {
                 list.push({y: bossDef.bladePad.y, o: bladeMC});
             }
+            for (var ci:int = 0; ci < crystalMCs.length; ci++)
+            {
+                list.push({y: crystalMCs[ci].y, o: crystalMCs[ci]});
+            }
             for each (var r:String in roles)
             {
                 list.push({y: actors[r].mc.y, o: actors[r].mc});
@@ -1986,6 +2329,11 @@ package
             if (targetBlade)
             {
                 setBar(targetBox, "HP", "intHPbar", "strIntHP", 1, "1,000,000"); // the Overfiend Blade (1 000 000 HP) is never attacked
+            }
+            else if (bossId == "gramiel" && targetSel != "boss")
+            {
+                var gh:Number = (f as GramielFight).crystalHp[targetSel];
+                setBar(targetBox, "HP", "intHPbar", "strIntHP", gh / 400, String(gh));
             }
             else
             {
@@ -2101,6 +2449,10 @@ package
                 }
                 slot.icon.alpha = f.stunned() && k >= 2 ? 0.5 : 1;
             }
+            if (bossId == "gramiel")
+            {
+                updateGramielHud(f as GramielFight);
+            }
             // health bars over each character
             for each (var who:String in roles)
             {
@@ -2108,6 +2460,44 @@ package
                 Hud.bar(a.bar, 56, 6, f.hp[who] / f.maxHp(who), 0x6FE08A, 0x1D8A3A);
                 a.bar.x = a.mc.x - 28;
                 a.bar.y = a.mc.y - 104 * bossDef.charScale / 0.65;
+            }
+        }
+
+        /** crystal HP bars (the left / right one is the one you keep even), the selected one outlined, and the chat bubbles */
+        private function updateGramielHud(f:GramielFight):void
+        {
+            for (var i:int = 0; i < crystalBars.length; i++)
+            {
+                var side:String = i == 0 ? "cl" : "cr";
+                var c:MovieClip = crystalMCs[i];
+                var left:Number = f.crystalHp[side];
+                var on:Boolean = bossId == "gramiel" && f.phase == 1 && left > 0;
+                crystalBars[i].visible = crystalTexts[i].visible = on;
+                if (on)
+                {
+                    Hud.bar(crystalBars[i], 70, 7, left / 400, targetSel == side ? 0xFFD24A : 0xE0507A, targetSel == side ? 0xB8861F : 0x8A1D3A);
+                    crystalBars[i].x = c.x - 35;
+                    crystalBars[i].y = bossDef.crystalBarY;
+                    crystalTexts[i].text = (i == 0 ? "Left " : "Right ") + left + "/400";
+                    crystalTexts[i].x = c.x - 60;
+                    crystalTexts[i].y = bossDef.crystalBarY - 17;
+                }
+            }
+            var now:int = getTimer();
+            for (var r:String in bubbles)
+            {
+                var b:Object = bubbles[r];
+                if (now > b.until || !actors[r])
+                {
+                    if (b.sp.parent)
+                    {
+                        b.sp.parent.removeChild(b.sp);
+                    }
+                    delete bubbles[r];
+                    continue;
+                }
+                b.sp.x = actors[r].mc.x - b.w / 2;
+                b.sp.y = actors[r].mc.y - 128 * bossDef.charScale / 0.65;
             }
         }
 
@@ -2163,6 +2553,11 @@ package
             if (bossId == "nulgath")
             {
                 runNulgathBot(f, a);
+                return;
+            }
+            if (bossId == "gramiel")
+            {
+                runGramielBot(f as GramielFight, a);
                 return;
             }
             for (var i:int = botQueue.length - 1; i >= 0; i--)
@@ -2277,6 +2672,86 @@ package
                 f.cast(5);
             }
         }
+
+        /** Auto-pilot for Ultra Gramiel: answers the cues, keeps the crystals even, rotates the Shaman's skills. */
+        private function runGramielBot(f:GramielFight, a:Object):void
+        {
+            for (var i:int = botQueue.length - 1; i >= 0; i--)
+            {
+                var q:Object = botQueue[i];
+                if (q.until && f.t > q.until)
+                {
+                    botQueue.splice(i, 1);
+                }
+                else if (f.t >= q.at)
+                {
+                    var done:Boolean = true;
+                    if (q.target)
+                    {
+                        selectTarget(q.target);
+                        botHold = f.t + 1500;
+                    }
+                    else if (q.chat)
+                    {
+                        say(role, q.chat);
+                        f.chat(q.chat);
+                    }
+                    else if (q.k)
+                    {
+                        done = f.cast(q.k);
+                    }
+                    if (done)
+                    {
+                        botQueue.splice(i, 1);
+                    }
+                }
+            }
+            var home:Point = spot(homeAt, role);
+            if (a.moveTo == null && Point.distance(new Point(a.mc.x, a.mc.y), home) > 20)
+            {
+                a.moveTo = home;
+            }
+            if (!f.started)
+            {
+                f.cast(2);
+                return;
+            }
+            if (f.phase == 1 && !f.draining && f.t > botHold)
+            {
+                // keep the crystals even: hit the one with more HP left
+                var diff:int = f.crystalHp.cl - f.crystalHp.cr;
+                if (f.crystalHp.cl <= 0 || diff <= -4)
+                {
+                    if (targetSel != "cr")
+                    {
+                        selectTarget("cr");
+                    }
+                }
+                else if (f.crystalHp.cr <= 0 || diff >= 4)
+                {
+                    if (targetSel != "cl")
+                    {
+                        selectTarget("cl");
+                    }
+                }
+            }
+            else if (f.phase == 1 && !f.draining && targetSel == "boss")
+            {
+                selectTarget(f.crystalHp.cl > f.crystalHp.cr ? "cl" : "cr");
+            }
+            if (f.mana >= 30)
+            {
+                f.cast(5);
+                f.cast(4);
+            }
+            if (f.mana >= 15)
+            {
+                f.cast(2);
+                f.cast(3);
+            }
+        }
+
+        private var botHold:Number = 0;
 
         /** Auto-pilot for Ultra Nulgath: Quix on the Blade first (Lord of Order), taunt on cue, heal when somebody is low. */
         private function runNulgathBot(f:Fight, a:Object):void
@@ -2397,7 +2872,7 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"pose\":\"" + actors[role].pose + "\",\"moving\":" + actors[role].moving + ",\"started\":" + f.started + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"pose\":\"" + actors[role].pose + "\",\"moving\":" + actors[role].moving + ",\"gram\":" + (bossId == "gramiel" ? (f as GramielFight).debug() : "null") + ",\"started\":" + f.started + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
         }
 
         private function box(d:DisplayObject):String

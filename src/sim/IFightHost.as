@@ -39,6 +39,12 @@ package sim
         /** Ultra Nulgath: an animation label for the Overfiend Blade. */
         function bladeAnim(label:String, loop:Boolean):void;
 
+        /** Ultra Gramiel: an animation label for the left ("cl") or right ("cr") Grace Crystal. */
+        function crystalAnim(side:String, label:String, loop:Boolean):void;
+
+        /** Ultra Gramiel: a chat line said by `role` (speech bubble over the character and a line in the log). */
+        function say(role:String, text:String):void;
+
         /** A banner line over the boss, `alert` = red (do something now) instead of yellow. */
         function showBanner(text:String, alert:Boolean, ms:Number):void;
 
