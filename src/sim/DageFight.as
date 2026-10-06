@@ -602,6 +602,7 @@ package sim
                 return false;
             }
             mana -= cost;
+            started = true; // the first skill starts the fight
             cd[n] = t + skillCdMs(name);
             doSkill(name);
             for (var k:int = 2; k <= 6; k++)
@@ -750,7 +751,7 @@ package sim
         // ------------------------------------------------------------ engine
         override public function step(dtMs:Number):void
         {
-            if (over)
+            if (over || !started)
             {
                 return;
             }

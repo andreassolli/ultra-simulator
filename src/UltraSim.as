@@ -155,6 +155,7 @@ package
         private var hudLayer:Sprite = new Sprite();
         private var bossMC:MovieClip;
         private var bladeMC:MovieClip;
+        private var targetBlade:Boolean = false; // Ultra Nulgath: the clicked Overfiend Blade is the target
         private var targetRing:Shape = new Shape();
         private var runeMC:MovieClip;
         private var safeMC:MovieClip;
@@ -435,6 +436,18 @@ package
             return false;
         }
 
+        /** the target frame shows the boss, or the Overfiend Blade (Ultra Nulgath) when that was clicked */
+        private function showTarget(blade:Boolean):void
+        {
+            targetBlade = blade;
+            var domain:ApplicationDomain = blade ? bossScenes[bossId].bladeDomain : bossDomain;
+            setFace(targetBox["mcHead"], new (domain.getDefinition(blade ? "mcHeadOverfiendBlade" : bossDef.headClass) as Class)() as DisplayObject);
+            targetBox["mcHead"].head.hair.visible = false;
+            targetBox["mcHead"].head.helm.visible = false;
+            targetBox["mcHead"].backhair.visible = false;
+            targetBox["strName"].text = blade ? "Overfiend Blade" : bossDef.name;
+        }
+
         private function buildBoss(sc:Object):void
         {
             var Boss:Class = sc.domain.getDefinition(sc.def.bossClass) as Class;
@@ -514,11 +527,8 @@ package
                 role = bossDef.classes[0];
             }
             // the target frame's face and name
-            setFace(targetBox["mcHead"], new (bossDomain.getDefinition(bossDef.headClass) as Class)() as DisplayObject);
-            targetBox["mcHead"].head.hair.visible = false;
-            targetBox["mcHead"].head.helm.visible = false;
-            targetBox["mcHead"].backhair.visible = false;
-            targetBox["strName"].text = bossDef.name;
+            targetBlade = false;
+            showTarget(false);
             plateId = "";
             bossAnim("Idle", false);
             newFight(role);
@@ -1620,8 +1630,17 @@ package
             var mx:Number = stage.mouseX;
             var my:Number = stage.mouseY;
             // the wings' pixels, or the boss' body column (the clip is mostly glow and gaps)
+            if (bladeMC && bladeMC.visible && bladeMC.hitTestPoint(mx, my, true))
+            {
+                showTarget(true); // not attacked, only a target for Quix
+                return;
+            }
             if (bossMC.hitTestPoint(mx, my, true) || (Math.abs(mx - bossPad.x) <= 150 && my >= 40 && my <= bossPad.y + 30))
             {
+                if (targetBlade)
+                {
+                    showTarget(false);
+                }
                 moveToBoss(); // click the boss: target it and walk into range
                 return;
             }
@@ -1699,6 +1718,7 @@ package
                 moveToBoss();
                 return true;
             }
+            fight.targetIsBlade = targetBlade;
             return fight.cast(k);
         }
 
@@ -1713,6 +1733,10 @@ package
         private function onFrame(e:Event):void
         {
             frameCount++;
+            if (targetBlade && fight.started)
+            {
+                showTarget(false); // after the opening Quix the target is Nulgath again
+            }
             var now:int = getTimer();
             var dt:Number = Math.min((now - lastTime) / 1000, 0.1);
             lastTime = now;
@@ -1794,7 +1818,7 @@ package
                         f.playerHit(sw.dmg, sw.crit);
                     }
                 }
-                else if (!a.moving && a.poseUntil < f.t / 1000)
+                else if (!a.moving && a.poseUntil < getTimer() / 1000)
                 {
                     pose(a, isMe && targeted && near ? "RifleFight" : "Idle", 0);
                 }
@@ -1867,12 +1891,12 @@ package
             {
                 return;
             }
-            if (a.pose == label && a.poseUntil > fight.t / 1000)
+            if (a.pose == label && a.poseUntil > getTimer() / 1000)
             {
                 return;
             }
             a.pose = label;
-            a.poseUntil = fight.t / 1000 + seconds;
+            a.poseUntil = getTimer() / 1000 + seconds;
             a.mc.mcChar.gotoAndPlay(label);
         }
 
@@ -1940,7 +1964,14 @@ package
             setBar(playerBox, "HP", "intHPbar", "strIntHP", f.hp[role] / f.maxHp(role), Fight.fmt(f.hp[role]));
             setBar(playerBox, "MP", "intMPbar", "strIntMP", f.mana / 100, String(Math.round(f.mana)));
             setBar(playerBox, "SP", "intSPbar", "strIntSP", stamina / 100, String(Math.round(stamina)));
-            setBar(targetBox, "HP", "intHPbar", "strIntHP", f.bossHp / f.bossMaxHp, Fight.fmt(f.bossHp));
+            if (targetBlade)
+            {
+                setBar(targetBox, "HP", "intHPbar", "strIntHP", 1, "1,000,000"); // the Overfiend Blade (1 000 000 HP) is never attacked
+            }
+            else
+            {
+                setBar(targetBox, "HP", "intHPbar", "strIntHP", f.bossHp / f.bossMaxHp, Fight.fmt(f.bossHp));
+            }
             setBar(targetBox, "MP", "intMPbar", "strIntMP", 1, "100");
             for (var r:String in partyPanels)
             {
@@ -2250,7 +2281,19 @@ package
             }
             if (!f.started)
             {
-                f.cast(role == "loo" ? 5 : 2); // Lord of Order: Quix on the Blade starts the fight
+                if (role == "loo")
+                {
+                    if (!targetBlade)
+                    {
+                        showTarget(true); // click the Blade, then Quix (5) starts the fight
+                    }
+                    f.targetIsBlade = true;
+                    f.cast(5);
+                }
+                else
+                {
+                    f.cast(2);
+                }
                 return;
             }
             var lowest:Number = 1;
@@ -2335,7 +2378,7 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"pose\":\"" + actors[role].pose + "\",\"moving\":" + actors[role].moving + ",\"started\":" + f.started + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
         }
 
         private function box(d:DisplayObject):String

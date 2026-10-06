@@ -46,7 +46,19 @@ reorganized without extracting the SWF again.
 
 ## Running it offline (play.html)
 
-`bin/play.html` runs `ultra_sim.swf` with a copy of Ruffle that lives in `bin/ruffle/` (nothing is downloaded). Browsers do not let a page opened from a file load the game's other files, so start it with the little server: `python3 bin/serve.py` (or double-click `serve.py`) opens `http://localhost:8000/play.html`. The address takes the options below, e.g. `play.html?boss=drakath&class=pc&hints=0`. `bin/index.html` is the same page with Ruffle loaded from the internet.
+`bin/play.html` runs `ultra_sim.swf` with a copy of Ruffle that lives in `bin/ruffle/` (nothing is downloaded). Browsers do not let a page opened from a file load the game's other files, so start it with the little server: `python3 bin/serve.py` (or double-click `serve.py`) opens `http://localhost:8000/play.html`. The address takes the options below, e.g. `play.html?boss=drakath&class=pc&hints=0`. `bin/index.html` is the same page (so `/` works on a web host).
+
+## Hosting it on Firebase (static site)
+
+The game is a static site: `bin/` is everything (`index.html` / `play.html`, `ultra_sim.swf`, `runtime/*.swf`, and Ruffle in `ruffle/`), nothing needs a server of its own. `firebase.json` at the root already points Hosting at `bin/` and sets the cache and content-type headers (`.wasm`, `.swf`).
+
+1. Install the CLI (Node 18+): `npm install -g firebase-tools`, then `firebase login`.
+2. In the [Firebase console](https://console.firebase.google.com) create a project (no other Firebase product is needed) and note its project id.
+3. Put the id in `.firebaserc` (replace `your-firebase-project-id`), or run `firebase use --add` and pick the project.
+4. Build the SWF if you changed the ActionScript (`./build.sh`), then deploy from the repository root: `firebase deploy --only hosting`. It prints the URL (`https://<project-id>.web.app`); `?boss=drakath&class=lr` and the other options work on it.
+5. Try a version first without touching the live site: `firebase hosting:channel:deploy preview` gives a temporary URL.
+
+Notes: the first visit downloads the Ruffle engine (about 14 MB of WebAssembly) and the SWFs in `bin/runtime/` (about 25 MB in all); everything is cached afterwards (the headers make the hashed Ruffle files immutable, the SWFs live for an hour, the HTML is always revalidated, so a new `ultra_sim.swf` shows up within the hour or on a hard refresh). The free Spark plan has 10 GB of storage and about 360 MB of traffic a day, which is a dozen or so first visits a day; the pay-as-you-go plan has no such cap. The game's maps, bosses and items are Artix Entertainment's files: a public site serving them is theirs to allow, so keep the URL private or share it only where that is fine. To deploy from GitHub on every push, `firebase init hosting:github` writes the workflow for you.
 
 ## Controls and speed
 
@@ -63,7 +75,7 @@ Everybody the player can be spends and regenerates mana like the class text says
 
 `runtime/town-ultranulgath.swf`, `monster-UltraNulgath.swf` and `monster-OverfiendBlade.swf`; rules in `src/sim/NulgathFight.as` (from `ultranulgath.mdx`). Classes: Legion Revenant and Lord of Order; the other of the two is played by the sim, with Arch Paladin and Chrono ShadowSlayer.
 
-- **Start:** the fight does not start until you use a skill (Champion Drakath works the same way). As Lord of Order that first skill has to be Quix (5) on the Overfiend Blade: without it the Blade's Sword Charge kills everybody 5 s in. Nobody attacks the Blade; it keeps hitting the party with its auto attacks.
+- **Start:** no fight starts until you use a skill. As Lord of Order that first skill has to be Quix (5), cast with the Overfiend Blade clicked (it becomes your target and shows in the target frame; click Nulgath again afterwards): without it the Blade's Sword Charge kills everybody 5 s in. Nobody attacks the Blade; it keeps hitting the party with its auto attacks.
 - **Taunts:** a Contract of the Abyss (every 7 s: 6, 13, 20, 27, 34 s) must hit somebody who taunted, and not somebody who still has the previous one (Frailty -> Despair -> Stagnation), so Lord of Order and Legion Revenant take turns. Lord of Order taunts 5 s in and each time his Frailty wears off (16 s, 30 s); Legion Revenant at each "Behold the power of the Abyss!" (9, 23, 37 s). The sim's class does its own. Hints on show "TAUNT NOW" for yours.
 - **Healing:** Lord of Order heals with Ordinance (3) when somebody is low (the bot does; the sim's Lord of Order does too).
 - **Length:** raid damage is tuned (`GEAR_LR` / `GEAR_LOO`) so the run takes about 38 seconds. Damage over 100 000 a hit is cut (excess ^ 0.8).

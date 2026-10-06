@@ -75,7 +75,8 @@ package sim
 
         // ---------------------------------------------------------------- state
         public var t:Number = 0;
-        public var started:Boolean = true; // false until the player uses a skill (Champion Drakath, Ultra Nulgath)
+        public var started:Boolean = false; // the fight starts with the player's first skill
+        public var targetIsBlade:Boolean = false; // Ultra Nulgath: the Overfiend Blade is the player's target
         public var mana:Number = 100; // 0-100, only the Dage / Drakath fights spend it
         public var playerRole:String;
         public var over:Object = null; // {result, reason}
@@ -259,7 +260,7 @@ package sim
         /** What to tell the player while the fight waits for their first skill. */
         public function startHint():String
         {
-            return "";
+            return "Use any skill to start the fight";
         }
 
         /** What the boss does next, for the "Next:" panel. */
@@ -702,6 +703,7 @@ package sim
                 return false;
             }
             mana -= MP[name];
+            started = true; // the first skill starts the fight
             cd[n] = t + skillCdMs(name);
             doSkill(name, playerRole, true);
             for (var k:int = 2; k <= 6; k++)
@@ -768,7 +770,7 @@ package sim
 
         public function step(dtMs:Number):void
         {
-            if (over)
+            if (over || !started)
             {
                 return;
             }

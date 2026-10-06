@@ -125,7 +125,7 @@ package sim
 
         override public function startHint():String
         {
-            return playerClass == "loo" ? "Use QUIX (5) on the Overfiend Blade to start the fight" : "Use a skill to start the fight (Lord of Order quixes the Blade)";
+            return playerClass == "loo" ? "Click the Overfiend Blade, then use QUIX (5) to start the fight" : "Use a skill to start the fight (Lord of Order quixes the Blade)";
         }
 
         override public function maxHp(role:String):int
@@ -255,7 +255,7 @@ package sim
             started = true;
             if (playerClass == "loo")
             {
-                quixed = firstSkill == "quix";
+                quixed = firstSkill == "quix" && targetIsBlade; // Quix has to be on the Blade
             }
             else
             {

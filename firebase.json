@@ -1,0 +1,25 @@
+{
+  "hosting": {
+    "public": "bin",
+    "ignore": [
+      "firebase.json",
+      "serve.py",
+      "character_test.swf",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "cleanUrls": true,
+    "headers": [
+      { "source": "**/*.wasm", "headers": [
+        { "key": "Content-Type", "value": "application/wasm" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" } ] },
+      { "source": "ruffle/core.ruffle.*.js", "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" } ] },
+      { "source": "**/*.swf", "headers": [
+        { "key": "Content-Type", "value": "application/x-shockwave-flash" },
+        { "key": "Cache-Control", "value": "public, max-age=3600" } ] },
+      { "source": "**/*.html", "headers": [
+        { "key": "Cache-Control", "value": "no-cache" } ] }
+    ]
+  }
+}
