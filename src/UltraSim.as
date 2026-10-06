@@ -86,7 +86,7 @@ package
                 loops: {PowerLoop: [351, 363], ChargeLoop: [193, 208]}},
             {id: "drakath", name: "Champion Drakath", classes: ["lr", "pc"], mapFrame: "r2", hideIdx: [1], idleStop: true, dieLabel: "Die",
                 mapSwf: "runtime/town-championdrakath.swf", bossSwf: "runtime/monster-DoubleDrak.swf", bossClass: "DoubleDrak", headClass: "mcHeadDoubleDrak",
-                roles: ["lr", "pc", "da", "db"], pad: new Point(480, 300), home: new Point(480, 410), scale: 0.5,
+                roles: ["lr", "pc", "loo", "ap"], pad: new Point(480, 300), home: new Point(480, 410), scale: 0.5,
                 loops: {}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
@@ -2054,9 +2054,12 @@ package
             }
             if (role == "ca")
             {
-                f.cast(4);
-                f.cast(2);
-                f.cast(5);
+                if (f.mana >= 100) // keep the mana for Flux (3)
+                {
+                    f.cast(4);
+                    f.cast(2);
+                    f.cast(5);
+                }
             }
             else
             {

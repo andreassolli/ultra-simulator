@@ -18,8 +18,8 @@ package sim
      */
     public class DrakathFight extends Fight
     {
-        public static const DRAK_ROLES:Array = ["lr", "pc", "da", "db"];
-        public static const DRAK_NAMES:Object = {lr: "Legion Revenant", pc: "Paladin Chronomancer", da: "DPS 1", db: "DPS 2"};
+        public static const DRAK_ROLES:Array = ["lr", "pc", "loo", "ap"];
+        public static const DRAK_NAMES:Object = {lr: "Legion Revenant", pc: "Paladin Chronomancer", loo: "Lord of Order", ap: "Arch Paladin"};
 
         /** player skill slots 2-6 (slot 1 is the auto attack, slot 6 the taunt) */
         public static const DRAK_SKILLS:Object = {
@@ -39,7 +39,7 @@ package sim
             taunt: {f: 0, src: "AP1", mp: 0, type: "phys"}
         };
         /** every hit and heal is multiplied by this: see GEAR in DageFight (tuned so the fight lasts about as long as before the calculator maths) */
-        private static const GEAR:Number = 5.4;
+        private static const GEAR:Number = 6.6;
         private static const CAP:Number = 75000; // "damage over 75 000 is reduced": excess ^ 0.8
         private static const HEAL_SCALE:Number = 0.35; // what is left of a heal after the boss' damage was tuned (see README)
 
@@ -53,7 +53,10 @@ package sim
         /** the taunts each class owns (millions of HP) */
         private static const TAUNTS:Object = {lr: [16, 12], pc: [18, 14, 8, 6, 4]};
 
-        private static const START_HP:Object = {lr: 4800, pc: 4800, da: 3600, db: 3600};
+        /** max HP at level 100 (see Dmg): Lord of Order's Harmony and the Arch Paladin's heal buff add to it, as in the Ultra Speaker fight */
+        private static const START_HP:Object = {lr: 2910, pc: 4970, loo: 3505, ap: 3670};
+        private static const HARMONY_HP:Number = 0.062;
+        private static const APHEAL_HP:Number = 0.0756;
         private static const AUTO_EVERY:int = 2250;
         private static const AUTO_CAST:int = 500;
         private static const TAUNT_MS:int = 6000;
@@ -95,6 +98,9 @@ package sim
         private var npcGuardAt:Number = 20000;
         private var npcDepravedAt:Number = 2000;
         private var npcNoxAt:Number = 3000;
+        private var npcHarmonyAt:Number = 500;
+        private var npcOrdAt:Number = 2500;
+        private var npcApHealAt:Number = 1500;
         private var npcRiftAt:Number = 1000;
         private var recent:Array = [];       // [time, damage] of recent hits on Drakath, for the dps estimate
         private var cued:Object = {};
@@ -147,7 +153,30 @@ package sim
 
         override public function maxHp(role:String):int
         {
-            return START_HP[role];
+            return Math.round(START_HP[role] * (1 + (t < harmonyUntil ? HARMONY_HP : 0) + (t < apHealUntil ? APHEAL_HP : 0)));
+        }
+
+        /** set a max-HP buff, the current HP moves along with the maximum */
+        private function buffMax(which:String, until:Number):void
+        {
+            var old:Object = {};
+            var r:String;
+            for each (r in DRAK_ROLES)
+            {
+                old[r] = maxHp(r);
+            }
+            if (which == "harmony")
+            {
+                harmonyUntil = until;
+            }
+            else
+            {
+                apHealUntil = until;
+            }
+            for each (r in DRAK_ROLES)
+            {
+                hp[r] = Math.round(hp[r] / old[r] * maxHp(r));
+            }
         }
 
         override public function stunned():Boolean
@@ -217,7 +246,7 @@ package sim
             {
                 return;
             }
-            var real:Number = Math.min(START_HP[role] - hp[role], amount);
+            var real:Number = Math.min(maxHp(role) - hp[role], amount);
             hp[role] += real;
             if (real > 0 && shown)
             {
@@ -404,7 +433,11 @@ package sim
                     {
                         continue;
                     }
-                    var d:Number = rnd(1285, 1570) * (1 + 0.5 * power) * ARMOR * (t < chaosUntil ? 2 : 1);
+                    var d:Number = rnd(1285, 1570) * (1 + 0.5 * power) * ARMOR * (Dmg.takenMul(Dmg.profile(r), false) / 0.55) * (t < chaosUntil ? 2 : 1);
+                    if (t < ordinanceUntil)
+                    {
+                        d *= 0.7; // Ordinance
+                    }
                     d *= 1 - 0.1 * live(reprisal); // Reprisal: Drakath's outgoing damage -10 % per stack
                     if (t < vowUntil)
                     {
@@ -709,6 +742,30 @@ package sim
         // ------------------------------------------------------------ the sim's own class
         private function npcPlay():void
         {
+            // Lord of Order and the Arch Paladin keep their buffs and heals going (the player is never one of them)
+            if (alive("loo"))
+            {
+                if (t >= npcHarmonyAt)
+                {
+                    npcHarmonyAt = t + 4000;
+                    buffMax("harmony", t + 10000);
+                    host2.castFx("harmony", "loo");
+                }
+                if (t >= npcOrdAt)
+                {
+                    npcOrdAt = t + 6000;
+                    ordinanceUntil = t + 12000;
+                    healAll(2700 * HEAL_SCALE, false);
+                    host2.castFx("ordinance", "loo");
+                }
+            }
+            if (alive("ap") && t >= npcApHealAt)
+            {
+                npcApHealAt = t + 5000;
+                buffMax("apheal", t + 15000);
+                healAll(6682 * HEAL_SCALE, false);
+                host2.castFx("heal", "ap");
+            }
             var c:String = npcClass();
             if (!alive(c))
             {
@@ -816,7 +873,7 @@ package sim
                     restore(q, LIFESTEAL, false);
                     if (t < hotUntil)
                     {
-                        restore(q, 0.2 * START_HP[q], false);
+                        restore(q, 0.2 * maxHp(q), false);
                     }
                     if (q == "lr" && t < depravedUntil)
                     {
@@ -834,13 +891,14 @@ package sim
             {
                 var tick:Number = rnd(600, 1100);
                 var d:Number = 0;
-                var perHit:Number = Dmg.average(ally, 1.0, "AP2", "phys") * GEAR;
-                var hitsPerSec:Number = 1000 / Dmg.cooldown(1500, ally.haste);
                 for each (var w:String in DRAK_ROLES)
                 {
                     if (w != playerRole && alive(w))
                     {
-                        d += perHit * hitsPerSec * tick / 1000 * (w == "da" || w == "db" ? 1 : 0.5);
+                        var pw:Object = Dmg.profile(w);
+                        var caster:Boolean = pw.sp > pw.ap;
+                        var perHit:Number = Dmg.average(pw, 1.0, caster ? "SP2" : "AP2", caster ? "magic" : "phys") * GEAR;
+                        d += perHit * 1000 / Dmg.cooldown(1500, pw.haste) * tick / 1000;
                     }
                 }
                 if (d > 0)

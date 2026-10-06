@@ -23,38 +23,46 @@ package sim
         public static const WEAPON_BOOST:Number = 1.51 * 1.5; // Boost51x50
 
         /**
-         * Stat totals of an ultra build. The numbers are the calculator's own test build (AP 1156, SP 798, crit 56.44 %,
-         * crit damage 323.97 %, haste 32.72 %, hit 118.63 %, +20 % all damage) changed by each class' passives from classes.json.
+         * Stat totals of each class at level 100 with its enhancements, as given for this project (resistances and
+         * boosts in %, `haste` is the Cooldown Reduction stat, `hit` the Hit Chance).
+         *   Paladin Chronomancer: Lucky Mana Vamp weapon, Lucky class, Healer helm, Penitence cape
+         *   Legion Revenant:      Arcana's Concerto weapon, Lucky class, Forge helm, Penitence cape
+         *   Lord of Order:        Lucky Awe Blast weapon, Lucky class, Healer helm, Penitence cape
+         *   Chaos Avenger:        Dauntless weapon, Lucky class, Anima helm, Vainglory cape
+         *   ArchPaladin:          Valiance weapon, Lucky class, Forge helm, Penitence cape
+         *   Shaman (later boss):  Elysium weapon, Wizard class and helm, Vainglory cape, Sage Tonic + Malevolence Elixir
          */
+        private static const CLASSES:Object = {
+            pc: {ap: 737, sp: 741, critChance: 25.24, critMod: 276.35, hit: 107.40, haste: 26.31, dodge: 22.37, hp: 4970,
+                dmgRes: 45, physRes: 0, magRes: 38.22, allOut: 100, physOut: 100, magOut: 138.22, dotOut: 75, healOut: 120, healIn: 100},
+            lr: {ap: 282, sp: 1108, critChance: 31.63, critMod: 391.27, hit: 99.68, haste: 20.86, dodge: 19.87, hp: 2910,
+                dmgRes: 25, physRes: 0, magRes: 53.46, allOut: 100, physOut: 100, magOut: 193.46, dotOut: 75, healOut: 100, healIn: 100},
+            loo: {ap: 252, sp: 969, critChance: 20.70, critMod: 372.22, hit: 109.75, haste: 47.43, dodge: 17.78, hp: 3505,
+                dmgRes: 50, physRes: 0, magRes: 45.97, allOut: 100, physOut: 100, magOut: 145.97, dotOut: 75, healOut: 100, healIn: 100},
+            ca: {ap: 1757, sp: 284, critChance: 76.02, critMod: 265.56, hit: 108.53, haste: 11.64, dodge: 20.03, hp: 4910,
+                dmgRes: 0, physRes: 35, magRes: 13.59, allOut: 115, physOut: 100, magOut: 100, dotOut: 100, healOut: 100, healIn: 50},
+            ap: {ap: 877, sp: 877, critChance: 29.94, critMod: 372.22, hit: 108.69, haste: 11.64, dodge: 21.64, hp: 3670,
+                dmgRes: 45, physRes: 0, magRes: 40.13, allOut: 120, physOut: 100, magOut: 140.13, dotOut: 75, healOut: 100, healIn: 100},
+            shaman: {ap: 152, sp: 1706, critChance: 39.69, critMod: 300.48, hit: 103.35, haste: 32.34, dodge: 23.96, hp: 3125,
+                dmgRes: 0, physRes: 0, magRes: 80, allOut: 115, physOut: 100, magOut: 222.78, dotOut: 75, healOut: 100, healIn: 50}
+        };
+
+        /** The stats of a class; any other key (the sim's DPS characters) gets the ArchPaladin's. */
         public static function profile(cls:String):Object
         {
-            var p:Object = {ap: 1156, sp: 798, critChance: 56.44, critMod: 323.97, haste: 32.72, hit: 118.63,
-                allOut: 120, physOut: 100, magOut: 138.35, dotOut: 100, healOut: 100, hp: 3600};
-            switch (cls)
+            var src:Object = CLASSES[cls] ? CLASSES[cls] : CLASSES.ap;
+            var p:Object = {};
+            for (var k:String in src)
             {
-                case "ca": // Unending Rage: STR +50 %, crit +10 %; Wall of Chaorruption: crit +15 %
-                    p.ap = 1156 * 1.5;
-                    p.critChance += 25;
-                    p.magOut = 100;
-                    p.haste = 60; // the guide needs a Flux for every Decaying Strike, which only works with this much haste
-                    p.hp = 4800;
-                    break;
-                case "lr": // Shadow Step: WIS +20 %; Dark Scholar: magic damage +40 %, crit damage +40 %
-                    p.ap = 300;
-                    p.sp = 1156;
-                    p.magOut = 138.35 + 40;
-                    p.critMod += 40;
-                    p.hp = 4800;
-                    break;
-                case "pc": // Dauntless / Virtuous: hit +10 %; Sacred Blessing: haste +5 %, healing +20 %
-                    p.hit += 10;
-                    p.haste += 5;
-                    p.healOut = 120;
-                    p.hp = 4800;
-                    break;
+                p[k] = src[k];
             }
-            p.critChance = Math.min(100, p.critChance);
             return p;
+        }
+
+        /** Multiplier on the physical / magical damage a character takes: (1 - damage resistance) x (1 - type resistance). */
+        public static function takenMul(p:Object, magical:Boolean):Number
+        {
+            return (1 - p.dmgRes / 100) * (1 - (magical ? p.magRes : p.physRes) / 100);
         }
 
         /** The value a skill's damage source gives, `curHp` is the caster's current HP (intHP). */

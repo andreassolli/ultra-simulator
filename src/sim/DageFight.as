@@ -37,7 +37,7 @@ package sim
          * Ultra builds have far larger stats than the calculator's test build, so every hit and heal is multiplied by
          * this to make the raid kill Dage in about the time it took before the calculator maths was put in.
          */
-        private static const GEAR:Number = 4.9;
+        private static const GEAR:Number = 14;
         private static const RESIST:Number = 0.5;   // Dage: 50 % physical and magical resistance
         private static const CAP:Number = 150000;   // "damage over 150 000 is reduced": excess ^ 0.8
 
@@ -45,7 +45,7 @@ package sim
         private static const SLOT:Object = {auto: 2250, decay: 2250, zone: 4500, regen: 11500};
         private static const START_AT:int = 2500;
 
-        private static const START_HP:Object = {ca: 4800, cn: 3600, da: 3600, db: 3600};
+        private static const START_HP:Object = {ca: 4910, cn: 3670, da: 3670, db: 3670};
         private static const FOCUS_MS:int = 4000;
         private static const AETERNA_MS:int = 11000;
         private static const DECAY_MS:int = 11000;
@@ -198,7 +198,8 @@ package sim
 
         override public function skillCdMs(name:String):Number
         {
-            return Dmg.cooldown(LISTED_CD[name], me.haste);
+            // Flux: the guide has a taunt for every Decaying Strike (9 s apart), which the listed 15 s and the class' cooldown reduction cannot do
+            return name == "flux" ? 6000 : Dmg.cooldown(LISTED_CD[name], me.haste);
         }
 
         private function isTank(r:String):Boolean
@@ -211,9 +212,9 @@ package sim
         {
             if (!isTank(r))
             {
-                return 0.35; // the others' armour; the listed damage is before it
+                return Dmg.takenMul(Dmg.profile("ap"), false);
             }
-            var m:Number = 0.65; // Death Defiant
+            var m:Number = Dmg.takenMul(Dmg.profile("ca"), false); // Death Defiant: physical resistance 35 %
             if (playerClass != "ca" || t < bulwarkUntil)
             {
                 m *= 0.4; // Chaotic Armor: the sim's Chaos Avenger keeps it up
