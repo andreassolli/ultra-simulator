@@ -60,6 +60,20 @@ The game is a static site: `bin/` is everything (`index.html` / `play.html`, `ul
 
 Notes: the first visit downloads the Ruffle engine (about 14 MB of WebAssembly) and the SWFs in `bin/runtime/` (about 25 MB in all); everything is cached afterwards (the headers make the hashed Ruffle files immutable, the SWFs live for an hour, the HTML is always revalidated, so a new `ultra_sim.swf` shows up within the hour or on a hard refresh). The free Spark plan has 10 GB of storage and about 360 MB of traffic a day, which is a dozen or so first visits a day; the pay-as-you-go plan has no such cap. The game's maps, bosses and items are Artix Entertainment's files: a public site serving them is theirs to allow, so keep the URL private or share it only where that is fine. To deploy from GitHub on every push, `firebase init hosting:github` writes the workflow for you.
 
+## As a Discord Activity
+
+Discord Activities are web pages that Discord opens in an iframe inside a voice channel, DM or group chat, so the Firebase site can be one with a small wrapper, which `bin/play.html` already has: when Discord opens it (it adds `?frame_id=...` to the address) the page loads the Embedded App SDK (bundled in `bin/discord/discord-sdk.js`, no CDN) and calls `ready()`. Outside Discord nothing changes.
+
+1. Deploy the site (Firebase, above). Note its URL, e.g. `my-project.web.app`.
+2. In the [Discord Developer Portal](https://discord.com/developers/applications) create an application, copy its **Application ID** into `bin/discord/config.js` and redeploy.
+3. In the application: **Activities -> Settings**: turn Activities on (enable it for the platforms you want). Under **Activities -> URL Mappings** map the root `/` to your host (`my-project.web.app`, no `https://`). Everything the page loads (the SWFs, Ruffle's WebAssembly) is a relative URL on that host, so Discord's proxy (`<application-id>.discordsays.com`) serves it all.
+4. Under **Installation** keep the default install link, and add yourself as a tester (**App Testers**) while it is not published.
+5. Start it: join a voice channel in Discord (with Developer Mode on: Settings -> Advanced), click the rocket **Activities** button, pick your application. Discord loads `https://<application-id>.discordsays.com/` in the iframe. To see the browser's console, use the web version of Discord and open DevTools on the iframe, or `https://<application-id>.discordsays.com/?frame_id=test` directly.
+
+What to expect: it works as a single-player game inside Discord; each person in the call who starts the Activity plays their own run (nothing is shared between them, that would need a server, e.g. Firebase Functions or Cloud Run, reached through a `/.proxy/api/...` URL mapping, plus the SDK's `authenticate`). The game's own Fullscreen button does nothing useful in an iframe, use Discord's pop-out / fullscreen controls for the Activity. Discord's proxy only allows what is mapped, so anything the page fetches from another site has to be added as another URL mapping. I could not run it inside Discord here (no application to test with), so the first launch is the test: Ruffle needs WebAssembly, which other web games already use in Activities.
+
+The same caveat as for any public site applies: the maps, bosses and items belong to Artix Entertainment, and an Activity that anybody can install is a public site. Keep the application private (testers only) unless they are fine with it.
+
 ## Controls and speed
 
 - **Sprint:** hold Space while clicking to walk to the point at 480 instead of 250 pixels per second. A sprint costs 50 of the green stamina bar; the bar refills (20 per second) while you stand still.

@@ -29,6 +29,7 @@
   if (location.protocol === "file:") { document.getElementById("warn").style.display = "block"; }
 </script>
 <script src="ruffle/ruffle.js"></script>
+<script src="discord/config.js"></script>
 <script>
   // Options go in the address: play.html?boss=drakath&class=lr&bot=1&speed=4&hints=0&autoplay=1
   // boss = speaker | dage | drakath, class = loo | ap | lr | ca | pc
@@ -48,6 +49,19 @@
     };
     fitGame();
     window.addEventListener("resize", fitGame);
+    // Inside a Discord Activity (Discord adds ?frame_id=... to the address) the Embedded App SDK has to say it is ready
+    if (urlOpts.has("frame_id")) {
+      const sdkScript = document.createElement("script");
+      sdkScript.src = "discord/discord-sdk.js";
+      sdkScript.onload = async () => {
+        try {
+          const sdk = new window.DiscordSDK(window.DISCORD_CLIENT_ID);
+          await sdk.ready();
+          window.discordSdk = sdk;
+        } catch (e) { console.error("Discord SDK:", e); }
+      };
+      document.head.appendChild(sdkScript);
+    }
     // keyboard focus from the start: the keys work without a first click
     player.setAttribute("tabindex", "0");
     const focusGame = () => { try { player.focus(); } catch (e) {} };
