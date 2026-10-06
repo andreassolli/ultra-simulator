@@ -1883,8 +1883,25 @@ package
                         }
                         else
                         {
-                            botQueue.push({at: t + 300, chat: nr == "loo" ? "LOO" : (nr == "sc" ? "SC" : "LR")});
+                            botQueue.push({at: t + 2300, chat: nr == "loo" ? "LOO" : (nr == "sc" ? "SC" : "LR")}); // after the third hit
                         }
+                    }
+                    break;
+                case "stop":
+                    setBanner("STOP ATTACKING (click away from Gramiel) - wait for \"All servants of the 'Liberator' must die!\", then burst him down (1 = back)", 0xFF5B5B, 6000);
+                    if (botOn)
+                    {
+                        botStop = true;
+                        actors[role].follow = false;
+                        actors[role].moveTo = new Point(720, 450);
+                    }
+                    break;
+                case "burst":
+                    setBanner("BURST HIM DOWN to the next threshold (press 1 to go back to him)", 0xFF5B5B, 4500);
+                    if (botOn)
+                    {
+                        botStop = false;
+                        actors[role].follow = true;
                     }
                     break;
                 case "vanquish":
@@ -2826,7 +2843,7 @@ package
                 }
             }
             var home:Point = spot(homeAt, role);
-            if (a.moveTo == null && Point.distance(new Point(a.mc.x, a.mc.y), home) > 20)
+            if (!botStop && a.moveTo == null && Point.distance(new Point(a.mc.x, a.mc.y), home) > 20)
             {
                 a.moveTo = home;
             }
@@ -2875,6 +2892,7 @@ package
         }
 
         private var botHold:Number = 0;
+        private var botStop:Boolean = false;     // the auto-pilot stepped away from Gramiel before a threshold
 
         /** Auto-pilot for Ultra Nulgath: Quix on the Blade first (Lord of Order), taunt on cue, heal when somebody is low. */
         private function runNulgathBot(f:Fight, a:Object):void
@@ -2995,7 +3013,7 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"pose\":\"" + actors[role].pose + "\",\"moving\":" + actors[role].moving + ",\"gram\":" + (bossId == "gramiel" ? (f as GramielFight).debug() : "null") + ",\"started\":" + f.started + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"pose\":\"" + actors[role].pose + "\",\"moving\":" + actors[role].moving + ",\"own\":" + Math.round(ownDamage) + ",\"raid\":" + Math.round(raidDamage) + ",\"gram\":" + (bossId == "gramiel" ? (f as GramielFight).debug() : "null") + ",\"started\":" + f.started + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
         }
 
         private function box(d:DisplayObject):String

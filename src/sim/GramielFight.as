@@ -38,7 +38,10 @@ package sim
         private static const SHIELD:int = 20;
         private static const TAUNT_MS:int = 7000;
         private static const CAP:Number = 125000;
-        private static const GEAR:Number = 7;            // tuned so each leg between Celestial Vanquishes lasts about 25 s
+        private static const GEAR:Number = 12;            // tuned so each leg between Celestial Vanquishes lasts about 25 s
+        private static const PARTY_GEAR:Number = 1.5;    // the sim's characters deal a small steady share in Phase 2; the Shaman does most of the damage
+        private static const STOP_MARGIN:Number = 450000; // "stop around" this much above the next threshold
+        private static const PARTY_STOP:Number = 300000;  // the others stop attacking this close to it until the Unleashed text
         private static const ARMOR:Number = 0.2 / 0.55;  // what is left of the listed monster damage (as in the Nulgath fight)
         private static const REFLECT_K:Number = 0.1;     // Burning Ward: listed reflect x this x the character's damage taken
         private static const REGEN:Number = 0.065;       // of max HP per second: lifesteal, potions, the other healers
@@ -571,6 +574,8 @@ package sim
 
         // ---------------------------------------------------------------- Phase 2
         private var unleashing:Boolean = false;
+        public var burstOpen:Boolean = false;           // Grace Unleashed has been shouted: burst Gramiel down to the threshold
+        private var stopCued:Boolean = false;
         public var auraUntil:Number = 0;                // Grace Unleashed's icon: no taunting until it fades
         public var tauntedLeg:Object = {sh: false, lr: false, sc: false, loo: false}; // who has taunted since the last Celestial Vanquish
 
@@ -679,6 +684,9 @@ package sim
         {
             unleashing = true;
             auraUntil = t + 8000;
+            burstOpen = true;
+            stopCued = false;
+            host2.mechanic(playerRole, "burst", 0, 0);
             host2.announce("All servants of the 'Liberator' must die!");
             host2.bossAnim("Charge1", false);
             later(900, function():void { host2.bossAnim("ChargeLoop1", true); });
@@ -724,6 +732,8 @@ package sim
             vanquishIdx++;
             bossHp = limit;
             invulnUntil = t + 5000;
+            burstOpen = false;
+            stopCued = false;
             host2.announce("The Shadow Fiend lends their aid to those at Death's Door.");
             host2.bossAnim("Charge2", false);
             later(900, function():void { host2.bossAnim("ChargeLoop2", true); });
@@ -1190,13 +1200,14 @@ package sim
                 {
                     var pw:Object = Dmg.profile(w);
                     var caster:Boolean = pw.sp > pw.ap;
-                    var perHit:Number = Dmg.average(pw, 1.0, caster ? "SP2" : "AP2", caster ? "magic" : "phys") * GEAR;
+                    var perHit:Number = Dmg.average(pw, 1.0, caster ? "SP2" : "AP2", caster ? "magic" : "phys") * PARTY_GEAR;
                     var hits:Number = 1000 / Dmg.cooldown(1500, pw.haste) * tick / 1000;
                     d += Dmg.taken(perHit, 1, CAP) * hits;
                 }
             }
             partyAt = t + tick;
-            if (d > 0 && t >= invulnUntil)
+            var nextLimit:Number = vanquishIdx < THRESHOLDS.length ? bossMaxHp * THRESHOLDS[vanquishIdx] : 0;
+            if (d > 0 && t >= invulnUntil && !(vanquishIdx < THRESHOLDS.length && !burstOpen && bossHp <= nextLimit + PARTY_STOP))
             {
                 bossHp = Math.max(0, bossHp - d);
                 host2.bossDamage(int(d), false, "party");
@@ -1263,6 +1274,11 @@ package sim
                 if (over)
                 {
                     return;
+                }
+                if (phase == 2 && !stopCued && !burstOpen && vanquishIdx < THRESHOLDS.length && t >= invulnUntil && bossHp <= bossMaxHp * THRESHOLDS[vanquishIdx] + STOP_MARGIN)
+                {
+                    stopCued = true;
+                    host2.mechanic(playerRole, "stop", vanquishIdx + 1, 0);
                 }
                 phase2Cues();
             }
