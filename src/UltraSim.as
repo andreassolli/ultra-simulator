@@ -1091,6 +1091,7 @@ package
             }
             paused = false;
             lastTime = getTimer();
+            refocus(); // the Play button the focus was on is gone: without this the keys 1-6 do nothing until the next click on the map
         }
 
         private function toggleHints():void
@@ -1194,6 +1195,7 @@ package
         /** a click on a skill slot uses the skill (the slot under the mouse, whatever is drawn on top of it) */
         private function onBarDown(e:MouseEvent):void
         {
+            refocus();
             if (startScreen && startScreen.parent)
             {
                 return;
@@ -1620,8 +1622,21 @@ package
         }
 
         // ===================================================================== input
+        /** keep the keyboard focus on the stage so the keys always reach onKeyDown */
+        private function refocus():void
+        {
+            try
+            {
+                stage.focus = stage;
+            }
+            catch (err:Error)
+            {
+            }
+        }
+
         private function onMouseDown(e:MouseEvent):void
         {
+            refocus();
             if (!ready || fight.over || (startScreen && startScreen.parent))
             {
                 return;
@@ -1662,7 +1677,11 @@ package
                 spaceHeld = true;
                 return;
             }
-            var k:int = e.keyCode - 48; // keys 1-6
+            var k:int = e.keyCode - 48; // keys 1-6 (the number row)
+            if (e.keyCode >= 97 && e.keyCode <= 102)
+            {
+                k = e.keyCode - 96; // ... and the numeric keypad
+            }
             if (k >= 1 && k <= 6)
             {
                 castKey(k);
