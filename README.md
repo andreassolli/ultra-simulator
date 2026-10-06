@@ -250,3 +250,12 @@ boss; Empowerment, Heal, Harmony, Axiom, Ordinance on us) reuse the class skill 
 ## Boss damage notes
 
 Monsters without listed stats use the default secondary stats (hit 90 %, haste 37.5 %, crit 15 % x2, evasion 10 %, auto cooldown 4 s, damage 27-33); the Grace Crystals' auto uses that damage. Champion Drakath's autos are about 450 (x1.4 in Phase 2, plus Gaining Power), the Overfiend Blade and the Ultra Speaker's autos / Truths hit harder than in the first calibration; the sim's own characters take about half of it (they heal and avoid some). Everything is re-checked with the auto-pilot.
+
+## Ultra Speaker: charts and strict mechanics
+
+- With tips on, the right edge shows the chart of your role: the Arch Paladin chart, the Lord of Order chart, and (no Legion Revenant chart was supplied) the taunt chart for the Legion Revenant. Press **C** to enlarge / shrink it; turning tips off (H) hides it.
+- Legion Revenant has to use Decay (2) when the Equal Zone appears (within its 3 s); missing it loses. A Truth that needed the Arch Paladin's Seal and did not get it loses.
+
+## Ultra Gramiel Phase 2 timing
+
+One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between, "All servants of the 'Liberator' must die!" at 28 s (lands at 33 s), one more auto at 35 s, Death's Door at 36 s, and so on. He casts nothing else while he is casting.

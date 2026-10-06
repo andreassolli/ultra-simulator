@@ -599,39 +599,51 @@ package sim
                 host2.bossAnim("ChargeAttack1", false);
                 later(1000, function():void { restIdle(); });
                 host2.mechanic(playerRole, "p2start", 0, 0);
-                p2Next(4500);
+                later(2000, function():void { p2Cycle(true); });
             });
         }
 
-        private function p2Next(delay:Number):void
+        /**
+         * One 30 s Phase 2 cycle, as timed on the live boss (offsets from the cycle start): Death's Door at 6, 16 and 26 s with
+         * Celestial Ruin every 2 s between them, Grace Unleashed shouted at 28 s and landing at 33 s, one more auto at 35 s (= 5 s of the
+         * next cycle), then Death's Door again at 36 s. Nothing else is cast while he is casting.
+         */
+        private function p2Cycle(first:Boolean):void
         {
-            if (over)
+            if (over || phase != 2)
             {
                 return;
             }
-            var seq:int = p2Seq % 16;
-            p2Seq++;
-            later(delay, function():void {
-                if (over)
+            var ev:Array = first ?
+                [[2, "aa"], [4, "aa"], [6, "dd"], [8, "aa"], [10, "aa"], [12, "aa"], [14, "aa"], [16, "dd"], [18, "aa"], [20, "aa"], [22, "aa"], [24, "aa"], [26, "dd"], [28, "lib"]] :
+                [[5, "aa"], [6, "dd"], [8, "aa"], [10, "aa"], [12, "aa"], [14, "aa"], [16, "dd"], [18, "aa"], [20, "aa"], [22, "aa"], [24, "aa"], [26, "dd"], [28, "lib"]];
+            for each (var e:Array in ev)
+            {
+                later(e[0] * 1000, makeP2Event(e[1]));
+            }
+            later(30000, function():void { p2Cycle(false); });
+        }
+
+        private function makeP2Event(kind:String):Function
+        {
+            return function():void {
+                if (over || phase != 2)
                 {
                     return;
                 }
-                if (seq == 15)
+                if (kind == "aa")
                 {
-                    graceUnleashed();
-                    return;
+                    celestialRuin();
                 }
-                if (seq % 5 == 4)
+                else if (kind == "dd")
                 {
                     deathsDoor();
-                    p2Next(1000);
                 }
                 else
                 {
-                    celestialRuin();
-                    p2Next(2250);
+                    graceUnleashed();
                 }
-            });
+            };
         }
 
         private function celestialRuin():void
@@ -714,7 +726,6 @@ package sim
                     }
                 }
                 later(1000, function():void { restIdle(); });
-                p2Next(1500);
             });
         }
 

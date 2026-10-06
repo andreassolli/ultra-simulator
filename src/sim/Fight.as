@@ -107,6 +107,8 @@ package sim
         public var cd:Array = [0, 0, 0, 0, 0, 0, 0];
         public var counters:Object = {harmony: 0, ordinance: 0, axiom: 0, seal: 0, quix: 0, notBroken: 0};
         public var ruleIdx:int = 0; // current position in PATTERN
+        public var zoneAt:Number = -99999;     // when the last Equal zone appeared (Legion Revenant has to use Decay in the 3 s after it)
+        public var decayUsed:Boolean = false;
         public var lastTruthHit:Number = -99999; // when the last Truth landed
         public var raidDps:Array;
 
@@ -410,6 +412,7 @@ package sim
                 {
                     host.floater(null, "Missed Seal", "bad");
                     counters.seal++;
+                    end("lose", "Missed Seal: Truth #" + n + " needed the Arch Paladin's Seal");
                     return;
                 }
                 if (need == "quix" && t >= quixUntil)
@@ -464,6 +467,8 @@ package sim
         private function equal(n:int):void
         {
             last["zone"] = t;
+            zoneAt = t;
+            decayUsed = false;
             var role:String = ZONE_ROLES[n];
             host.announce("All stand equal beneath the eyes of the Eternal.");
             host.log("Equal - zone " + n + ": " + ROLE_NAMES[role] + " must stand inside", "bad");
@@ -474,6 +479,11 @@ package sim
             after(810, function():void { host.bossAnim("PowerLoop", true); });
             after(2200, function():void { host.bossAnim("Magic", false); });
             after(3000, function():void {
+                if (playerRole == "lr" && !decayUsed)
+                {
+                    end("lose", "Missed Decay: Legion Revenant has to use Decay (2) when the Zone appears");
+                    return;
+                }
                 var dmg:int = irnd(2411, 2946);
                 var inZone:Boolean = host.playerInZone();
                 var shouldBeIn:Boolean = (role == playerRole);
@@ -617,6 +627,10 @@ package sim
                 case "shade":
                 case "wicked":
                     host.castFx(name, actor);
+                    if (name == "shade" && manual && t >= zoneAt && t <= zoneAt + 3000)
+                    {
+                        decayUsed = true; // Legion Revenant's Decay (2) while the Zone is up
+                    }
                     break;
                 case "empowerment":
                     after(250, function():void {

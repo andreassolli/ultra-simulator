@@ -40,6 +40,9 @@ package
 
     import ui.BuffAeternaNox;
     import ui.BuffCog;
+    import ui.ChartAp;
+    import ui.ChartLoo;
+    import ui.ChartTaunt;
     import ui.BuffGramielAura;
     import ui.BuffVendettaShield;
     import ui.BuffMagiaBurn;
@@ -176,6 +179,9 @@ package
         private var crystalTexts:Array = [];
         private var targetSel:String = "boss";     // Ultra Gramiel: "boss" | "cl" | "cr"
         private var gramielP2:Boolean = false;     // start screen option / FlashVar p2=1: Ultra Gramiel starts at Phase 2
+        private var chartMC:Bitmap;
+        private var chartKey:String = "";
+        private var chartBig:Boolean = false;
         private var chatField:TextField;
         private var chatHint:TextField;
         private var bubbles:Object = {};
@@ -1822,7 +1828,11 @@ package
                     setBanner("SEAL NOW (4) - Truth #" + truthN + (mine ? " + TAUNT (6)" : ""), 0xFF5B5B, 2400);
                 }
             }
-            else if (ability == "zone" && role == "ap" && (zoneN == 1 || zoneN == 3))
+            else if (ability == "zone" && role == "lr")
+            {
+                setBanner("DECAY NOW (2) - the Zone appeared", 0xFF5B5B, 3000);
+            }
+            if (ability == "zone" && role == "ap" && (zoneN == 1 || zoneN == 3))
             {
                 setBanner("SEAL NOW (4) - it covers the Truth that follows this zone", 0xFF5B5B, 3000);
             }
@@ -1883,7 +1893,7 @@ package
                         }
                         else
                         {
-                            botQueue.push({at: t + 2300, chat: nr == "loo" ? "LOO" : (nr == "sc" ? "SC" : "LR")}); // after the third hit
+                            botQueue.push({at: t + 300, chat: nr == "loo" ? "LOO" : (nr == "sc" ? "SC" : "LR")}); // after the third hit
                         }
                     }
                     break;
@@ -2068,6 +2078,10 @@ package
             else if (e.keyCode == 72)
             {
                 toggleHints();
+            }
+            else if (e.keyCode == 67 && bossId == "speaker")
+            {
+                chartBig = !chartBig; // C: the role's chart, small / large
             }
             else if (e.keyCode == 70)
             {
@@ -2538,6 +2552,7 @@ package
             {
                 updateGramielHud(f as GramielFight);
             }
+            updateChart();
             // health bars over each character
             for each (var who:String in roles)
             {
@@ -2590,6 +2605,36 @@ package
             }
             var p:Point = gramielStation(r, (fight as GramielFight).targetOf(r));
             return Point.distance(new Point(a.mc.x, a.mc.y), p) <= 45;
+        }
+
+        /** Ultra Speaker: the role's chart (Arch Paladin / Lord of Order chart, the taunt chart for Legion Revenant), only while tips are on */
+        private function updateChart():void
+        {
+            var key:String = bossId == "speaker" && hintsOn ? (role == "ap" ? "ap" : (role == "loo" ? "loo" : (role == "lr" ? "taunt" : ""))) : "";
+            if (key != chartKey)
+            {
+                chartKey = key;
+                if (chartMC && chartMC.parent)
+                {
+                    chartMC.parent.removeChild(chartMC);
+                }
+                chartMC = null;
+                if (key != "")
+                {
+                    chartMC = key == "ap" ? new ChartAp() : (key == "loo" ? new ChartLoo() : new ChartTaunt());
+                    chartMC.smoothing = true;
+                    hudLayer.addChild(chartMC);
+                }
+            }
+            if (chartMC)
+            {
+                var h:Number = chartBig ? 470 : 290;
+                chartMC.height = h;
+                chartMC.scaleX = chartMC.scaleY;
+                chartMC.x = chartBig ? (STAGE_W - chartMC.width) / 2 : STAGE_W - chartMC.width - 4;
+                chartMC.y = chartBig ? 14 : 112;
+                chartMC.alpha = chartBig ? 0.97 : 0.88;
+            }
         }
 
         /** crystal HP bars (the left / right one is the one you keep even), the selected one outlined, and the chat bubbles */
@@ -2653,6 +2698,10 @@ package
                 {
                     botQueue.push({at: at, until: at + 1400, k: 4});
                 }
+            }
+            else if (ability == "zone" && role == "lr")
+            {
+                botQueue.push({at: fight.t + 200, until: fight.t + 2600, k: 2}); // Decay while the Zone is up
             }
             else if (ability == "zone" && role == "ap" && (zoneN == 1 || zoneN == 3))
             {
