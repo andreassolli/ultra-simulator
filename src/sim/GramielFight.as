@@ -37,6 +37,7 @@ package sim
         private static const CRYSTAL_HP:int = 400;
         private static const SHIELD:int = 20;
         private static const TAUNT_MS:int = 7000;
+        private static const FOCUS_MS:int = 6000;   // how long a taunt on Gramiel lasts in Phase 2: only hits taken while it is up give Vendetta stacks
         private static const CAP:Number = 125000;
         private static const GEAR:Number = 12;            // tuned so each leg between Celestial Vanquishes lasts about 25 s
         private static const PARTY_GEAR:Number = 1.5;    // the sim's characters deal a small steady share in Phase 2; the Shaman does most of the damage
@@ -58,6 +59,7 @@ package sim
         public var shattered:Object = {};              // role -> expiry times of Grace Shattered
         public var vendetta:Object = {};               // role -> expiry times of Vendetta stacks
         public var holder:String = null;               // Phase 2: who holds Gramiel
+        public var holderUntil:Number = 0;             // when the holder's taunt runs out
         public var holderHits:int = 0;                 // consecutive auto attacks on the holder
         public var invulnUntil:Number = 0;             // Celestial Vanquish
         public var scorchedUntil:Number = 0;           // the player's Ancestor's Flame
@@ -650,15 +652,30 @@ package sim
         {
             host2.bossAnim("Attack3", false);
             later(1300, function():void { restIdle(); });
-            if (holder == null || !alive(holder))
-            {
-                host2.log("Nobody taunted Gramiel", "bad");
-                finish("lose", "Missed Taunt: Celestial Ruin hit everybody");
-                return;
-            }
             if (t < invulnUntil)
             {
                 return; // Invulnerable: the hit does nothing and adds no stack
+            }
+            if (holder != null && t >= holderUntil)
+            {
+                holder = null; // the taunt (Focus) has run out
+                holderHits = 0;
+            }
+            if (holder == null || !alive(holder))
+            {
+                // nobody is taunting him: the auto attack hits everybody, and nobody gets a Vendetta stack
+                for each (var r:String in G_ROLES)
+                {
+                    if (alive(r))
+                    {
+                        hurt(r, listed(626, 765, r) * 0.6, "Celestial Ruin", r == playerRole);
+                        if (over)
+                        {
+                            return;
+                        }
+                    }
+                }
+                return;
             }
             holderHits++;
             var n:int = stacks(holder);
@@ -805,6 +822,7 @@ package sim
                     return;
                 }
                 tauntedLeg[role] = true;
+                holderUntil = t + FOCUS_MS;
                 if (holder != role)
                 {
                     holderHits = 0;
@@ -1291,6 +1309,11 @@ package sim
                     stopCued = true;
                     host2.mechanic(playerRole, "stop", vanquishIdx + 1, 0);
                 }
+                if (holder != null && t >= holderUntil)
+                {
+                    holder = null; // his Focus has run out
+                    holderHits = 0;
+                }
                 phase2Cues();
             }
             if (t >= tickAt)
@@ -1317,10 +1340,10 @@ package sim
             }
         }
 
-        /** Phase 2 prompt: two hits on the holder, the player sends the next one's name */
+        /** Phase 2 prompt: one or two hits on the holder, the player sends the next one's name */
         private function phase2Cues():void
         {
-            if (phase != 2 || holder == null || t < invulnUntil || cued || holderHits < 2)
+            if (phase != 2 || holder == null || t < invulnUntil || cued || holderHits < 1)
             {
                 return;
             }

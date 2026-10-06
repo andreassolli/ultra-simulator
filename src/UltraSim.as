@@ -1884,7 +1884,7 @@ package
                     break;
                 case "pass":
                     var nr:String = GramielFight.nextInOrder(gf.holder);
-                    setBanner(nr == "sh" ? "TAUNT (6) yourself now" : "Two hits taken - type " + (nr == "loo" ? "LOO" : (nr == "sc" ? "SC" : "LR")) + " (Enter)", 0xFF5B5B, 3600);
+                    setBanner(nr == "sh" ? "TAUNT (6) yourself now" : "Hit - pass it on, type " + (nr == "loo" ? "LOO" : (nr == "sc" ? "SC" : "LR")) + " (Enter)", 0xFF5B5B, 3600);
                     if (botOn)
                     {
                         if (nr == "sh")
