@@ -26,12 +26,12 @@ package sim
         private static const LISTED_CD:Object = {flame: 4000, hydro: 4000, lightning: 16000, embrace: 16000, taunt: 10000};
         private static const MP:Object = {flame: 15, hydro: 15, lightning: 30, embrace: 30, taunt: 0};
         // damage factor / source of the Shaman's spells (classes.json: EE1 / Pyro1 / EE3 are taken as SP1, Elemental Embrace is SP2)
-        private static const SPELL:Object = {flame: {f: 2, src: "SP1"}, hydro: {f: 1, src: "SP1"}, lightning: {f: 3, src: "SP1"}, embrace: {f: 0.3, src: "SP2"}};
-        private static const START_HP:Object = {sh: 3125, lr: 2910, sc: 5200, loo: 3505};
+        private static const SPELL:Object = {flame: {f: 2, src: "SP1", aoe: true}, hydro: {f: 1, src: "SP1", aoe: true}, lightning: {f: 3, src: "SP1"}, embrace: {f: 0.3, src: "SP2"}};
+        private static const START_HP:Object = {sh: 3125, lr: 2910, sc: 2810, loo: 3505};
         private static const SIDE:Object = {sh: "cr", loo: "cr", lr: "cl", sc: "cl"};
         private static const GROUP:Object = {1: ["sh", "sc"], 2: ["lr", "loo"]};
         /** hits per second of the sim's characters on a crystal (auto attacks + skills + DoT ticks) */
-        private static const RATE:Object = {lr: 1.9, sc: 2.1, loo: 1.7};
+        private static const RATE:Object = {lr: 1.0, sc: 1.1, loo: 1.2};
         private static const SIDE_NAME:Object = {cl: "left", cr: "right"};
 
         private static const CRYSTAL_HP:int = 400;
@@ -939,7 +939,7 @@ package sim
                         var sel:String = targetSel;
                         for (var i:int = 1; i <= 5; i++)
                         {
-                            later(i * 1000, function():void { hitTarget(playerRole, sel, false); });
+                            later(i * 1000, function():void { aoeHit(sel); });
                         }
                     }
                     else
@@ -957,7 +957,32 @@ package sim
                     embraceUntil = t + 15000;
                     break;
             }
-            playerStrike(d, c, 1);
+            if (SPELL[name].aoe)
+            {
+                if (phase == 1)
+                {
+                    aoeHit(targetSel);
+                }
+                else
+                {
+                    playerStrike(d, c, 1);
+                }
+            }
+            else
+            {
+                playerStrike(d, c, 1);
+            }
+        }
+
+        /** Flame / Hydrophobia hit up to three targets: both crystals, and Gramiel too when he is the target */
+        private function aoeHit(sel:String):void
+        {
+            hitTarget(playerRole, "cl", false);
+            hitTarget(playerRole, "cr", false);
+            if (sel == "boss")
+            {
+                hitTarget(playerRole, "boss", false);
+            }
         }
 
         override public function activeBuffs():Array
@@ -1051,7 +1076,7 @@ package sim
                 if (draining)
                 {
                     sel = t - drainStartAt > 800 ? "boss" : sel;
-                    rate *= 0.65;
+                    rate *= 1.4;
                 }
                 if (sel != "boss" && crystalHp[sel] <= 0)
                 {

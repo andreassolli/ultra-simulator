@@ -100,8 +100,8 @@ package
             {id: "gramiel", name: "Ultra Gramiel", classes: ["sh"], mapFrame: "r2", idleStop: true, dieLabel: "Die",
                 mapSwf: "runtime/town-ultragramiel.swf", bossSwf: "runtime/monster-UltraGramiel.swf", bossClass: "UltraGramiel", headClass: "mcHeadUltraGramiel",
                 crystalSwf: "runtime/monster-GraceCrystal.swf", crystalClass: "GraceCrystal", crystalHead: "mcHeadGraceCrystal",
-                roles: ["sh", "lr", "sc", "loo"], pad: new Point(480, 300), home: new Point(480, 400), scale: 0.8, charScale: 0.8,
-                crystalPads: [new Point(300, 330), new Point(660, 330)], crystalScale: 0.7, crystalBarY: 222, stack: {lr: [-150, -4], sc: [-78, 6], sh: [62, 6], loo: [138, -3]},
+                roles: ["sh", "lr", "sc", "loo"], pad: new Point(492, 284), home: new Point(492, 385), scale: 0.85, charScale: 0.8,
+                crystalPads: [new Point(182, 359), new Point(806, 368)], crystalScale: 0.7, crystalBarY: 236, stack: {lr: [-150, -4], sc: [-78, 6], sh: [62, 6], loo: [138, -3]},
                 loops: {ChargeLoop1: [151, 164], ChargeLoop2: [213, 230]}, crystalLoops: {ChargeLoop: [157, 177]}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead

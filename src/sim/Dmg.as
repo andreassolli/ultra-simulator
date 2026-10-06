@@ -50,10 +50,9 @@ package sim
             // 150 + 5 x Luck x 0.127, Luck +70 on the ArchPaladin's crit / hit chance, magic resistance and boost from Intellect, HP 2000 + 5 x END):
             cs: {ap: 926, sp: 926, critChance: 42.61, critMod: 416.7, hit: 109.58, haste: 11.64, dodge: 22.5, hp: 2835,
                 dmgRes: 0, physRes: 0, magRes: 40.13, allOut: 110, physOut: 100, magOut: 140.13, dotOut: 75, healOut: 100, healIn: 100},
-            // StoneCrusher (Ultra Gramiel, not in classes.json, so assumed): Valiance weapon, Fighter class, Anima helm, Absolution cape, Might + Divine
-            // potions. A sturdy physical fighter: strength build (high AP), a tank's HP and resistances.
-            sc: {ap: 1500, sp: 300, critChance: 28, critMod: 250, hit: 105, haste: 12, dodge: 20, hp: 5200,
-                dmgRes: 25, physRes: 20, magRes: 20, allOut: 120, physOut: 100, magOut: 100, dotOut: 100, healOut: 100, healIn: 100},
+            // StoneCrusher (Ultra Gramiel): Valiance weapon, Fighter class, Anima helm, Absolution cape, Might + Divine potions (stats as given)
+            sc: {ap: 1282, sp: 1087, critChance: 19.63, critMod: 350, hit: 107, haste: 50, dodge: 19, hp: 2810,
+                dmgRes: 0, physRes: 0, magRes: 55, allOut: 100, physOut: 80, magOut: 155, dotOut: 100, healOut: 85, healIn: 100},
             shaman: {ap: 152, sp: 1706, critChance: 39.69, critMod: 300.48, hit: 103.35, haste: 32.34, dodge: 23.96, hp: 3125,
                 dmgRes: 0, physRes: 0, magRes: 80, allOut: 115, physOut: 100, magOut: 222.78, dotOut: 75, healOut: 100, healIn: 50}
         };
