@@ -1,5 +1,7 @@
 // Background music for the simulator.
 //
+// The main screen plays audio/menu.mp3 (or a generated menu track); a fight starting restarts the boss's own track from the beginning.
+//
 // 1. If bin/audio/<boss>.mp3 (or .ogg) exists - boss = speaker | dage | drakath | nulgath | gramiel - that file is looped.
 //    Drop your own tracks there; nothing else has to change.
 // 2. Otherwise a short generative ambient track is played, made in the browser with the Web Audio API (no audio files, nothing
@@ -16,9 +18,10 @@
     dage:    { root: 52, scale: [0, 1, 4, 5, 7, 8, 10], bpm: 70, chords: [0, 1, 0, 6], pad: "sawtooth", arp: "square", density: 0.35 },
     drakath: { root: 49, scale: [0, 2, 3, 5, 7, 8, 11], bpm: 84, chords: [0, 5, 2, 4], pad: "sawtooth", arp: "sawtooth", density: 0.6 },
     nulgath: { root: 53, scale: [0, 2, 3, 5, 7, 8, 10], bpm: 58, chords: [0, 0, 5, 6], pad: "square", arp: "triangle", density: 0.3 },
+    menu:    { root: 48, scale: [0, 2, 4, 5, 7, 9, 11], bpm: 56, chords: [0, 5, 3, 4], pad: "triangle", arp: "sine", density: 0.5 },
     gramiel: { root: 50, scale: [0, 2, 4, 6, 7, 9, 11], bpm: 66, chords: [0, 4, 5, 3], pad: "triangle", arp: "sine", density: 0.55 }
   };
-  var state = { on: true, boss: "speaker", ctx: null, master: null, timer: null, nextBeat: 0, beat: 0, file: null, unlocked: false };
+  var state = { on: true, boss: "menu", ctx: null, master: null, timer: null, nextBeat: 0, beat: 0, file: null, unlocked: false };
   try { if (window.localStorage.getItem("ultraMusic") === "off") state.on = false; } catch (e) {}
 
   function hz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
@@ -112,9 +115,10 @@
   }
   ["pointerdown", "keydown", "touchstart"].forEach(function (ev) { window.addEventListener(ev, unlock, { capture: true }); });
 
-  window.gameMusicBoss = function (id) {
+  // scene = "menu" (the main screen) or a boss id; force restarts the track even when the scene did not change (a fight starting)
+  window.gameMusicScene = window.gameMusicBoss = function (id, force) {
     if (!MOODS[id]) return false;
-    if (id !== state.boss) { state.boss = id; start(); }
+    if (id !== state.boss || force) { state.boss = id; start(); }
     return state.on;
   };
   window.gameMusicToggle = function () {

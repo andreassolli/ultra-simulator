@@ -426,6 +426,7 @@ package
             if (loaderInfo.parameters["autoplay"] == "1")
             {
                 paused = false;
+                music(true);
             }
             else
             {
@@ -622,13 +623,6 @@ package
             if (bossDef.classes.indexOf(role) < 0)
             {
                 role = bossDef.classes[0];
-            }
-            try
-            {
-                ExternalInterface.call("window.gameMusicBoss", id);
-            }
-            catch (err:Error)
-            {
             }
             // the target frame's face and name
             targetBlade = false;
@@ -1152,6 +1146,7 @@ package
                 return;
             }
             paused = true;
+            music(false); // the main screen has its own track
             startScreen = new Sprite();
             startScreen.graphics.beginFill(0x05070d, 0.84);
             startScreen.graphics.drawRect(0, 0, STAGE_W, STAGE_H);
@@ -1159,24 +1154,7 @@ package
             var title:TextField = Hud.label(bossDef.name, 44, 0xFFD24A, true, "center", STAGE_W);
             title.y = 36;
             startScreen.addChild(title);
-            for (var bi:int = 0; bi < BOSSES.length; bi++)
-            {
-                var bd:Object = BOSSES[bi];
-                var sel:Boolean = bd.id == bossId;
-                var bt:Sprite = new Sprite();
-                bt.graphics.lineStyle(sel ? 2 : 1, sel ? 0xFFD24A : 0x3A4560, 1);
-                bt.graphics.beginFill(sel ? 0x1d2433 : 0x10141f, 0.95);
-                bt.graphics.drawRoundRect(0, 0, TAB_W, 30, 8, 8);
-                bt.graphics.endFill();
-                var bl:TextField = Hud.label(bd.name, 13, sel ? 0xFFFFFF : 0x9BA6BD, true, "center", TAB_W);
-                bl.y = 4;
-                bt.addChild(bl);
-                bt.x = (STAGE_W - (BOSSES.length * TAB_W + (BOSSES.length - 1) * 10)) / 2 + bi * (TAB_W + 10);
-                bt.y = 98;
-                bt.buttonMode = true;
-                bt.addEventListener(MouseEvent.MOUSE_DOWN, makeBossHandler(bd.id));
-                startScreen.addChild(bt);
-            }
+            menuButton("Change boss", (STAGE_W - 180) / 2, 98, 180, showBossPicker);
             var sub:TextField = Hud.label("Select your class", 18, 0xFFFFFF, false, "center", STAGE_W);
             sub.y = 134;
             startScreen.addChild(sub);
@@ -1232,16 +1210,88 @@ package
             markCard();
         }
 
+        private var bossPicker:Sprite;
+
+        /** the "Change boss" screen: one big button per boss; picking one goes back to the main screen with that boss */
+        private function showBossPicker():void
+        {
+            if (bossPicker && bossPicker.parent)
+            {
+                return;
+            }
+            bossPicker = new Sprite();
+            bossPicker.graphics.beginFill(0x05070d, 0.97);
+            bossPicker.graphics.drawRect(0, 0, STAGE_W, STAGE_H);
+            bossPicker.graphics.endFill();
+            var title:TextField = Hud.label("Choose a boss", 40, 0xFFD24A, true, "center", STAGE_W);
+            title.y = 40;
+            bossPicker.addChild(title);
+            var w:Number = 170;
+            var gap:Number = 14;
+            var x0:Number = (STAGE_W - (BOSSES.length * w + (BOSSES.length - 1) * gap)) / 2;
+            for (var bi:int = 0; bi < BOSSES.length; bi++)
+            {
+                var bd:Object = BOSSES[bi];
+                var sel:Boolean = bd.id == bossId;
+                var card:Sprite = new Sprite();
+                card.graphics.lineStyle(sel ? 3 : 1, sel ? 0xFFD24A : 0x3A4560, 1);
+                card.graphics.beginFill(sel ? 0x1d2433 : 0x10141f, 0.95);
+                card.graphics.drawRoundRect(0, 0, w, 150, 12, 12);
+                card.graphics.endFill();
+                var nm:TextField = Hud.label(bd.name, 17, sel ? 0xFFFFFF : 0xC9D1E3, true, "center", w - 12);
+                nm.x = 6;
+                nm.y = 52;
+                nm.multiline = true;
+                nm.wordWrap = true;
+                nm.height = 60;
+                card.addChild(nm);
+                var cl:TextField = Hud.label(classList(bd), 11, 0x9BA6BD, false, "center", w - 12);
+                cl.x = 6;
+                cl.y = 106;
+                cl.multiline = true;
+                cl.wordWrap = true;
+                cl.height = 40;
+                card.addChild(cl);
+                card.x = x0 + bi * (w + gap);
+                card.y = 170;
+                card.buttonMode = true;
+                card.addEventListener(MouseEvent.MOUSE_DOWN, makeBossHandler(bd.id));
+                bossPicker.addChild(card);
+            }
+            var back:TextField = Hud.label("Click a boss  |  Esc: back", 13, 0x9BA6BD, false, "center", STAGE_W);
+            back.y = 380;
+            bossPicker.addChild(back);
+            bossPicker.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
+            addChild(bossPicker);
+        }
+
+        private static function classList(bd:Object):String
+        {
+            var names:Array = [];
+            for each (var c:String in bd.classes)
+            {
+                names.push(c == "sh" ? "Shaman" : (c == "sh2" ? "" : CLASS_NAMES[c]));
+            }
+            return names.filter(function(n:String, i:int, a:Array):Boolean { return n != ""; }).join(", ");
+        }
+
         private function makeBossHandler(id:String):Function
         {
             return function(e:MouseEvent):void {
                 e.stopPropagation();
-                if (id != bossId)
+                if (bossPicker && bossPicker.parent)
+                {
+                    removeChild(bossPicker);
+                }
+                if (startScreen && startScreen.parent)
                 {
                     removeChild(startScreen);
-                    selectBoss(id); // swaps map, boss, party and class list while the screen is down
-                    showStartScreen();
                 }
+                if (id != bossId)
+                {
+                    selectBoss(id); // swaps map, boss, party and class list while the screen is down
+                }
+                showStartScreen();
             };
         }
 
@@ -1284,6 +1334,7 @@ package
                 removeChild(startScreen);
             }
             paused = false;
+            music(true); // the boss's track, from the start, when the fight starts
             lastTime = getTimer();
             refocus(); // the Play button the focus was on is gone: without this the keys 1-6 do nothing until the next click on the map
         }
@@ -1299,6 +1350,18 @@ package
             }
             say(role, text);
             fight.chat(text);
+        }
+
+        /** menu track (boss == false) or the boss's track from the start (boss == true) */
+        private function music(boss:Boolean):void
+        {
+            try
+            {
+                ExternalInterface.call("window.gameMusicScene", boss ? bossId : "menu", boss);
+            }
+            catch (err:Error)
+            {
+            }
         }
 
         private function toggleMusic():void
@@ -2268,6 +2331,14 @@ package
         private function handleKey(code:int, ch:String):void
         {
             var e:Object = {keyCode: code};
+            if (bossPicker && bossPicker.parent)
+            {
+                if (code == 27)
+                {
+                    removeChild(bossPicker);
+                }
+                return;
+            }
             if (creditsPanel && creditsPanel.parent)
             {
                 if (code == 27 || code == 13)
