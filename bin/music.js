@@ -18,6 +18,7 @@
     dage:    { root: 52, scale: [0, 1, 4, 5, 7, 8, 10], bpm: 70, chords: [0, 1, 0, 6], pad: "sawtooth", arp: "square", density: 0.35 },
     drakath: { root: 49, scale: [0, 2, 3, 5, 7, 8, 11], bpm: 84, chords: [0, 5, 2, 4], pad: "sawtooth", arp: "sawtooth", density: 0.6 },
     nulgath: { root: 53, scale: [0, 2, 3, 5, 7, 8, 10], bpm: 58, chords: [0, 0, 5, 6], pad: "square", arp: "triangle", density: 0.3 },
+    drago:   { root: 50, scale: [0, 2, 3, 5, 7, 8, 10], bpm: 72, chords: [0, 3, 5, 4], pad: "sawtooth", arp: "triangle", density: 0.4 },
     menu:    { root: 48, scale: [0, 2, 4, 5, 7, 9, 11], bpm: 56, chords: [0, 5, 3, 4], pad: "triangle", arp: "sine", density: 0.5 },
     gramiel: { root: 50, scale: [0, 2, 4, 6, 7, 9, 11], bpm: 66, chords: [0, 4, 5, 3], pad: "triangle", arp: "sine", density: 0.55 }
   };

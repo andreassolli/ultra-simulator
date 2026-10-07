@@ -278,3 +278,14 @@ One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between,
 - **Memory:** Ruffle (like most WebAssembly players) never gives memory back to the browser, and every time the game rebuilds its characters (a boss / class switch) a few MB stay behind. Measured with 40 restarts in a row: about 4.5 MB per restart before, about 0.4 MB after reusing the characters when the boss and class are unchanged; a 3 minute fight grows the process by about 20 MB. To stop it adding up, after about 8 rebuilds the game reloads the page (same boss and class, back at the start screen) when a fight ends. Nothing in the game's own JavaScript heap grows (it stays at about 4 MB).
 
 **Main screen and music tracks:** the start screen now shows the boss's name, a **Change boss** button (opens a screen with one big button per boss; picking one returns to the main screen with its classes), the class cards, Play, Music and Credits. The main screen plays its own track (`bin/audio/menu.mp3`, or a generated one); pressing Play (or Restart / a finished fight, which returns to the main screen) switches tracks, and the boss's track always starts from the beginning when the fight starts.
+
+## Ultra Drago (Flash)
+
+`runtime/town-ultradrago.swf`, `monster-KingDrago.swf`, `monster-ExecutionerDene.swf` and `monster-BowmasterAlgie.swf`; rules in `src/sim/DragoFight.as` (from `ultradrago.mdx`). Classes: Legion Revenant and Arch Paladin; the other one plus the Chrono ShadowSlayer and Lord of Order are played by the sim.
+
+- **Targets:** click Executioner Dene (left), Bowmaster Algie (right) or King Drago (middle), or press Tab; your character walks beside it. Key 1 walks to the current target.
+- **Taunts:** the Legion Revenant taunts Algie and the Arch Paladin taunts Dene on repeat (6 s taunts, 10 s cooldown). An untaunted auto hits all four: Dene's autos make him take 1 % less damage per player hit (stacking), Algie's make him deal 1 % more, so taunting keeps them down.
+- **Execution:** every 8 Dene autos he raises his axe (banner + "Next: Execution in ..."). The Arch Paladin's Seal (skill 4, 7 s) has to be up when it lands or the fight is lost. The guide gives no damage for the nuke; unsealed it is lethal here, sealed it is small.
+- **Who attacks what:** Lord of Order and the Arch Paladin stay on Dene (range); the Legion Revenant and Chrono ShadowSlayer kill Algie first, then join on Dene. When one side boss dies the other heals fully and gets Ally Boost (x2 damage, half damage taken), so the Dene damage done before Algie dies is wasted. King Drago (1 000 HP) cannot be hurt and falls when both are dead; after 160 s he starts Judgement Day and everybody dies 20 s later.
+- **Length:** raid damage is tuned so everything is dead in about 45-50 seconds. Damage over 75 000 a hit is cut (excess ^ 0.7).
+- **Music:** `bin/audio/drago.mp3` is the map's own track, extracted from `town-ultradrago.swf` (the `OMGmusic` sound in the SWF).

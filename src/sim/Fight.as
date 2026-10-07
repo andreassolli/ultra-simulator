@@ -268,6 +268,23 @@ package sim
             return null;
         }
 
+        /** Multi-target scenes (Ultra Gramiel, Ultra Drago): what `role` is attacking, "boss" | "cl" | "cr" */
+        public function targetOf(role:String):String
+        {
+            return role == playerRole ? targetSel : "boss";
+        }
+
+        /** HP / max HP of one of the targets ("boss", "cl", "cr") for the target frame */
+        public function selHp(sel:String):Number
+        {
+            return bossHp;
+        }
+
+        public function selMax(sel:String):Number
+        {
+            return bossMaxHp;
+        }
+
         /** A line the player typed in the chat field (Ultra Gramiel: tells the others to taunt). */
         public function chat(text:String):void
         {

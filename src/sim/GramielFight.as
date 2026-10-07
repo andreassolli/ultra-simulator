@@ -1171,7 +1171,17 @@ package sim
         }
 
         /** what `role` is attacking right now: "boss" | "cl" | "cr" (the characters stand next to it and face it) */
-        public function targetOf(role:String):String
+        override public function selHp(sel:String):Number
+        {
+            return sel == "boss" ? bossHp : crystalHp[sel];
+        }
+
+        override public function selMax(sel:String):Number
+        {
+            return sel == "boss" ? bossMaxHp : crystalMax;
+        }
+
+        override public function targetOf(role:String):String
         {
             if (role == playerRole)
             {
