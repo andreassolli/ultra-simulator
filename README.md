@@ -311,3 +311,7 @@ Ruffle draws the whole 960x500 scene with its own renderer, so the load is mostl
 - **Floating numbers** are reused instead of created for every hit, which removes most of the per-frame allocation that Ruffle never gives back; the page still reloads itself after a number of boss / class switches (`recycleGame`).
 - Measured and found to make **no difference**: hiding or removing the other bosses' maps (hidden clips cost nothing), `cacheAsBitmap` on the map, and turning the number glow off (`?fx=0`).
 - Everything else is Ruffle's: the engine in `bin/ruffle/` is a self-hosted nightly (the `.wasm` files). A newer or patched build only has to replace that folder; the game needs no change.
+
+### Loading Ruffle from a link
+
+`bin/ruffle-source.js` decides where `play.html` / `index.html` get Ruffle: the bundled `bin/ruffle/` copy (`local`, the default) or a link you add to its `SOURCES` list, for example `patched: "https://your.host/ruffle-aqw/ruffle.js"`. Make it the `DEFAULT` there, or open the page with `?ruffle=patched`; `?ruffle=local` goes back. Only names in the list can be chosen from the address (a free link in the address could run any script on the page). The link must be the build's `ruffle.js` with its core and `.wasm` in the same folder, and the host must send CORS headers; in a Discord Activity the host also needs a URL mapping. A build with its own renderer behaviour can be tried with `?renderer=webgl` (see above). Options such as `__aqwFlags` from other pages are specific to that build and are not used here.
