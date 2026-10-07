@@ -271,3 +271,8 @@ One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between,
 - **Party HP** button / **G** hides the other characters' HP frames; the Speaker chart then grows to use the room.
 - Key **1** walks to your target at the same speed as Space + click (and costs the same stamina).
 - Ultra Gramiel: skills work while walking as long as you are within range of the target (only auto attacks need you to stand next to it), and Grace Drain gives 7 s instead of 5 s.
+
+## Music, credits and memory
+
+- **Music:** `bin/music.js` plays a generated ambient loop (Web Audio, a different key / tempo per boss) or, if present, `bin/audio/<boss>.mp3` / `.ogg` (speaker, dage, drakath, nulgath, gramiel). The **Music** button (or **M**) turns it on / off and remembers the choice; browsers only start sound after the first click or key press. The start screen has **Credits** and Music buttons.
+- **Memory:** Ruffle (like most WebAssembly players) never gives memory back to the browser, and every time the game rebuilds its characters (a boss / class switch) a few MB stay behind. Measured with 40 restarts in a row: about 4.5 MB per restart before, about 0.4 MB after reusing the characters when the boss and class are unchanged; a 3 minute fight grows the process by about 20 MB. To stop it adding up, after about 8 rebuilds the game reloads the page (same boss and class, back at the start screen) when a fight ends. Nothing in the game's own JavaScript heap grows (it stays at about 4 MB).

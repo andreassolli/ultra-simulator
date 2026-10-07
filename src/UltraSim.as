@@ -210,6 +210,10 @@ package
         private var hintsOn:Boolean = true; // context hints: who's zone it is, taunt / quix / seal prompts, next cast, log
         private var hintsLabel:TextField;
         private var partyLabel:TextField;
+        private var musicLabel:TextField;
+        private var musicOn:Boolean = true;
+        private var creditsPanel:Sprite;
+        private var churn:Number = 0;           // how much the Flash player has been made to rebuild; see recycle()
         private var partyShown:Boolean = true; // the other characters' HP frames (G)
         private var startScreen:Sprite;
         private var cards:Object = {};
@@ -619,6 +623,13 @@ package
             {
                 role = bossDef.classes[0];
             }
+            try
+            {
+                ExternalInterface.call("window.gameMusicBoss", id);
+            }
+            catch (err:Error)
+            {
+            }
             // the target frame's face and name
             targetBlade = false;
             showTarget(false);
@@ -643,8 +654,39 @@ package
             return new Point(base.x + st[r][0], base.y + st[r][1]);
         }
 
+        private var actorsKey:String = "";
+
         private function buildActors():void
         {
+            // the same party for the same boss and class: reuse the characters (their gear SWFs are not loaded again on every restart,
+            // which, together with the display objects, is what made the player's memory grow with every fight)
+            if (actorsKey == bossId + ":" + role)
+            {
+                churn += 0.05;
+                for each (var again:Object in actors)
+                {
+                    var p0:Point = spot(homeAt, again.role);
+                    again.mc.x = p0.x;
+                    again.mc.y = p0.y;
+                    again.moveTo = null;
+                    again.sprint = false;
+                    again.aaT = Math.random() * 1.3;
+                    again.poseUntil = 0;
+                    setMoving(again, false);
+                    again.pose = "Idle";
+                    again.mc.mcChar.gotoAndPlay("Idle");
+                    if (again.bar.parent == null)
+                    {
+                        fxLayer.addChild(again.bar);
+                    }
+                    if (again.mc.parent == null)
+                    {
+                        actorLayer.addChild(again.mc);
+                    }
+                }
+                return;
+            }
+            churn += 1;
             for each (var old:Object in actors)
             {
                 if (old.mc && old.mc.parent)
@@ -688,6 +730,7 @@ package
                 actors[r] = a;
             }
             equipPlayer();
+            actorsKey = bossId + ":" + role;
         }
 
         /** Same call sequence AvatarMC.as expects: ActiveSet filled in, then each item SWF loaded with its callback. */
@@ -1094,6 +1137,8 @@ package
             button("Fullscreen (F)", 836, 28, 118, toggleFullscreen);
             partyLabel = button("", 676, 52, 150, toggleParty);
             partyLabel.text = "Party HP: ON (G)";
+            musicLabel = button("", 836, 52, 118, toggleMusic);
+            musicLabel.text = "Music: ON (M)";
         }
 
         private static const TAB_W:Number = 172;
@@ -1175,6 +1220,10 @@ package
                 playGame();
             });
             startScreen.addChild(play);
+            menuButton("Credits", STAGE_W - 124, 462, 110, showCredits);
+            var ml:TextField = menuButton("", STAGE_W - 244, 462, 110, function():void { toggleMusic(); ml.text = "Music: " + (musicOn ? "ON" : "OFF"); });
+            syncMusicLabel();
+            ml.text = "Music: " + (musicOn ? "ON" : "OFF");
             var help:TextField = Hud.label("Left-click: move / target the boss  |  1-6: skills  |  H: hints  |  F: fullscreen", 12, 0x9BA6BD, false, "center", STAGE_W);
             help.y = 424;
             startScreen.addChild(help);
@@ -1250,6 +1299,130 @@ package
             }
             say(role, text);
             fight.chat(text);
+        }
+
+        private function toggleMusic():void
+        {
+            try
+            {
+                var r:* = ExternalInterface.call("window.gameMusicToggle");
+                musicOn = r === null ? !musicOn : r === true;
+            }
+            catch (err:Error)
+            {
+                musicOn = !musicOn;
+            }
+            musicLabel.text = "Music: " + (musicOn ? "ON" : "OFF") + " (M)";
+        }
+
+        private function syncMusicLabel():void
+        {
+            try
+            {
+                var r:* = ExternalInterface.call("window.gameMusicState");
+                if (r === true || r === false)
+                {
+                    musicOn = r;
+                }
+            }
+            catch (err:Error)
+            {
+            }
+            musicLabel.text = "Music: " + (musicOn ? "ON" : "OFF") + " (M)";
+        }
+
+        private static const CREDITS:Array = [
+            "Ultra boss mechanics, stats and attack patterns: the AQW Ultra guides (Ultra Speaker, Ultra Dage, Champion Drakath,",
+            "Ultra Nulgath, Ultra Gramiel). Stats from the official AQW wiki, pattern information by Scratch, the Gramiel guide and video by Proxy,",
+            "the role charts for the Speaker from the community guide.",
+            "",
+            "Damage and healing maths: the AQWDex calculator (github.com/Shell1010/aqwdex). Class data: AQW's classes.json.",
+            "",
+            "Game art, animations, characters, bosses and maps: Artix Entertainment, AdventureQuest Worlds.",
+            "This is a fan-made practice tool and is not affiliated with or endorsed by Artix Entertainment.",
+            "",
+            "Built with: Ruffle (Flash Player emulator), Apache Flex SDK, JPEXS Free Flash Decompiler, Discord Embedded App SDK.",
+            "Background music: generated live in the browser (Web Audio); put audio/<boss>.mp3 next to the page to use your own.",
+            "",
+            "Project: github.com/andreassolli/ultra-simulator"
+        ];
+
+        private function showCredits():void
+        {
+            if (creditsPanel && creditsPanel.parent)
+            {
+                return;
+            }
+            creditsPanel = new Sprite();
+            creditsPanel.graphics.beginFill(0x05070d, 0.985);
+            creditsPanel.graphics.drawRect(0, 0, STAGE_W, STAGE_H);
+            creditsPanel.graphics.endFill();
+            var title:TextField = Hud.label("Credits", 36, 0xFFD24A, true, "center", STAGE_W);
+            title.y = 24;
+            creditsPanel.addChild(title);
+            var body:TextField = Hud.label(CREDITS.join("\n"), 13, 0xE6E9EF, false, "left", STAGE_W - 120);
+            body.multiline = true;
+            body.wordWrap = true;
+            body.autoSize = "left";
+            body.x = 60;
+            body.y = 90;
+            creditsPanel.addChild(body);
+            var close:TextField = Hud.label("Click anywhere or press Esc to close", 12, 0x9BA6BD, false, "center", STAGE_W);
+            close.y = 470;
+            creditsPanel.addChild(close);
+            creditsPanel.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
+                e.stopPropagation();
+                closeCredits();
+            });
+            addChild(creditsPanel);
+        }
+
+        private function closeCredits():void
+        {
+            if (creditsPanel && creditsPanel.parent)
+            {
+                removeChild(creditsPanel);
+            }
+            refocus();
+        }
+
+        /** a rounded menu button for the start screen */
+        private function menuButton(text:String, x:Number, y:Number, w:Number, fn:Function):TextField
+        {
+            var b:Sprite = new Sprite();
+            b.graphics.lineStyle(1, 0x3A4560, 1);
+            b.graphics.beginFill(0x10141f, 0.95);
+            b.graphics.drawRoundRect(0, 0, w, 28, 8, 8);
+            b.graphics.endFill();
+            var t:TextField = Hud.label(text, 12, 0xD8DEEA, true, "center", w);
+            t.y = 6;
+            b.addChild(t);
+            b.x = x;
+            b.y = y;
+            b.buttonMode = true;
+            b.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
+                e.stopPropagation();
+                fn();
+            });
+            startScreen.addChild(b);
+            return t;
+        }
+
+        /** Ruffle keeps some memory for good every time a party is rebuilt; at a quiet moment the page is reloaded (same boss and class) */
+        private function recycle():Boolean
+        {
+            if (churn < 8)
+            {
+                return false;
+            }
+            try
+            {
+                return ExternalInterface.call("window.recycleGame", bossId, role, gramielP2) === true;
+            }
+            catch (err:Error)
+            {
+            }
+            return false;
         }
 
         private function toggleParty():void
@@ -1963,6 +2136,10 @@ package
             setTimeout(function():void {
                 if (fight === f) // not already restarted by hand
                 {
+                    if (recycle())
+                    {
+                        return; // the page reloads itself, back at this boss and class
+                    }
                     newFight(role);
                     showStartScreen();
                 }
@@ -2089,6 +2266,14 @@ package
         private function handleKey(code:int, ch:String):void
         {
             var e:Object = {keyCode: code};
+            if (creditsPanel && creditsPanel.parent)
+            {
+                if (code == 27 || code == 13)
+                {
+                    closeCredits();
+                }
+                return;
+            }
             if (startScreen && startScreen.parent)
             {
                 if (e.keyCode == 13) // Enter = Play
@@ -2154,6 +2339,10 @@ package
             else if (e.keyCode == 71)
             {
                 toggleParty();
+            }
+            else if (e.keyCode == 77)
+            {
+                toggleMusic();
             }
             else if (e.keyCode == 67 && bossId == "speaker")
             {

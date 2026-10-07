@@ -30,6 +30,7 @@
 </script>
 <script src="ruffle/ruffle.js"></script>
 <script src="discord/config.js"></script>
+<script src="music.js"></script>
 <script>
   // Options go in the address: play.html?boss=drakath&class=lr&bot=1&speed=4&hints=0&autoplay=1
   // boss = speaker | dage | drakath, class = loo | ap | lr | ca | pc
@@ -89,6 +90,18 @@
     }, true);
     document.addEventListener("keyup", (e) => { const code = e.keyCode; setTimeout(() => sendKey(code, "", false), 0); }, true);
     player.load({ url: "ultra_sim.swf", parameters: location.search.slice(1) });
+    // Ruffle keeps some memory for good after loading movies; after a number of boss / class switches the game asks for a fresh page
+    // (same boss and class, back at the start screen) before that adds up
+    window.recycleGame = function (boss, cls, p2) {
+      try {
+        const u = new URL(location.href);
+        u.searchParams.set("boss", boss); u.searchParams.set("class", cls);
+        if (p2) u.searchParams.set("p2", "1"); else u.searchParams.delete("p2");
+        u.searchParams.delete("autoplay");
+        setTimeout(() => location.replace(u.toString()), 150);
+        return true;
+      } catch (e) { return false; }
+    };
     // the game's Fullscreen button / F key call this
     window.toggleGameFullscreen = function () {
       if (document.fullscreenElement) document.exitFullscreen();
