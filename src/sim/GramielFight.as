@@ -37,6 +37,7 @@ package sim
         private static const CRYSTAL_HP:int = 400;
         private static const SHIELD:int = 20;
         private static const TAUNT_MS:int = 7000;
+        private static const DRAIN_MS:int = 7000;   // Grace Drain's charge (5 s on the wiki) is given a little longer so the shield can be broken while walking over
         private static const FOCUS_MS:int = 6000;   // how long a taunt on Gramiel lasts in Phase 2: only hits taken while it is up give Vendetta stacks
         private static const CAP:Number = 125000;
         private static const GEAR:Number = 12;            // tuned so each leg between Celestial Vanquishes lasts about 25 s
@@ -177,6 +178,11 @@ package sim
         override public function skillName(n:int):String
         {
             return G_SKILLS[n] ? G_SKILLS[n] : null;
+        }
+
+        override public function skillCost(name:String):Number
+        {
+            return MP[name] ? (MP[name]) : 0;
         }
 
         override public function skillCdMs(name:String):Number
@@ -370,7 +376,7 @@ package sim
             host2.bossAnim("Charge1", false);
             host2.mechanic(playerRole, "drain", 0, 0);
             later(900, function():void { if (draining) { host2.bossAnim("ChargeLoop1", true); } });
-            later(5000, function():void {
+            later(DRAIN_MS, function():void {
                 if (token != p1Token || over || !draining)
                 {
                     return;
@@ -923,9 +929,9 @@ package sim
         /** the player's attack on his target: Phase 1 = `hits` hits of 1 damage, Phase 2 = real damage */
         private function playerStrike(dmg:Number, crit:Boolean, hits:int):void
         {
-            if (!host2.inPlace(playerRole))
+            if (!host2.inRange(playerRole))
             {
-                return; // not next to the target
+                return; // too far from the target
             }
             if (phase == 1)
             {
@@ -970,9 +976,9 @@ package sim
                 host2.floater(playerRole, "Not enough mana", "bad");
                 return false;
             }
-            if (phase != 15 && !host2.inPlace(playerRole))
+            if (phase != 15 && !host2.inRange(playerRole))
             {
-                host2.floater(playerRole, "Move next to your target", "bad");
+                host2.floater(playerRole, "Too far from your target", "bad");
                 return false;
             }
             mana -= cost;
@@ -1072,7 +1078,7 @@ package sim
         /** Flame / Hydrophobia hit up to three targets: both crystals, and Gramiel too when he is the target */
         private function aoeHit(sel:String):void
         {
-            if (!host2.inPlace(playerRole))
+            if (!host2.inRange(playerRole))
             {
                 return;
             }

@@ -263,3 +263,11 @@ One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between,
 **Phase 2 taunts:** a taunt on Gramiel (Focus) lasts 6 s, and only the Celestial Ruin autos taken while it is up add a Vendetta stack (the number on the shield icon). When it has run out an auto hits all four characters and gives nobody a stack, so a character that is not re-taunted does not pile up shields. One or two hits are enough for each character; pass the taunt on after the first or second hit.
 
 **Keys inside a Discord Activity:** the page also listens for key presses itself and forwards them to the game (`jsKey`), because the Activity frame often gives the Flash player no keyboard focus. A key the player already received is not handled twice. This covers 1-6, Space, Tab, Enter / typing in the chat field, H, F, P and C.
+
+## HUD notes
+
+- The skill slots stay grey (their art used to pulse grey / red); a slot goes white-grey while there is not enough mana for its skill.
+- Tips (what to do) are purple and sit under the yellow boss announcement; the fight clock is under the "Next:" line.
+- **Party HP** button / **G** hides the other characters' HP frames; the Speaker chart then grows to use the room.
+- Key **1** walks to your target at the same speed as Space + click (and costs the same stamina).
+- Ultra Gramiel: skills work while walking as long as you are within range of the target (only auto attacks need you to stand next to it), and Grace Drain gives 7 s instead of 5 s.

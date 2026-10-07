@@ -70,18 +70,24 @@
     setTimeout(() => clearInterval(focusTimer), 30000);
     window.addEventListener("focus", focusGame);
     window.addEventListener("pointerdown", () => { try { window.focus(); } catch (e) {} setTimeout(focusGame, 0); });
-    // Inside a Discord Activity the frame often gives the Flash player no keyboard focus, so the page forwards the keys itself
-    // (the game ignores a key it already got from the player a moment before)
+    // Inside a Discord Activity the frame often gives the Flash player no keyboard focus, so the page checks whether the game got
+    // a key press itself (it counts them) and, when it did not, forwards the press (and, after two misses, every following one at once).
+    // The game also ignores a forwarded key it already received, so nothing is handled twice.
+    let fwdMode = false, misses = 0;
+    const keyCount = () => { try { return player.keyCount ? player.keyCount() : -1; } catch (err) { return -1; } };
+    const sendKey = (code, ch, down) => { try { if (player.jsKey) player.jsKey(code, ch, down); } catch (err) {} };
     document.addEventListener("keydown", (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
       if (e.keyCode === 9 || e.keyCode === 32) e.preventDefault();
       const code = e.keyCode, ch = e.key && e.key.length === 1 ? e.key : (code === 8 ? "\b" : "");
-      setTimeout(() => { try { if (player.jsKey) player.jsKey(code, ch, true); } catch (err) {} }, 60);
+      const c0 = keyCount();
+      if (fwdMode) setTimeout(() => sendKey(code, ch, true), 0);
+      setTimeout(() => {
+        if (keyCount() > c0) { misses = 0; fwdMode = false; }          // the game got the key itself
+        else if (c0 >= 0) { if (!fwdMode) sendKey(code, ch, true); if (++misses >= 2) fwdMode = true; }
+      }, 400);
     }, true);
-    document.addEventListener("keyup", (e) => {
-      const code = e.keyCode;
-      setTimeout(() => { try { if (player.jsKey) player.jsKey(code, "", false); } catch (err) {} }, 60);
-    }, true);
+    document.addEventListener("keyup", (e) => { const code = e.keyCode; setTimeout(() => sendKey(code, "", false), 0); }, true);
     player.load({ url: "ultra_sim.swf", parameters: location.search.slice(1) });
     // the game's Fullscreen button / F key call this
     window.toggleGameFullscreen = function () {

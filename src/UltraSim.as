@@ -200,6 +200,7 @@ package
         private var banner:String = "";
         private var bannerUntil:Number = 0;
         private var bannerColor:uint = 0xFFD24A;
+        private static const TIP_COLOR:uint = 0xC77DFF;
         private var shout:String = "";
         private var shoutUntil:Number = 0;
         private var bossLabel:String = "Idle";
@@ -208,6 +209,8 @@ package
         private var paused:Boolean = false;
         private var hintsOn:Boolean = true; // context hints: who's zone it is, taunt / quix / seal prompts, next cast, log
         private var hintsLabel:TextField;
+        private var partyLabel:TextField;
+        private var partyShown:Boolean = true; // the other characters' HP frames (G)
         private var startScreen:Sprite;
         private var cards:Object = {};
         private var simSpeed:Number = 1;
@@ -395,6 +398,7 @@ package
                 {
                     ExternalInterface.addCallback("getState", getState);
                     ExternalInterface.addCallback("jsKey", onPageKey);
+                    ExternalInterface.addCallback("keyCount", function():int { return nativeKeys; });
                     ExternalInterface.addCallback("setBot", function(on:Boolean):void { botOn = on; });
                     ExternalInterface.addCallback("setSpeed", function(s:Number):void { simSpeed = s; });
                     ExternalInterface.addCallback("setPaused", function(p:Boolean):void { paused = p; });
@@ -791,7 +795,7 @@ package
             }
             clockText = Hud.label("0:00", 14, 0xFFFFFF, true, "right", 100);
             clockText.x = 854;
-            clockText.y = 54;
+            clockText.y = 106; // under the "Next:" panel
             g.addChild(clockText);
             nextPanel = new Sprite();
             Hud.panel(nextPanel, 0, 0, 262, 26);
@@ -804,11 +808,11 @@ package
             g.addChild(nextText);
             bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 960);
             bannerText.x = 0;
-            bannerText.y = 114;
+            bannerText.y = 140; // the tips sit under the announcement
             g.addChild(bannerText);
             shoutText = Hud.label("", 19, 0xFFD24A, true, "center", 960); // boss speech: yellow, larger
             shoutText.x = 0;
-            shoutText.y = 136;
+            shoutText.y = 114;
             g.addChild(shoutText);
             overText = Hud.label("", 40, 0xFFFFFF, true, "center", 960);
             overText.y = 180;
@@ -934,6 +938,7 @@ package
                 var size:Number = d.boss ? 30 : 23;
                 var slot:Sprite = new Sprite();
                 var bg:MovieClip = new UISlotBg();
+                stopPulse(bg);
                 var bb:Rectangle = bg.getBounds(bg);
                 var k:Number = size / Math.max(bb.width, bb.height);
                 bg.scaleX = bg.scaleY = k;
@@ -1006,6 +1011,7 @@ package
             for each (var pp:MovieClip in partyPanels)
             {
                 pp.y = pp.baseY + extra;
+                pp.visible = partyShown;
             }
         }
 
@@ -1086,6 +1092,8 @@ package
             hintsLabel = button("", 676, 28, 150, toggleHints);
             hintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
             button("Fullscreen (F)", 836, 28, 118, toggleFullscreen);
+            partyLabel = button("", 676, 52, 150, toggleParty);
+            partyLabel.text = "Party HP: ON (G)";
         }
 
         private static const TAB_W:Number = 172;
@@ -1244,6 +1252,12 @@ package
             fight.chat(text);
         }
 
+        private function toggleParty():void
+        {
+            partyShown = !partyShown;
+            partyLabel.text = "Party HP: " + (partyShown ? "ON" : "OFF") + " (G)";
+        }
+
         private function toggleHints():void
         {
             hintsOn = !hintsOn;
@@ -1272,11 +1286,24 @@ package
             }
         }
 
+        private static function stopPulse(slot:MovieClip):void
+        {
+            slot.gotoAndStop(1);
+            for (var i:int = 0; i < slot.numChildren; i++)
+            {
+                var c:MovieClip = slot.getChildAt(i) as MovieClip;
+                if (c)
+                {
+                    c.gotoAndStop(1);
+                }
+            }
+        }
+
         private function buildSkillbar():void
         {
             for each (var old:Object in skillSlots)
             {
-                for each (var d:DisplayObject in [old.icon, old.cd, old.key])
+                for each (var d:DisplayObject in [old.icon, old.cd, old.mp, old.key])
                 {
                     if (d && d.parent)
                     {
@@ -1289,6 +1316,7 @@ package
             for (var i:int = 0; i < 6; i++)
             {
                 var slot:MovieClip = actBar["blank" + i];
+                stopPulse(slot); // the slot art pulses grey -> red on its own timeline; it should stay grey
                 var b:Rectangle = slot.getBounds(actBar);
                 var cx:Number = b.x + b.width / 2;
                 var cy:Number = b.y + b.height / 2;
@@ -1326,6 +1354,10 @@ package
                 cd.x = cx;
                 cd.y = cy;
                 actBar.addChild(cd);
+                var mpo:Shape = new Shape(); // white / grey overlay while there is not enough mana for the skill
+                mpo.x = cx;
+                mpo.y = cy;
+                actBar.addChild(mpo);
                 var key:TextField = Hud.label(String(i + 1), 10, 0xFFFFFF, true);
                 key.x = b.x + 1;
                 key.y = b.y - 3;
@@ -1338,7 +1370,7 @@ package
                     actBar.setChildIndex(cdt, actBar.numChildren - 1);
                 }
                 slot.buttonMode = true;
-                skillSlots.push({sp: slot, cd: cd, txt: cdt, icon: icon, key: key, r: b.width / 2});
+                skillSlots.push({sp: slot, cd: cd, mp: mpo, low: false, txt: cdt, icon: icon, key: key, r: b.width / 2});
             }
         }
 
@@ -1852,7 +1884,7 @@ package
                     }
                     break;
                 case "drain":
-                    setBanner("GRACE DRAIN - click Gramiel and attack him until his shield breaks", 0xFF5B5B, 4800);
+                    setBanner("GRACE DRAIN - click Gramiel and attack him until his shield breaks", 0xFF5B5B, 6800);
                     if (botOn)
                     {
                         botQueue.push({at: t + 450, target: "boss"});
@@ -2014,10 +2046,20 @@ package
         }
 
         private var keyLog:Object = {};
+        private var fwdLog:Object = {};
+        private var nativeKeys:int = 0;
+        private var pageKeys:int = 0;
 
         private function onKeyDown(e:KeyboardEvent):void
         {
-            keyLog[e.keyCode] = getTimer();
+            var now:int = getTimer();
+            nativeKeys++;
+            var fwd:* = fwdLog["k" + e.keyCode];
+            keyLog["k" + e.keyCode] = now;
+            if (fwd !== undefined && now - fwd < 1500)
+            {
+                return; // the page already forwarded this very key press (the player was slow to deliver it)
+            }
             handleKey(e.keyCode, "");
         }
 
@@ -2035,10 +2077,12 @@ package
                 }
                 return;
             }
-            if (getTimer() - (keyLog[code] === undefined ? -9999 : keyLog[code]) < 200)
+            if (keyLog["k" + code] !== undefined && getTimer() - keyLog["k" + code] < 800)
             {
                 return; // the player got this key itself
             }
+            fwdLog["k" + code] = getTimer();
+            pageKeys++;
             handleKey(code, ch == "" ? " " : ch);
         }
 
@@ -2107,6 +2151,10 @@ package
             {
                 toggleHints();
             }
+            else if (e.keyCode == 71)
+            {
+                toggleParty();
+            }
             else if (e.keyCode == 67 && bossId == "speaker")
             {
                 chartBig = !chartBig; // C: the role's chart, small / large
@@ -2142,20 +2190,38 @@ package
             }
         }
 
+        private function forceSprint(ok:Boolean):void
+        {
+            var a:Object = actors[role];
+            if (ok && !a.sprint)
+            {
+                stamina -= SPRINT_COST;
+                a.sprint = true;
+            }
+        }
+
         private function moveToBoss():void
         {
             targeted = true;
+            var sprintable:Boolean = stamina >= SPRINT_COST; // key 1 moves at the speed of Space + click
             if (bossId == "gramiel")
             {
                 actors[role].follow = true; // walk next to the current target (crystal or Gramiel)
+                if (sprintable && !actors[role].sprint)
+                {
+                    stamina -= SPRINT_COST;
+                    actors[role].sprint = true;
+                }
                 return;
             }
             if (targetBlade && bladeMC)
             {
                 beginWalk(actors[role], new Point(clamp(bossDef.bladePad.x + 90, WALK.x0, WALK.x1), clamp(bossDef.bladePad.y + 10, WALK.y0, WALK.y1)));
+                forceSprint(sprintable);
                 return;
             }
             beginWalk(actors[role], new Point(clamp(bossPad.x - 90, WALK.x0, WALK.x1), clamp(bossPad.y + 70, WALK.y0, WALK.y1)));
+            forceSprint(sprintable);
         }
 
         private function castKey(k:int):Boolean
@@ -2558,7 +2624,7 @@ package
             {
                 bannerText.text = f.startHint();
             }
-            bannerText.textColor = bannerColor;
+            bannerText.textColor = TIP_COLOR; // what to do: purple, to tell it from the yellow announcements
             shoutText.text = (shout != "" && f.t < shoutUntil) ? shout : "";
             // skill cooldowns on the action bar
             for (var s:int = 0; s < skillSlots.length; s++)
@@ -2575,6 +2641,18 @@ package
                     slot.txt.text = left > 50 ? (left / 1000).toFixed(left > 9950 ? 0 : 1) : "";
                 }
                 slot.icon.alpha = f.stunned() && k >= 2 ? 0.5 : 1;
+                var low:Boolean = name != null && f.mana < f.skillCost(name);
+                if (low != slot.low)
+                {
+                    slot.low = low;
+                    slot.mp.graphics.clear();
+                    if (low)
+                    {
+                        slot.mp.graphics.beginFill(0xE6E9EF, 0.62);
+                        slot.mp.graphics.drawCircle(0, 0, slot.r * 0.92);
+                        slot.mp.graphics.endFill();
+                    }
+                }
             }
             if (bossId == "gramiel")
             {
@@ -2624,6 +2702,20 @@ package
             return x >= actors[r].mc.x ? 1 : -1;
         }
 
+        /** within casting range (skills have a long range, so they work while the character walks) */
+        public function inRange(r:String):Boolean
+        {
+            var a:Object = actors[r];
+            if (!a || !(fight is GramielFight))
+            {
+                return false;
+            }
+            var sel:String = (fight as GramielFight).targetOf(r);
+            var tx:Number = sel == "boss" ? bossPad.x : crystalMCs[sel == "cl" ? 0 : 1].x;
+            var ty:Number = sel == "boss" ? bossPad.y : crystalMCs[sel == "cl" ? 0 : 1].y;
+            return Point.distance(new Point(a.mc.x, a.mc.y), new Point(tx, ty)) <= 430;
+        }
+
         public function inPlace(r:String):Boolean
         {
             var a:Object = actors[r];
@@ -2656,11 +2748,11 @@ package
             }
             if (chartMC)
             {
-                var h:Number = chartBig ? 470 : 252;
+                var h:Number = chartBig ? 470 : (partyShown ? 250 : 360);
                 chartMC.height = h;
                 chartMC.scaleX = chartMC.scaleY;
-                chartMC.x = chartBig ? (STAGE_W - chartMC.width) / 2 : 4; // left, under the party frames (the right side is for clicking)
-                chartMC.y = chartBig ? 14 : 238;
+                chartMC.x = chartBig ? (STAGE_W - chartMC.width) / 2 : 14; // left, under the party frames (the right side is for clicking)
+                chartMC.y = chartBig ? 14 : (partyShown ? 238 : 114);
                 chartMC.alpha = chartBig ? 0.97 : 0.88;
             }
         }
@@ -3090,7 +3182,7 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"pose\":\"" + actors[role].pose + "\",\"moving\":" + actors[role].moving + ",\"own\":" + Math.round(ownDamage) + ",\"raid\":" + Math.round(raidDamage) + ",\"gram\":" + (bossId == "gramiel" ? (f as GramielFight).debug() : "null") + ",\"started\":" + f.started + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"pose\":\"" + actors[role].pose + "\",\"moving\":" + actors[role].moving + ",\"keys\":[" + nativeKeys + "," + pageKeys + "],\"own\":" + Math.round(ownDamage) + ",\"raid\":" + Math.round(raidDamage) + ",\"gram\":" + (bossId == "gramiel" ? (f as GramielFight).debug() : "null") + ",\"started\":" + f.started + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
         }
 
         private function box(d:DisplayObject):String

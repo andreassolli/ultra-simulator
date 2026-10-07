@@ -48,6 +48,9 @@ package sim
         /** Ultra Gramiel: is `role`'s character standing still next to what it is attacking? */
         function inPlace(role:String):Boolean;
 
+        /** Ultra Gramiel: is `role`'s character within casting range of what it is attacking (skills work while walking)? */
+        function inRange(role:String):Boolean;
+
         /** A banner line over the boss, `alert` = red (do something now) instead of yellow. */
         function showBanner(text:String, alert:Boolean, ms:Number):void;
 

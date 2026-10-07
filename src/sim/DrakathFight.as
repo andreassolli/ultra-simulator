@@ -202,6 +202,11 @@ package sim
             return c && c[n] ? c[n] : null;
         }
 
+        override public function skillCost(name:String):Number
+        {
+            return SKILL[name] ? (SKILL[name].mp) : 0;
+        }
+
         override public function skillCdMs(name:String):Number
         {
             return name == "taunt" ? LISTED_CD[name] : Dmg.cooldown(LISTED_CD[name], me.haste + (t < depravedUntil && playerClass == "lr" ? 20 : 0));

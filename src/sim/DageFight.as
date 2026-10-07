@@ -196,6 +196,11 @@ package sim
             return c && c[n] ? c[n] : null;
         }
 
+        override public function skillCost(name:String):Number
+        {
+            return SKILL[name] ? (SKILL[name].mp) : 0;
+        }
+
         override public function skillCdMs(name:String):Number
         {
             // Flux: the guide has a taunt for every Decaying Strike (9 s apart), which the listed 15 s and the class' cooldown reduction cannot do

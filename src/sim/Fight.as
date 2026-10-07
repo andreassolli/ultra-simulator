@@ -250,6 +250,12 @@ package sim
         }
 
         /** Cooldown length of a skill by name, for the action bar overlay. */
+        /** mana a skill costs (the action bar greys the slot out when there is not enough) */
+        public function skillCost(name:String):Number
+        {
+            return MP[name] ? MP[name] : 0;
+        }
+
         public function skillCdMs(name:String):Number
         {
             // SKILL_CD is the listed cooldown halved: in a perfect run (Lord of Order never failing) everybody has a permanent 50 % cooldown reduction
