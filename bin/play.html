@@ -26,6 +26,8 @@
   // rq = Ruffle's quality (low | medium | high | best), res = render resolution factor (see below)
   const urlOpts = new URLSearchParams(location.search);
   if (urlOpts.get("rq")) { window.RufflePlayer.config.quality = urlOpts.get("rq"); }
+  // renderer = wgpu-webgl | webgl | canvas (default: Ruffle picks; see README, "Performance")
+  if (urlOpts.get("renderer")) { window.RufflePlayer.config.preferredRenderer = urlOpts.get("renderer"); }
   if (location.protocol === "file:") { document.getElementById("warn").style.display = "block"; }
 </script>
 <script src="ruffle/ruffle.js"></script>

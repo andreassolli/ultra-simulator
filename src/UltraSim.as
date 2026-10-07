@@ -211,6 +211,7 @@ package
         private var role:String = "loo";
         private var actors:Object = {};
         private var floaters:Array = [];
+        private var floatPool:Object = {};
         private var fxClips:Array = [];
         private var zoneRole:String = "";
         private var banner:String = "";
@@ -237,6 +238,9 @@ package
         private var cards:Object = {};
         private var simSpeed:Number = 1;
         private var cacheMap:Boolean = false;
+        private var hudCache:Boolean = true;
+        private var idleRate:Boolean = false;
+        private static const IDLE_FPS:int = 12;
         private var glowText:Boolean = true; // FlashVars fx=0: plain combat text (cheaper to draw)
         private var stamina:Number = 100;      // the green bar: a sprint (Space + click) costs SPRINT_COST, standing still refills it
         private var spaceHeld:Boolean = false;
@@ -327,6 +331,7 @@ package
             initialBoss = ["dage", "drakath", "nulgath", "gramiel", "drago"].indexOf(p["boss"]) >= 0 ? p["boss"] : "speaker";
             glowText = p["fx"] != "0";
             cacheMap = p["cache"] == "1";
+            hudCache = p["hudcache"] != "0";
             botOn = p["bot"] == "1";
             gramielP2 = p["p2"] == "1";
             hintsOn = p["hints"] != "0";
@@ -416,6 +421,18 @@ package
                 buildBoss(bossScenes[bd.id]);
             }
             buildHud();
+            if (hudCache)
+            {
+                // Ruffle draws a cached clip once and then only blits it: the frames, skill slots and portraits are redrawn when they change,
+                // not 24 times a second (the texts stay live: caching them is no gain)
+                for (var ck:int = 0; ck < hudLayer.numChildren; ck++)
+                {
+                    if (!(hudLayer.getChildAt(ck) is TextField))
+                    {
+                        hudLayer.getChildAt(ck).cacheAsBitmap = true;
+                    }
+                }
+            }
             selectBoss(initialBoss);
             stage.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
             stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
@@ -2064,32 +2081,43 @@ package
             var label:String = text.replace(/[-+,]/g, "");
             var color:uint = 0xFFFFFF;
             var glow:uint = 0x000000;
+            var spare:Array = floatPool[kind] as Array;
+            var reused:Boolean = spare != null && spare.length > 0;
+            if (reused)
+            {
+                clip = spare.pop() as MovieClip; // Ruffle keeps what a clip used for good: the finished ones are played again
+            }
             switch (kind)
             {
                 case "crit":
-                    clip = new UICritDisplay();
+                    clip = reused ? clip : new UICritDisplay();
                     color = 0xFF9944;
                     glow = 0x330000;
                     break;
                 case "heal":
-                    clip = new UIHitDisplay();
+                    clip = reused ? clip : new UIHitDisplay();
                     label = "+" + label + "+";
                     color = 0x00FFAA;
                     break;
                 case "bad":
-                    clip = new UIAvoidDisplay();
+                    clip = reused ? clip : new UIAvoidDisplay();
                     label = text;
                     break;
                 default:
-                    clip = new UIHitDisplay();
+                    clip = reused ? clip : new UIHitDisplay();
             }
+            clip["kind"] = kind;
             var ti:TextField = clip["t"]["ti"] as TextField;
             ti.autoSize = "center";
             ti.text = label;
             ti.textColor = color;
-            if (glowText)
+            if (glowText && !reused)
             {
                 ti.filters = [new GlowFilter(glow, 1, 5, 5, 5, 1, false, false)];
+            }
+            if (reused)
+            {
+                clip.gotoAndPlay(1);
             }
             clip.mouseEnabled = false;
             clip.mouseChildren = false;
@@ -2690,6 +2718,13 @@ package
         private function onFrame(e:Event):void
         {
             frameCount++;
+            // the start screen, the menus, a paused game and the result screen change little: half the frames, half the GPU work
+            var idle:Boolean = paused || fight.over != null;
+            if (idle != idleRate)
+            {
+                idleRate = idle;
+                stage.frameRate = idle ? IDLE_FPS : 24;
+            }
             if (targetBlade && fight.started)
             {
                 showTarget(false); // after the opening Quix the target is Nulgath again
@@ -2924,6 +2959,16 @@ package
                 {
                     c.parent.removeChild(c);
                     floaters.splice(i, 1);
+                    var pool:Array = floatPool[c["kind"]] as Array;
+                    if (pool == null)
+                    {
+                        pool = floatPool[c["kind"]] = [];
+                    }
+                    if (pool.length < 24)
+                    {
+                        c.stop();
+                        pool.push(c);
+                    }
                 }
             }
         }

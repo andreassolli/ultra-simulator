@@ -298,3 +298,16 @@ One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between,
 - The **Change boss** screen shows a picture of each boss (drawn from the boss clips themselves) with the available classes on a dark, see-through panel.
 
 **Ultra Drago additions:** the Legion Revenant has to keep Bowmaster Algie taunted: when Algie dies the fight is lost if the player taunted him fewer than 1 / 2 / 3 times (by 0 / 10 / 20 s into the fight). The Arch Paladin and Lord of Order only add a share of their auto-attack damage (they heal, Seal and taunt). Ultra Dage: the Chaos Avenger's taunt (Flux, skill 3) shows Flux's icon on the boss instead of the taunt skull. Skills that cost more mana than you have are dimmed like a disabled button.
+
+
+## Performance (GPU load and memory)
+
+Ruffle draws the whole 960x500 scene with its own renderer, so the load is mostly fill rate and the number of things drawn. What the project does about it:
+
+- **Render resolution:** the page lays Ruffle out at no more than about 1280 px wide and scales it up (`?res=0.5` ... `?res=1`, see `play.html`), so a 4K / hi-dpi screen is not millions of pixels.
+- **Options in the address:** `?rq=low` (Ruffle quality: no anti-aliasing, the biggest single saving on a weak GPU), `?renderer=canvas` (Ruffle's 2D-canvas renderer: almost no GPU process, more CPU; `webgl` / `wgpu-webgl` pick the others), `?hudcache=0` turns the HUD caching below off.
+- **HUD caching:** the HUD's frames, skill slots and portraits are `cacheAsBitmap`, which Ruffle draws once and then only blits (measured: about 40 % more frames per second in a software-rendered test, i.e. that much less GPU work). The texts stay live.
+- **Idle frame rate:** the game runs at 24 fps and drops to 12 fps while it is paused (start screen, menus, credits) or the fight is over.
+- **Floating numbers** are reused instead of created for every hit, which removes most of the per-frame allocation that Ruffle never gives back; the page still reloads itself after a number of boss / class switches (`recycleGame`).
+- Measured and found to make **no difference**: hiding or removing the other bosses' maps (hidden clips cost nothing), `cacheAsBitmap` on the map, and turning the number glow off (`?fx=0`).
+- Everything else is Ruffle's: the engine in `bin/ruffle/` is a self-hosted nightly (the `.wasm` files). A newer or patched build only has to replace that folder; the game needs no change.
