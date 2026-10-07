@@ -289,3 +289,10 @@ One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between,
 - **Who attacks what:** Lord of Order and the Arch Paladin stay on Dene (range); the Legion Revenant and Chrono ShadowSlayer kill Algie first, then join on Dene. When one side boss dies the other heals fully and gets Ally Boost (x2 damage, half damage taken), so the Dene damage done before Algie dies is wasted. King Drago (1 000 HP) cannot be hurt and falls when both are dead; after 160 s he starts Judgement Day and everybody dies 20 s later.
 - **Length:** raid damage is tuned so everything is dead in about 45-50 seconds. Damage over 75 000 a hit is cut (excess ^ 0.7).
 - **Music:** `bin/audio/drago.mp3` is the map's own track, extracted from `town-ultradrago.swf` (the `OMGmusic` sound in the SWF).
+
+## Music from the original files, hints before the fight, boss pictures
+
+- `bin/audio/drakath.mp3`, `dage.mp3`, `gramiel.mp3`, `nulgath.mp3` and `drago.mp3` are the tracks inside each map's SWF (the `OMGmusic` sound of `town-*.swf`, extracted with JPEXS FFDec: `ffdec -export sound <dir> town-<boss>.swf`); the Speaker's track (`town-ultraspeaker.swf`) can be extracted the same way into `speaker.mp3`. The menu track is `bin/audio/menu.mp3` (or generated).
+- The menu music is requested as soon as the page loads; browsers only let sound start after the first click or key press, so it begins with that. Starting a fight stops it and starts the boss's track from the beginning.
+- On the start screen **H** (or the Hints button, bottom left) turns hints off or on before the fight starts, **M** the music.
+- The **Change boss** screen shows a picture of each boss (drawn from the boss clips themselves) with the available classes on a dark, see-through panel.

@@ -4,6 +4,7 @@ package
     import AQWorlds.AvatarMC;
 
     import flash.display.Bitmap;
+    import flash.display.BitmapData;
     import flash.display.DisplayObject;
     import flash.display.Loader;
     import flash.display.MovieClip;
@@ -16,6 +17,7 @@ package
     import flash.events.KeyboardEvent;
     import flash.events.MouseEvent;
     import flash.external.ExternalInterface;
+    import flash.geom.Matrix;
     import flash.geom.Point;
     import flash.geom.Rectangle;
     import flash.net.URLRequest;
@@ -225,6 +227,8 @@ package
         private var hintsLabel:TextField;
         private var partyLabel:TextField;
         private var musicLabel:TextField;
+        private var startMusicLabel:TextField;
+        private var startHintsLabel:TextField;
         private var musicOn:Boolean = true;
         private var creditsPanel:Sprite;
         private var churn:Number = 0;           // how much the Flash player has been made to rebuild; see recycle()
@@ -1229,9 +1233,10 @@ package
             });
             startScreen.addChild(play);
             menuButton("Credits", STAGE_W - 124, 462, 110, showCredits);
-            var ml:TextField = menuButton("", STAGE_W - 244, 462, 110, function():void { toggleMusic(); ml.text = "Music: " + (musicOn ? "ON" : "OFF"); });
+            startMusicLabel = menuButton("", STAGE_W - 244, 462, 110, toggleMusic);
             syncMusicLabel();
-            ml.text = "Music: " + (musicOn ? "ON" : "OFF");
+            startHintsLabel = menuButton("", 14, 462, 130, toggleHints);
+            startHintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
             var help:TextField = Hud.label("Left-click: move / target the boss  |  1-6: skills  |  H: hints  |  F: fullscreen", 12, 0x9BA6BD, false, "center", STAGE_W);
             help.y = 424;
             startScreen.addChild(help);
@@ -1266,33 +1271,93 @@ package
                 var card:Sprite = new Sprite();
                 card.graphics.lineStyle(sel ? 3 : 1, sel ? 0xFFD24A : 0x3A4560, 1);
                 card.graphics.beginFill(sel ? 0x1d2433 : 0x10141f, 0.95);
-                card.graphics.drawRoundRect(0, 0, w, 150, 12, 12);
+                card.graphics.drawRoundRect(0, 0, w, 244, 12, 12);
                 card.graphics.endFill();
-                var nm:TextField = Hud.label(bd.name, 17, sel ? 0xFFFFFF : 0xC9D1E3, true, "center", w - 12);
-                nm.x = 6;
-                nm.y = 52;
+                card.graphics.lineStyle(0, 0, 0);
+                card.graphics.beginFill(0x4a5368, 0.55); // a lighter backdrop so the dark bosses show up
+                card.graphics.drawRoundRect(6, 6, w - 12, 134, 8, 8);
+                card.graphics.endFill();
+                var pic:Bitmap = bossPicture(bd.id, w - 10, 128);
+                if (pic)
+                {
+                    pic.x = (w - pic.width) / 2;
+                    pic.y = 8 + (128 - pic.height);
+                    card.addChild(pic);
+                }
+                var nm:TextField = Hud.label(bd.name, 15, sel ? 0xFFFFFF : 0xE6E9EF, true, "center", w - 8);
+                nm.x = 4;
+                nm.y = 142;
                 nm.multiline = true;
                 nm.wordWrap = true;
-                nm.height = 60;
+                nm.height = 40;
                 card.addChild(nm);
-                var cl:TextField = Hud.label(classList(bd), 11, 0x9BA6BD, false, "center", w - 12);
-                cl.x = 6;
-                cl.y = 106;
+                // dark grey, see-through panel behind the classes so they stay readable on top of the picture
+                card.graphics.beginFill(0x1c1e22, 0.82);
+                card.graphics.drawRoundRect(4, 184, w - 8, 52, 8, 8);
+                card.graphics.endFill();
+                var cl:TextField = Hud.label(classList(bd), 11, 0xD2D8E6, false, "center", w - 16);
+                cl.x = 8;
+                cl.y = 189;
                 cl.multiline = true;
                 cl.wordWrap = true;
-                cl.height = 40;
+                cl.height = 44;
                 card.addChild(cl);
                 card.x = x0 + bi * (w + gap);
-                card.y = 170;
+                card.y = 130;
                 card.buttonMode = true;
                 card.addEventListener(MouseEvent.MOUSE_DOWN, makeBossHandler(bd.id));
                 bossPicker.addChild(card);
             }
             var back:TextField = Hud.label("Click a boss  |  Esc: back", 13, 0x9BA6BD, false, "center", STAGE_W);
-            back.y = 380;
+            back.y = 392;
             bossPicker.addChild(back);
             bossPicker.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
             addChild(bossPicker);
+        }
+
+        /**
+         * A picture of the boss for the boss picker: the boss clip itself, drawn once at its Idle frame and scaled to fit
+         * (Ultra Drago: Executioner Dene, King Drago and Bowmaster Algie side by side).
+         */
+        private function bossPicture(id:String, maxW:Number, maxH:Number):Bitmap
+        {
+            var sc:Object = bossScenes[id];
+            if (!sc.picture)
+            {
+                var clips:Array = [sc.boss];
+                if (id == "drago" && sc.crystals)
+                {
+                    clips = [sc.crystals[0], sc.boss, sc.crystals[1]];
+                }
+                var bd:BitmapData = new BitmapData(int(maxW), int(maxH), true, 0x00000000);
+                var slot:Number = maxW / clips.length;
+                for (var i:int = 0; i < clips.length; i++)
+                {
+                    var c:MovieClip = clips[i];
+                    var f0:int = c.currentFrame;
+                    var v0:Boolean = c.visible;
+                    c.visible = true;
+                    try
+                    {
+                        c.gotoAndStop("Idle");
+                        var b:Rectangle = c.getBounds(c);
+                        if (b.width > 1 && b.height > 1)
+                        {
+                            var k:Number = Math.min((slot - 2) / b.width, maxH / b.height);
+                            var m:Matrix = new Matrix(k, 0, 0, k, i * slot + (slot - b.width * k) / 2 - b.x * k, maxH - b.height * k - b.y * k);
+                            bd.draw(c, m, null, null, null, true);
+                        }
+                    }
+                    catch (err:Error)
+                    {
+                    }
+                    c.gotoAndStop(f0);
+                    c.visible = v0;
+                }
+                sc.picture = bd;
+            }
+            var bm:Bitmap = new Bitmap(sc.picture, "auto", true);
+            return bm;
         }
 
         private static function classList(bd:Object):String
@@ -1405,7 +1470,16 @@ package
             {
                 musicOn = !musicOn;
             }
+            setMusicLabels();
+        }
+
+        private function setMusicLabels():void
+        {
             musicLabel.text = "Music: " + (musicOn ? "ON" : "OFF") + " (M)";
+            if (startMusicLabel)
+            {
+                startMusicLabel.text = "Music: " + (musicOn ? "ON" : "OFF") + " (M)";
+            }
         }
 
         private function syncMusicLabel():void
@@ -1421,7 +1495,7 @@ package
             catch (err:Error)
             {
             }
-            musicLabel.text = "Music: " + (musicOn ? "ON" : "OFF") + " (M)";
+            setMusicLabels();
         }
 
         private static const CREDITS:Array = [
@@ -1531,6 +1605,10 @@ package
         {
             hintsOn = !hintsOn;
             hintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
+            if (startHintsLabel)
+            {
+                startHintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
+            }
         }
 
         private function toggleFullscreen():void
@@ -2418,6 +2496,14 @@ package
                 if (e.keyCode == 13) // Enter = Play
                 {
                     playGame();
+                }
+                else if (e.keyCode == 72) // H: hints on / off before the fight starts
+                {
+                    toggleHints();
+                }
+                else if (e.keyCode == 77)
+                {
+                    toggleMusic();
                 }
                 return;
             }

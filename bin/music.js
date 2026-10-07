@@ -83,36 +83,55 @@
     }
   }
 
+  var gen = 0; // changes with every track, so a late answer from an old track (a play() promise, a 404) cannot start it
+
   function stopAll() {
+    gen++;
     if (state.timer) { clearInterval(state.timer); state.timer = null; }
     if (state.file) { try { state.file.pause(); } catch (e) {} state.file = null; }
+    state.pending = null;
   }
 
+  // Starts the track of the current scene (and stops whatever played before). Before the first click / key press the browser
+  // refuses to play sound: a track file then waits (state.pending) and the first gesture starts it; the generated one is
+  // already scheduled and is only resumed.
   function start() {
     stopAll();
-    if (!state.on || !state.unlocked) return;
-    var id = state.boss, tried = [id + ".mp3", id + ".ogg"], i = 0;
+    if (!state.on) return;
+    var my = gen, id = state.boss, tried = [id + ".mp3", id + ".ogg"], i = 0;
+    var generative = function () {
+      if (my !== gen) return;
+      var ctx = ensureContext();
+      if (!ctx || !state.on) return;
+      if (ctx.state === "suspended") { try { ctx.resume(); } catch (e) {} }
+      state.nextBeat = ctx.currentTime + 0.1; state.beat = 0;
+      state.timer = setInterval(schedule, 120);
+    };
     var tryFile = function () {
+      if (my !== gen) return;
       if (i >= tried.length) return generative();
       var a = new Audio("audio/" + tried[i++]);
       a.loop = true; a.volume = VOLUME * 2;
-      a.addEventListener("error", tryFile, { once: true });
-      a.play().then(function () { if (state.boss === id && state.on) state.file = a; else a.pause(); }).catch(function () {});
-    };
-    var generative = function () {
-      var ctx = ensureContext();
-      if (!ctx || !state.on) return;
-      if (ctx.state === "suspended") ctx.resume();
-      state.nextBeat = ctx.currentTime + 0.1; state.beat = 0;
-      state.timer = setInterval(schedule, 120);
+      a.addEventListener("error", function () { if (my === gen) tryFile(); }, { once: true });
+      var pr = a.play();
+      if (pr && pr.then) {
+        pr.then(function () { if (my === gen && state.on) { state.file = a; state.pending = null; } else a.pause(); })
+          .catch(function (err) {
+            // blocked until the first gesture (a missing file is handled by the error event above)
+            if (my === gen && err && err.name === "NotAllowedError") state.pending = a;
+          });
+      }
     };
     if (window.location.protocol === "file:") generative(); else tryFile();
   }
 
   function unlock() {
-    if (state.unlocked) return;
     state.unlocked = true;
-    start();
+    if (state.ctx && state.ctx.state === "suspended") { try { state.ctx.resume(); } catch (e) {} }
+    if (state.pending) {
+      var a = state.pending, my = gen;
+      a.play().then(function () { if (my === gen && state.on) { state.file = a; state.pending = null; } else a.pause(); }).catch(function () {});
+    }
   }
   ["pointerdown", "keydown", "touchstart"].forEach(function (ev) { window.addEventListener(ev, unlock, { capture: true }); });
 
@@ -129,4 +148,5 @@
     return state.on;
   };
   window.gameMusicState = function () { return state.on; };
+  start(); // the main screen's track starts as soon as the page loads (sound itself begins with the first click / key press if the browser requires one)
 })();
