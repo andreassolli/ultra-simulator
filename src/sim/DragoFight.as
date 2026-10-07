@@ -35,12 +35,19 @@ package sim
             lr: {cd: 1500, f: 0.57, src: "AoE1", type: "magic"},
             ap: {cd: 2000, f: 1.1, src: "AP2", type: "phys"}
         };
+        /** the sim's characters' auto attacks (classes.json), and how much of the time they spend attacking */
+        private static const NPC_AA:Object = {
+            lr: {cd: 1500, f: 0.57, src: "AoE1", type: "magic", share: 1},
+            ap: {cd: 2000, f: 1.1, src: "AP2", type: "phys", share: 0.45},
+            loo: {cd: 2000, f: 0.7, src: "APSP1", type: "phys", share: 0.4},
+            cs: {cd: 1500, f: 1.0, src: "AP2", type: "phys", share: 1}
+        };
         private static const START_HP:Object = {lr: 2910, ap: 3670, cs: 2835, loo: 3505};
         private static const DENE_HP:Number = 3500000;
         private static const ALGIE_HP:Number = 2000000;
         private static const CAP:Number = 75000;        // damage over this is reduced: excess ^ 0.7
         private static const CAP_EXP:Number = 0.7;
-        private static const GEAR:Number = 40;          // tuned so the three of them are dead in under a minute
+        private static const GEAR:Number = 85;          // tuned so the three of them are dead in under a minute
         private static const ARMOR:Number = 0.2 / 0.55; // what is left of the listed monster damage (as in the other fights)
         private static const EXEC_K:Number = 20;        // Execution hits like this many autos when it is not Sealed
         private static const SEAL_MS:int = 7000;
@@ -63,6 +70,7 @@ package sim
         public var depravedUntil:Number = 0;
         public var executionAt:Number = -1;             // when the next Execution lands (for the Next: line)
         public var casts:Object = {taunted: 0};
+        public var algieTaunts:int = 0;                 // the player's (Legion Revenant) taunts on Bowmaster Algie
 
         private var host2:IFightHost;
         private var timers2:Array = [];
@@ -492,6 +500,16 @@ package sim
             host2.crystalAnim(sel, "Die", false);
             var name:String = sel == "cl" ? "Executioner Dene" : "Bowmaster Algie";
             host2.log(name + " is dead", "good");
+            if (sel == "cr" && playerClass == "lr")
+            {
+                // the Legion Revenant has to keep Algie taunted: at least one taunt, two after 10 s, three after 20 s
+                var need:int = Math.min(3, 1 + int(t / 10000));
+                if (algieTaunts < need)
+                {
+                    finish("lose", "Legion Revenant only taunted Bowmaster Algie " + algieTaunts + " time(s): taunt him (6) on repeat, at least " + need + " times by now");
+                    return;
+                }
+            }
             var other:String = sel == "cl" ? "cr" : "cl";
             if ((other == "cl" ? deneHp : algieHp) > 0)
             {
@@ -625,6 +643,10 @@ package sim
                     }
                     focusOn[targetSel == "cl" ? "dene" : "algie"] = {role: actor, until: t + TAUNT_MS};
                     casts.taunted++;
+                    if (targetSel == "cr")
+                    {
+                        algieTaunts++;
+                    }
                     break;
                 case "shade":
                 case "wicked":
@@ -777,9 +799,10 @@ package sim
                     continue;
                 }
                 var pw:Object = Dmg.profile(w);
-                var caster:Boolean = pw.sp > pw.ap;
-                var perHit:Number = Dmg.average(pw, 1.0, caster ? "SP2" : "AP2", caster ? "magic" : "phys") * GEAR;
-                var hits:Number = 1000 / Dmg.cooldown(1500, pw.haste) * tick / 1000;
+                var aa:Object = NPC_AA[w];
+                // the Arch Paladin and Lord of Order spend most of their time on heals, Seals and taunts: they only add a share
+                var perHit:Number = Dmg.average(pw, aa.f, aa.src, aa.type) * GEAR * aa.share;
+                var hits:Number = 1000 / Dmg.cooldown(aa.cd, pw.haste) * tick / 1000;
                 var sel:String = targetOf(w);
                 dealt(sel, perHit * drainMul(w), false, "party", hits);
                 if (over)

@@ -296,3 +296,5 @@ One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between,
 - The menu music is requested as soon as the page loads; browsers only let sound start after the first click or key press, so it begins with that. Starting a fight stops it and starts the boss's track from the beginning.
 - On the start screen **H** (or the Hints button, bottom left) turns hints off or on before the fight starts, **M** the music.
 - The **Change boss** screen shows a picture of each boss (drawn from the boss clips themselves) with the available classes on a dark, see-through panel.
+
+**Ultra Drago additions:** the Legion Revenant has to keep Bowmaster Algie taunted: when Algie dies the fight is lost if the player taunted him fewer than 1 / 2 / 3 times (by 0 / 10 / 20 s into the fight). The Arch Paladin and Lord of Order only add a share of their auto-attack damage (they heal, Seal and taunt). Ultra Dage: the Chaos Avenger's taunt (Flux, skill 3) shows Flux's icon on the boss instead of the taunt skull. Skills that cost more mana than you have are dimmed like a disabled button.

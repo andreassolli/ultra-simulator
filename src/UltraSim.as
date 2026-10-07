@@ -119,9 +119,9 @@ package
                 mapSwf: "runtime/town-ultradrago.swf", bossSwf: "runtime/monster-KingDrago.swf", bossClass: "KingDrago", headClass: "mcHeadKingDrago",
                 multi: true,
                 crystalDefs: [
-                    {swf: "runtime/monster-ExecutionerDene.swf", cls: "ExecutionerDene", head: "mcHeadExecutionerDene", name: "Executioner Dene", pad: new Point(250, 330), scale: 0.8, hitDx: 70, hitUp: 170, loops: {}},
-                    {swf: "runtime/monster-BowmasterAlgie.swf", cls: "BowmasterAlgie", head: "mcHeadBowmasterAlgie", name: "Bowmaster Algie", pad: new Point(740, 330), scale: 0.8, hitDx: 70, hitUp: 170, loops: {}}],
-                roles: ["lr", "ap", "cs", "loo"], pad: new Point(495, 270), home: new Point(495, 400), scale: 0.8, charScale: 0.8,
+                    {swf: "runtime/monster-ExecutionerDene.swf", cls: "ExecutionerDene", head: "mcHeadExecutionerDene", name: "Executioner Dene", pad: new Point(269, 358), scale: 1.3, hitDx: 85, hitUp: 190, stationDy: 14, loops: {}},
+                    {swf: "runtime/monster-BowmasterAlgie.swf", cls: "BowmasterAlgie", head: "mcHeadBowmasterAlgie", name: "Bowmaster Algie", pad: new Point(850, 214), scale: 1.3, hitDx: 85, hitUp: 190, stationDy: 150, loops: {}}],
+                roles: ["lr", "ap", "cs", "loo"], pad: new Point(478, 268), home: new Point(495, 400), scale: 1.25, charScale: 0.8,
                 stack: {lr: [150, 4], cs: [78, 6], ap: [-62, 6], loo: [-138, -3]},
                 loops: {}}
         ];
@@ -962,6 +962,7 @@ package
                 {name: "ordinance", icon: "LoO2", boss: false},
                 // Ultra Dage: Aeterna Nox's picture stands for all of his effects except Noxious Decay
                 {name: "focus", icon: BuffTaunt, boss: true},
+                {name: "focusflux", icon: "Chavengea2", boss: true},
                 {name: "cloak", icon: BuffAeternaNox, fill: true, boss: true},
                 {name: "might", icon: BuffAeternaNox, fill: true, boss: true},
                 {name: "legion", icon: BuffAeternaNox, fill: true, boss: true},
@@ -3060,15 +3061,15 @@ package
                 {
                     slot.txt.text = left > 50 ? (left / 1000).toFixed(left > 9950 ? 0 : 1) : "";
                 }
-                slot.icon.alpha = f.stunned() && k >= 2 ? 0.5 : 1;
                 var low:Boolean = name != null && f.mana < f.skillCost(name);
+                slot.icon.alpha = (f.stunned() && k >= 2) || low ? 0.5 : 1; // a disabled button: dimmed picture under a faint grey veil
                 if (low != slot.low)
                 {
                     slot.low = low;
                     slot.mp.graphics.clear();
                     if (low)
                     {
-                        slot.mp.graphics.beginFill(0xE6E9EF, 0.62);
+                        slot.mp.graphics.beginFill(0x9AA0AB, 0.4);
                         slot.mp.graphics.drawCircle(0, 0, slot.r * 0.92);
                         slot.mp.graphics.endFill();
                     }
@@ -3112,7 +3113,8 @@ package
             }
             var i:int = sel == "cl" ? 0 : 1;
             var c:MovieClip = crystalMCs[i];
-            return new Point(c.x + (i == 0 ? 1 : -1) * (62 + 52 * idx), c.y + 14 + (idx % 2) * 9);
+            var cdy:Number = bossDef.crystalDefs[i].stationDy !== undefined ? bossDef.crystalDefs[i].stationDy : 14;
+            return new Point(c.x + (i == 0 ? 1 : -1) * (62 + 52 * idx), c.y + cdy + (idx % 2) * 9);
         }
 
         private function gramielDir(r:String):int

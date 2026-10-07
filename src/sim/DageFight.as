@@ -704,7 +704,7 @@ package sim
             // on Dage
             if (currentTaunt() != null)
             {
-                list.push({name: "focus", count: "", frac: frac(tauntUntil, FOCUS_MS)});
+                list.push({name: "focusflux", count: "", frac: frac(tauntUntil, FOCUS_MS)}); // Chaos Avenger taunts with Flux (3): its icon, not the taunt skull
             }
             var n:int = cloakStacks();
             if (n > 0)
