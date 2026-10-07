@@ -102,7 +102,7 @@ package
                 roles: ["lr", "loo", "ap", "cs"], pad: new Point(150, 350), home: new Point(745, 440), scale: 1.0, charScale: 1.4,
                 bladePad: new Point(367, 477), bladeScale: 1.35,
                 loops: {Chargeloop: [185, 206]}},
-            {id: "gramiel", name: "Ultra Gramiel", classes: ["sh"], mapFrame: "r2", idleStop: true, dieLabel: "Die",
+            {id: "gramiel", name: "Ultra Gramiel", classes: ["sh", "sh2"], mapFrame: "r2", idleStop: true, dieLabel: "Die",
                 mapSwf: "runtime/town-ultragramiel.swf", bossSwf: "runtime/monster-UltraGramiel.swf", bossClass: "UltraGramiel", headClass: "mcHeadUltraGramiel",
                 crystalSwf: "runtime/monster-GraceCrystal.swf", crystalClass: "GraceCrystal", crystalHead: "mcHeadGraceCrystal",
                 roles: ["sh", "lr", "sc", "loo"], pad: new Point(492, 284), home: new Point(492, 385), scale: 0.85, charScale: 0.8,
@@ -1088,7 +1088,7 @@ package
         }
 
         private static const TAB_W:Number = 172;
-        private static const CARD_ICON:Object = {loo: "LoOaa", ap: "apal1", lr: "LRaa", ca: "Chavengeaa", cn: "iwd1", pc: "PallyChAA", sh: "iwd1"};
+        private static const CARD_ICON:Object = {loo: "LoOaa", ap: "apal1", lr: "LRaa", ca: "Chavengeaa", cn: "iwd1", pc: "PallyChAA", sh: "iwd1", sh2: "iwd1"};
 
         /** Boss + class selection and Play; the fight sits paused (and untouched) behind it until Play is pressed. */
         private function showStartScreen():void
@@ -1144,7 +1144,7 @@ package
                 icon.x = 100 - (ib.x + ib.width / 2) * k;
                 icon.y = 58 - (ib.y + ib.height / 2) * k;
                 card.addChild(icon);
-                var nm:TextField = Hud.label(CLASS_NAMES[cr], 16, 0xFFFFFF, true, "center", 200);
+                var nm:TextField = Hud.label(cr == "sh" ? "Shaman, P1" : (cr == "sh2" ? "Shaman, P2" : CLASS_NAMES[cr]), 16, 0xFFFFFF, true, "center", 200);
                 nm.y = 106;
                 card.addChild(nm);
                 card.addEventListener(MouseEvent.MOUSE_DOWN, makeCardHandler(cr));
@@ -1166,28 +1166,6 @@ package
                 playGame();
             });
             startScreen.addChild(play);
-            if (bossId == "gramiel")
-            {
-                var st:Sprite = new Sprite();
-                st.graphics.lineStyle(1, 0x3A4560, 1);
-                st.graphics.beginFill(0x10141f, 0.95);
-                st.graphics.drawRoundRect(0, 0, 190, 36, 8, 8);
-                st.graphics.endFill();
-                var stl:TextField = Hud.label("Start: " + (gramielP2 ? "Phase 2 (crystals dead)" : "Phase 1"), 13, 0xFFFFFF, true, "center", 190);
-                stl.y = 8;
-                st.addChild(stl);
-                st.x = 614;
-                st.y = 358;
-                st.buttonMode = true;
-                st.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
-                    e.stopPropagation();
-                    gramielP2 = !gramielP2;
-                    removeChild(startScreen);
-                    newFight(role);
-                    showStartScreen();
-                });
-                startScreen.addChild(st);
-            }
             var help:TextField = Hud.label("Left-click: move / target the boss  |  1-6: skills  |  H: hints  |  F: fullscreen", 12, 0x9BA6BD, false, "center", STAGE_W);
             help.y = 424;
             startScreen.addChild(help);
@@ -1213,7 +1191,13 @@ package
         {
             return function(e:MouseEvent):void {
                 e.stopPropagation();
-                if (r != role)
+                if (bossId == "gramiel")
+                {
+                    // "Shaman, P1" / "Shaman, P2": the same class, started at Phase 1 or right as the crystals die
+                    gramielP2 = r == "sh2";
+                    newFight("sh");
+                }
+                else if (r != role)
                 {
                     newFight(r); // rebuilds the party with this class and equips the gear while the screen is up
                 }
@@ -1227,8 +1211,9 @@ package
             {
                 var c:Sprite = cards[r];
                 c.graphics.clear();
-                c.graphics.lineStyle(r == role ? 3 : 1, r == role ? 0xFFD24A : 0x3A4560, 1);
-                c.graphics.beginFill(r == role ? 0x1d2433 : 0x10141f, 0.95);
+                var on:Boolean = bossId == "gramiel" ? (r == "sh2") == gramielP2 : r == role;
+                c.graphics.lineStyle(on ? 3 : 1, on ? 0xFFD24A : 0x3A4560, 1);
+                c.graphics.beginFill(on ? 0x1d2433 : 0x10141f, 0.95);
                 c.graphics.drawRoundRect(0, 0, 200, 140, 12, 12);
                 c.graphics.endFill();
             }
