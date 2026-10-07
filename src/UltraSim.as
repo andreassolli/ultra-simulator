@@ -1515,21 +1515,25 @@ package
 
         private static const CREDITS:Array = [
             "Development and design: Proxy.",
+            "youtube.com/AQWProxy  |  twitter.com/ProxyAQW  |  discord.gg/Oath",
             "",
             "Boss mechanics and stats: Stats from the official AQW wiki, as well as contribution from Scratch.",
             "",
             "Damage and healing maths: ArchFishy's damage calculator.",
+            "aqwhub.com/aqwdex",
             "",
-            "Music: Hiro Kazaz.",
-            "Ultra Drago's music is the map's own track from AdventureQuest Worlds (Artix Entertainment).",
+            "Music: Hiro Kazaz for Ultra Speaker, and Artix Entertainment for others.",
+            "twitter.com/OGSanAQW",
+            "",
+            "Support the project at ko-fi.com/proxyaqw",
+            "",
+            "Supporters:",
+            "- UnknownSolitude ($15)",
             "",
             "Game art, animations, characters, bosses and maps: Artix Entertainment, AdventureQuest Worlds.",
             "This is a fan-made practice tool and is not affiliated with or endorsed by Artix Entertainment.",
             "",
-            "Optional donation: ko-fi.com/proxyaqw",
-            "",
-            "Supporters:",
-            "- UnknownSolitude ($15)"
+            "Other useful tools: See aqw.app/tools"
         ];
 
         private function showCredits():void
