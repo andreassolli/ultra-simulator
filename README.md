@@ -261,3 +261,5 @@ Monsters without listed stats use the default secondary stats (hit 90 %, haste 3
 One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between, "All servants of the 'Liberator' must die!" at 28 s (lands at 33 s), one more auto at 35 s, Death's Door at 36 s, and so on. He casts nothing else while he is casting.
 
 **Phase 2 taunts:** a taunt on Gramiel (Focus) lasts 6 s, and only the Celestial Ruin autos taken while it is up add a Vendetta stack (the number on the shield icon). When it has run out an auto hits all four characters and gives nobody a stack, so a character that is not re-taunted does not pile up shields. One or two hits are enough for each character; pass the taunt on after the first or second hit.
+
+**Keys inside a Discord Activity:** the page also listens for key presses itself and forwards them to the game (`jsKey`), because the Activity frame often gives the Flash player no keyboard focus. A key the player already received is not handled twice. This covers 1-6, Space, Tab, Enter / typing in the chat field, H, F, P and C.

@@ -69,7 +69,19 @@
     const focusTimer = setInterval(focusGame, 250);
     setTimeout(() => clearInterval(focusTimer), 30000);
     window.addEventListener("focus", focusGame);
-    window.addEventListener("pointerdown", () => setTimeout(focusGame, 0));
+    window.addEventListener("pointerdown", () => { try { window.focus(); } catch (e) {} setTimeout(focusGame, 0); });
+    // Inside a Discord Activity the frame often gives the Flash player no keyboard focus, so the page forwards the keys itself
+    // (the game ignores a key it already got from the player a moment before)
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (e.keyCode === 9 || e.keyCode === 32) e.preventDefault();
+      const code = e.keyCode, ch = e.key && e.key.length === 1 ? e.key : (code === 8 ? "\b" : "");
+      setTimeout(() => { try { if (player.jsKey) player.jsKey(code, ch, true); } catch (err) {} }, 60);
+    }, true);
+    document.addEventListener("keyup", (e) => {
+      const code = e.keyCode;
+      setTimeout(() => { try { if (player.jsKey) player.jsKey(code, "", false); } catch (err) {} }, 60);
+    }, true);
     player.load({ url: "ultra_sim.swf", parameters: location.search.slice(1) });
     // the game's Fullscreen button / F key call this
     window.toggleGameFullscreen = function () {

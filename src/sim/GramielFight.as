@@ -448,7 +448,10 @@ package sim
                     return;
                 }
                 shattered[who].push(t + 20000);
-                host2.floater(who, "Grace Shattered", "bad");
+                if (who == playerRole)
+                {
+                    host2.floater(null, "Grace Shattered", "bad"); // in the middle of the screen, only for the player it lands on
+                }
                 if (shatteredStacks(who) >= 1 && who == playerRole)
                 {
                     host2.log("Grace Shattered on you (20 s): the next charge is for the other pair", "");

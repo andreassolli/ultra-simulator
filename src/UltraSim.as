@@ -394,6 +394,7 @@ package
                 if (ExternalInterface.available)
                 {
                     ExternalInterface.addCallback("getState", getState);
+                    ExternalInterface.addCallback("jsKey", onPageKey);
                     ExternalInterface.addCallback("setBot", function(on:Boolean):void { botOn = on; });
                     ExternalInterface.addCallback("setSpeed", function(s:Number):void { simSpeed = s; });
                     ExternalInterface.addCallback("setPaused", function(p:Boolean):void { paused = p; });
@@ -2012,8 +2013,38 @@ package
             beginWalk(a, new Point(clamp(stage.mouseX, WALK.x0, WALK.x1), clamp(stage.mouseY, WALK.y0, WALK.y1)));
         }
 
+        private var keyLog:Object = {};
+
         private function onKeyDown(e:KeyboardEvent):void
         {
+            keyLog[e.keyCode] = getTimer();
+            handleKey(e.keyCode, "");
+        }
+
+        /**
+         * Keys the web page forwards when the player does not get them itself (inside a Discord Activity the frame gives the
+         * Flash player no keyboard focus, so only the page's own key events arrive). `ch` is the typed character, for the chat field.
+         */
+        private function onPageKey(code:int, ch:String, down:Boolean):void
+        {
+            if (!down)
+            {
+                if (code == 32)
+                {
+                    spaceHeld = false;
+                }
+                return;
+            }
+            if (getTimer() - (keyLog[code] === undefined ? -9999 : keyLog[code]) < 200)
+            {
+                return; // the player got this key itself
+            }
+            handleKey(code, ch == "" ? " " : ch);
+        }
+
+        private function handleKey(code:int, ch:String):void
+        {
+            var e:Object = {keyCode: code};
             if (startScreen && startScreen.parent)
             {
                 if (e.keyCode == 13) // Enter = Play
@@ -2032,6 +2063,18 @@ package
                 {
                     chatField.text = "";
                     refocus();
+                }
+                else if (ch != "")
+                {
+                    // forwarded by the page: the text field did not get the key itself
+                    if (code == 8)
+                    {
+                        chatField.text = chatField.text.substr(0, chatField.text.length - 1);
+                    }
+                    else if (ch.length == 1 && chatField.text.length < 40)
+                    {
+                        chatField.appendText(ch);
+                    }
                 }
                 return; // typing: no skill / move keys
             }
