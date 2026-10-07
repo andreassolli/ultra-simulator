@@ -59,13 +59,13 @@ package sim
             lr: {2: "shade", 3: "wicked", 4: "empowerment", 5: "anathema", 6: "taunt"}
         };
         public static const SKILL_CD:Object = {
-            harmony: 4000, ordinance: 6000, axiom: 4000, quix: 4000, taunt: 10000,
+            harmony: 4000, ordinance: 8000, axiom: 4000, quix: 4000, taunt: 10000,
             commandment: 2500, heal: 5000, seal: 12500, eden: 12500,
             shade: 3000, wicked: 3000, empowerment: 3000, anathema: 6000
         };
 
         private static const HARMONY_DUR:int = 10000;
-        private static const ORDINANCE_DUR:int = 12000;
+        private static const ORDINANCE_DUR:int = 25000;
         private static const ORDINANCE_HEAL:int = 2700;
         private static const AXIOM_DUR:int = 10000;
         private static const QUIX_DUR:int = 4000;
@@ -316,10 +316,6 @@ package sim
         private function reductionFor(role:String, isTruth:Boolean):Number
         {
             var r:Number = 0;
-            if (t < ordinanceUntil)
-            {
-                r = 1 - (1 - r) * (1 - 0.3);
-            }
             if (role == "lr" && t < lrEmpowerUntil)
             {
                 r = 1 - (1 - r) * (1 - 0.3);

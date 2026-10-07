@@ -1334,6 +1334,8 @@ package
          * The boss's face for the boss picker, the same face clip the target frame shows (mcHead...), drawn once and scaled to fit.
          * Only the boss itself: not Executioner Dene / Bowmaster Algie, the Grace Crystals or the Overfiend Blade.
          */
+        private static const HEADSHOT_ZOOM:Number = 0.6; // < 1: the face clip is shown smaller than in the target frame, so head and shoulders fit
+
         private function bossPicture(id:String, maxW:Number, maxH:Number):Bitmap
         {
             var sc:Object = bossScenes[id];
@@ -1342,25 +1344,28 @@ package
                 var bd:BitmapData = new BitmapData(int(maxW), int(maxH), true, 0x00000000);
                 try
                 {
-                    // the face the way the target frame shows it: its origin is the middle of the ring, which is PORTRAIT_SIZE wide
+                    // the face clip the target frame uses (its origin is the middle of the ring, PORTRAIT_SIZE wide), shown smaller than
+                    // there so the shoulders are in the picture too
                     var Head:Class = sc.domain.getDefinition(sc.def.headClass) as Class;
                     var face:DisplayObject = new Head() as DisplayObject;
                     var d:Number = Math.min(maxW, maxH) - 6;
-                    var k:Number = d / PORTRAIT_SIZE;
+                    var k:Number = d / PORTRAIT_SIZE * HEADSHOT_ZOOM;
                     face.scaleX = face.scaleY = k;
+                    var shot:BitmapData = new BitmapData(int(maxW), int(maxH), true, 0x00000000);
+                    shot.draw(face, new Matrix(k, 0, 0, k, maxW / 2, maxH / 2), null, null, null, true);
                     var ring:Shape = new Shape();
                     ring.graphics.beginFill(0xFFFFFF);
-                    ring.graphics.drawCircle(0, 0, d / 2);
+                    ring.graphics.drawCircle(maxW / 2, maxH / 2, d / 2);
                     ring.graphics.endFill();
-                    var holder:Sprite = new Sprite();
-                    holder.addChild(face);
-                    holder.addChild(ring);
-                    face.mask = ring;
-                    bd.draw(holder, new Matrix(1, 0, 0, 1, maxW / 2, maxH / 2), null, null, null, true);
+                    var cut:BitmapData = new BitmapData(int(maxW), int(maxH), true, 0x00000000);
+                    cut.draw(ring, null, null, null, null, true);
+                    bd.copyPixels(shot, shot.rect, new Point(0, 0), cut, new Point(0, 0), false);
+                    shot.dispose();
+                    cut.dispose();
                     var edge:Shape = new Shape();
                     edge.graphics.lineStyle(3, 0xC9A24A, 1);
-                    edge.graphics.drawCircle(0, 0, d / 2);
-                    bd.draw(edge, new Matrix(1, 0, 0, 1, maxW / 2, maxH / 2), null, null, null, true);
+                    edge.graphics.drawCircle(maxW / 2, maxH / 2, d / 2);
+                    bd.draw(edge, null, null, null, null, true);
                 }
                 catch (err:Error)
                 {
@@ -3036,7 +3041,7 @@ package
             }
             if (dage == null && t < f.ordinanceUntil)
             {
-                active.push({name: "ordinance", count: remain(f.ordinanceUntil), frac: frac(f.ordinanceUntil, 12000)});
+                active.push({name: "ordinance", count: remain(f.ordinanceUntil), frac: frac(f.ordinanceUntil, 25000)});
             }
             showBuffs(active);
             for (var c:int = 0; c < chipTexts.length; c++)

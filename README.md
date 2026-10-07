@@ -91,7 +91,7 @@ Everybody the player can be spends and regenerates mana like the class text says
 
 - **Start:** no fight starts until you use a skill. As Lord of Order that first skill has to be Quix (5), cast with the Overfiend Blade clicked (it becomes your target and shows in the target frame; click Nulgath again afterwards): without it the Blade's Sword Charge kills everybody 5 s in. Nobody attacks the Blade; it keeps hitting the party with its auto attacks.
 - **Taunts:** a Contract of the Abyss (every 7 s: 6, 13, 20, 27, 34 s) must hit somebody who taunted, and not somebody who still has the previous one (Frailty -> Despair -> Stagnation), so Lord of Order and Legion Revenant take turns. Lord of Order taunts 5 s in and each time his Frailty wears off (16 s, 30 s); Legion Revenant at each "Behold the power of the Abyss!" (9, 23, 37 s). The sim's class does its own. Hints on show "TAUNT NOW" for yours.
-- **Healing:** Lord of Order heals with Ordinance (3) when somebody is low (the bot does; the sim's Lord of Order does too).
+- **Healing:** Lord of Order heals with Ordinance (3) when somebody is low (the bot does; the sim's Lord of Order does too). Ordinance has a 16 s cooldown before cooldown reduction (the reduction caps at 50 %, so 8 s at best), lasts 25 s and no longer reduces damage taken. Champion Drakath's raid deals more damage so that 2 000 000 HP drop in under a taunt cooldown, and the Paladin Chronomancer's taunt is not back in time for the Legion Revenant's thresholds.
 - **Length:** raid damage is tuned (`GEAR_LR` / `GEAR_LOO`) so the run takes about 38 seconds. Damage over 100 000 a hit is cut (excess ^ 0.8).
 - **Everywhere:** if any character dies, not just you, the fight is lost.
 

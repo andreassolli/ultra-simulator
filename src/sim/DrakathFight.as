@@ -40,6 +40,9 @@ package sim
         };
         /** every hit and heal is multiplied by this: see GEAR in DageFight (tuned so the fight lasts about as long as before the calculator maths) */
         private static const GEAR:Number = 15;
+        /** the raid's damage: 2 000 000 HP has to go in under a taunt cooldown (10 s), so a class that took the last threshold's taunt cannot take the next one */
+        private static const PARTY_BOOST:Number = 1.8;
+        private static const RAID_BOOST:Number = 1.6; // everybody's damage to the boss
         private static const CAP:Number = 75000; // "damage over 75 000 is reduced": excess ^ 0.8
         private static const HEAL_SCALE:Number = 0.35; // what is left of a heal after the boss' damage was tuned (see README)
 
@@ -306,7 +309,7 @@ package sim
             {
                 return;
             }
-            var m:Number = t < meteorUntil ? METEOR_TAKEN : (phase == 2 ? PHASE2_RESIST : 1);
+            var m:Number = (t < meteorUntil ? METEOR_TAKEN : (phase == 2 ? PHASE2_RESIST * 1.25 : RAID_BOOST));
             if (t < depravedUntil)
             {
                 m *= 1.3; // Depravity: outgoing damage +30 % for the party
@@ -454,11 +457,7 @@ package sim
                     {
                         continue;
                     }
-                    var d:Number = rnd(410, 490) * (1 + 0.5 * power) * (phase == 2 ? 1.4 : 1) * Dmg.takenMul(Dmg.profile(r), false) * (t < chaosUntil ? 2 : 1) * (r == playerRole ? 1 : 0.55); // base auto ~450; the sim's characters heal / avoid part of it
-                    if (t < ordinanceUntil)
-                    {
-                        d *= 0.7; // Ordinance
-                    }
+                    var d:Number = rnd(410, 490) * (1 + 0.5 * power) * (phase == 2 ? 1.2 : 1) * Dmg.takenMul(Dmg.profile(r), false) * (t < chaosUntil ? 2 : 1) * (r == playerRole ? 1 : 0.45); // base auto ~450; the sim's characters heal / avoid part of it
                     d *= 1 - 0.1 * live(reprisal); // Reprisal: Drakath's outgoing damage -10 % per stack
                     if (t < vowUntil)
                     {
@@ -792,8 +791,8 @@ package sim
                 }
                 if (t >= npcOrdAt)
                 {
-                    npcOrdAt = t + 6000;
-                    ordinanceUntil = t + 12000;
+                    npcOrdAt = t + 10000;
+                    ordinanceUntil = t + 25000;
                     healAll(2700 * HEAL_SCALE, false);
                     host2.castFx("ordinance", "loo");
                 }
@@ -931,7 +930,7 @@ package sim
                         var pw:Object = Dmg.profile(w);
                         var caster:Boolean = pw.sp > pw.ap;
                         var perHit:Number = Dmg.average(pw, 1.0, caster ? "SP2" : "AP2", caster ? "magic" : "phys") * GEAR;
-                        d += perHit * 1000 / Dmg.cooldown(1500, pw.haste) * tick / 1000;
+                        d += perHit * PARTY_BOOST * 1000 / Dmg.cooldown(1500, pw.haste) * tick / 1000;
                     }
                 }
                 if (d > 0)

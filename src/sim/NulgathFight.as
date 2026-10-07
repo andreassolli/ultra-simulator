@@ -23,7 +23,7 @@ package sim
         };
         private static const LISTED_CD:Object = {
             shade: 6000, wicked: 6000, depraved: 6000, anathema: 12000, taunt: 10000,
-            harmony: 8000, ordinance: 12000, axiom: 8000, quix: 8000
+            harmony: 8000, ordinance: 16000, axiom: 8000, quix: 8000
         };
         private static const SKILL:Object = {
             shade: {f: 0.85, mp: 10, crit: true}, wicked: {f: 1, mp: 15}, depraved: {f: 0, mp: 15}, anathema: {f: 3, mp: 20},
@@ -369,10 +369,6 @@ package sim
                         continue;
                     }
                     var d:Number = rnd(1750, 2150) * BLADE_ARMOR * (Dmg.takenMul(Dmg.profile(r), false) / 0.55) * (t < frailUntil[r] ? 2 : 1) * (r == playerRole ? 1 : 0.6);
-                    if (t < ordUntil)
-                    {
-                        d *= 0.7; // Ordinance
-                    }
                     hit(r, d, "Overfiend Blade");
                     if (over)
                     {
@@ -480,7 +476,7 @@ package sim
                     buffMax(t + 10000);
                     break;
                 case "ordinance":
-                    ordUntil = t + 12000;
+                    ordUntil = t + 25000;
                     healAll(healingOrdinance(actor), manual);
                     break;
                 case "axiom":
@@ -514,7 +510,7 @@ package sim
             }
             if (t < ordUntil)
             {
-                list.push({name: "ordinance", count: left(ordUntil), frac: frac(ordUntil, 12000)});
+                list.push({name: "ordinance", count: left(ordUntil), frac: frac(ordUntil, 25000)});
             }
             if (t < axiomUntil)
             {
@@ -549,7 +545,7 @@ package sim
                 }
                 if (low && t >= npcOrdAt)
                 {
-                    npcOrdAt = t + 6000;
+                    npcOrdAt = t + 8000;
                     doSkill("ordinance", "loo", false);
                 }
             }

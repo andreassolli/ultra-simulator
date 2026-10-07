@@ -778,7 +778,7 @@ package sim
                 }
                 if (low)
                 {
-                    npcCd.heal = t + 6000;
+                    npcCd.heal = t + 8000;
                     healAll(healPower("loo"), "");
                     host2.castFx("ordinance", "loo");
                 }
