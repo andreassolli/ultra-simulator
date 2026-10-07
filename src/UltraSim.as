@@ -1332,19 +1332,21 @@ package
         }
 
         private static const CREDITS:Array = [
-            "Ultra boss mechanics, stats and attack patterns: the AQW Ultra guides (Ultra Speaker, Ultra Dage, Champion Drakath,",
-            "Ultra Nulgath, Ultra Gramiel). Stats from the official AQW wiki, pattern information by Scratch, the Gramiel guide and video by Proxy,",
-            "the role charts for the Speaker from the community guide.",
+            "Development and design: Proxy.",
             "",
-            "Damage and healing maths: the AQWDex calculator (github.com/Shell1010/aqwdex). Class data: AQW's classes.json.",
+            "Boss mechanics and stats: Stats from the official AQW wiki, as well as contribution from Scratch.",
+            "",
+            "Damage and healing maths: ArchFishy's damage calculator.",
+            "",
+            "Music: Hiro Kazaz.",
             "",
             "Game art, animations, characters, bosses and maps: Artix Entertainment, AdventureQuest Worlds.",
             "This is a fan-made practice tool and is not affiliated with or endorsed by Artix Entertainment.",
             "",
-            "Built with: Ruffle (Flash Player emulator), Apache Flex SDK, JPEXS Free Flash Decompiler, Discord Embedded App SDK.",
-            "Background music: generated live in the browser (Web Audio); put audio/<boss>.mp3 next to the page to use your own.",
+            "Optional donation: ko-fi.com/proxyaqw",
             "",
-            "Project: github.com/andreassolli/ultra-simulator"
+            "Supporters:",
+            "- UnknownSolitude ($15)"
         ];
 
         private function showCredits():void
