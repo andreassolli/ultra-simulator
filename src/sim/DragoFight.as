@@ -70,7 +70,7 @@ package sim
         public var depravedUntil:Number = 0;
         public var executionAt:Number = -1;             // when the next Execution lands (for the Next: line)
         public var casts:Object = {taunted: 0};
-        public var algieTaunts:int = 0;                 // the player's (Legion Revenant) taunts on Bowmaster Algie
+        public var algieTaunts:int = 0;                 // the player's taunts on the boss their class holds (Legion Revenant: Algie, Arch Paladin: Dene)
 
         private var host2:IFightHost;
         private var timers2:Array = [];
@@ -500,13 +500,14 @@ package sim
             host2.crystalAnim(sel, "Die", false);
             var name:String = sel == "cl" ? "Executioner Dene" : "Bowmaster Algie";
             host2.log(name + " is dead", "good");
-            if (sel == "cr" && playerClass == "lr")
+            if ((sel == "cr" && playerClass == "lr") || playerClass == "ap")
             {
-                // the Legion Revenant has to keep Algie taunted: at least one taunt, two after 10 s, three after 20 s
+                // the tank has to keep its boss taunted (Legion Revenant: Algie, Arch Paladin: Dene): at least one taunt, two after 10 s, three after 20 s
                 var need:int = Math.min(3, 1 + int(t / 10000));
                 if (algieTaunts < need)
                 {
-                    finish("lose", "Legion Revenant only taunted Bowmaster Algie " + algieTaunts + " time(s): taunt him (6) on repeat, at least " + need + " times by now");
+                    var who:String = playerClass == "lr" ? "Legion Revenant only taunted Bowmaster Algie " : "Arch Paladin only taunted Executioner Dene ";
+                    finish("lose", who + algieTaunts + " time(s): taunt him (6) on repeat, at least " + need + " times by now");
                     return;
                 }
             }
@@ -643,9 +644,9 @@ package sim
                     }
                     focusOn[targetSel == "cl" ? "dene" : "algie"] = {role: actor, until: t + TAUNT_MS};
                     casts.taunted++;
-                    if (targetSel == "cr")
+                    if (targetSel == (playerClass == "lr" ? "cr" : "cl"))
                     {
-                        algieTaunts++;
+                        algieTaunts++; // taunts on the boss this class is meant to hold
                     }
                     break;
                 case "shade":

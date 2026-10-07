@@ -121,7 +121,7 @@ package
                 crystalDefs: [
                     {swf: "runtime/monster-ExecutionerDene.swf", cls: "ExecutionerDene", head: "mcHeadExecutionerDene", name: "Executioner Dene", pad: new Point(269, 358), scale: 1.3, hitDx: 85, hitUp: 190, stationDy: 14, loops: {}},
                     {swf: "runtime/monster-BowmasterAlgie.swf", cls: "BowmasterAlgie", head: "mcHeadBowmasterAlgie", name: "Bowmaster Algie", pad: new Point(850, 214), scale: 1.3, hitDx: 85, hitUp: 190, stationDy: 150, loops: {}}],
-                roles: ["lr", "ap", "cs", "loo"], pad: new Point(478, 268), home: new Point(495, 400), scale: 1.25, charScale: 0.8,
+                roles: ["lr", "ap", "cs", "loo"], pad: new Point(478, 268), home: new Point(495, 400), scale: 1.25, charScale: 1.15, stBase: 84, stStep: 70,
                 stack: {lr: [150, 4], cs: [78, 6], ap: [-62, 6], loo: [-138, -3]},
                 loops: {}}
         ];
@@ -197,7 +197,7 @@ package
         private var gramielP2:Boolean = false;     // start screen option / FlashVar p2=1: Ultra Gramiel starts at Phase 2
         private var chartMC:Bitmap;
         private var chartKey:String = "";
-        private var chartBig:Boolean = false;
+        private var chartHidden:Boolean = false;
         private var chatField:TextField;
         private var chatHint:TextField;
         private var bubbles:Object = {};
@@ -216,7 +216,7 @@ package
         private var banner:String = "";
         private var bannerUntil:Number = 0;
         private var bannerColor:uint = 0xFFD24A;
-        private static const TIP_COLOR:uint = 0xC77DFF;
+        private static const TIP_COLOR:uint = 0x6A1FB8; // dark purple
         private var shout:String = "";
         private var shoutUntil:Number = 0;
         private var bossLabel:String = "Idle";
@@ -272,6 +272,9 @@ package
         private var shoutText:TextField;
         private var overText:TextField;
         private var overSub:TextField;
+        private var overBand:Shape;
+        private var pausedText:TextField;
+        private var pauseLabel:TextField;
         private var skillSlots:Array = [];
         private var logText:TextField;
         private var logPanel:Sprite;
@@ -873,17 +876,28 @@ package
             bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 960);
             bannerText.x = 0;
             bannerText.y = 140; // the tips sit under the announcement
+            bannerText.filters = [new GlowFilter(0xFFFFFF, 0.6, 4, 4, 2, 1)]; // a light edge, the purple is dark
             g.addChild(bannerText);
             shoutText = Hud.label("", 19, 0xFFD24A, true, "center", 960); // boss speech: yellow, larger
             shoutText.x = 0;
             shoutText.y = 114;
             g.addChild(shoutText);
-            overText = Hud.label("", 40, 0xFFFFFF, true, "center", 960);
-            overText.y = 180;
+            overBand = new Shape();
+            g.addChild(overBand);
+            overText = Hud.label("", 46, 0xFFFFFF, true, "center", 960);
+            overText.y = 196;
             g.addChild(overText);
-            overSub = Hud.label("", 15, 0xFFFFFF, false, "center", 960);
-            overSub.y = 232;
+            overSub = Hud.label("", 20, 0xFFFFFF, true, "center", 800);
+            overSub.x = 80;
+            overSub.y = 258;
+            overSub.multiline = true;
+            overSub.wordWrap = true;
+            overSub.height = 70;
             g.addChild(overSub);
+            pausedText = Hud.label("PAUSED  (P)", 44, 0xFFFFFF, true, "center", 960);
+            pausedText.y = 200;
+            pausedText.visible = false;
+            g.addChild(pausedText);
             logPanel = new Sprite();
             Hud.panel(logPanel, 0, 0, 262, 98);
             logPanel.x = 690;
@@ -1160,7 +1174,7 @@ package
         {
             button("Restart", 676, 4, 70, function():void { newFight(role); showStartScreen(); });
             button("Auto-pilot", 750, 4, 90, function():void { botOn = !botOn; });
-            button("Pause", 844, 4, 110, function():void { paused = !paused; });
+            pauseLabel = button("Pause (P)", 844, 4, 110, function():void { paused = !paused; });
             hintsLabel = button("", 676, 28, 150, toggleHints);
             hintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
             button("Fullscreen (F)", 836, 28, 118, toggleFullscreen);
@@ -1317,48 +1331,43 @@ package
         }
 
         /**
-         * A picture of the boss for the boss picker: the boss clip itself, drawn once at its Idle frame and scaled to fit
-         * (Ultra Drago: Executioner Dene, King Drago and Bowmaster Algie side by side).
+         * The boss's face for the boss picker, the same face clip the target frame shows (mcHead...), drawn once and scaled to fit.
+         * Only the boss itself: not Executioner Dene / Bowmaster Algie, the Grace Crystals or the Overfiend Blade.
          */
         private function bossPicture(id:String, maxW:Number, maxH:Number):Bitmap
         {
             var sc:Object = bossScenes[id];
             if (!sc.picture)
             {
-                var clips:Array = [sc.boss];
-                if (id == "drago" && sc.crystals)
-                {
-                    clips = [sc.crystals[0], sc.boss, sc.crystals[1]];
-                }
                 var bd:BitmapData = new BitmapData(int(maxW), int(maxH), true, 0x00000000);
-                var slot:Number = maxW / clips.length;
-                for (var i:int = 0; i < clips.length; i++)
+                try
                 {
-                    var c:MovieClip = clips[i];
-                    var f0:int = c.currentFrame;
-                    var v0:Boolean = c.visible;
-                    c.visible = true;
-                    try
-                    {
-                        c.gotoAndStop("Idle");
-                        var b:Rectangle = c.getBounds(c);
-                        if (b.width > 1 && b.height > 1)
-                        {
-                            var k:Number = Math.min((slot - 2) / b.width, maxH / b.height);
-                            var m:Matrix = new Matrix(k, 0, 0, k, i * slot + (slot - b.width * k) / 2 - b.x * k, maxH - b.height * k - b.y * k);
-                            bd.draw(c, m, null, null, null, true);
-                        }
-                    }
-                    catch (err:Error)
-                    {
-                    }
-                    c.gotoAndStop(f0);
-                    c.visible = v0;
+                    // the face the way the target frame shows it: its origin is the middle of the ring, which is PORTRAIT_SIZE wide
+                    var Head:Class = sc.domain.getDefinition(sc.def.headClass) as Class;
+                    var face:DisplayObject = new Head() as DisplayObject;
+                    var d:Number = Math.min(maxW, maxH) - 6;
+                    var k:Number = d / PORTRAIT_SIZE;
+                    face.scaleX = face.scaleY = k;
+                    var ring:Shape = new Shape();
+                    ring.graphics.beginFill(0xFFFFFF);
+                    ring.graphics.drawCircle(0, 0, d / 2);
+                    ring.graphics.endFill();
+                    var holder:Sprite = new Sprite();
+                    holder.addChild(face);
+                    holder.addChild(ring);
+                    face.mask = ring;
+                    bd.draw(holder, new Matrix(1, 0, 0, 1, maxW / 2, maxH / 2), null, null, null, true);
+                    var edge:Shape = new Shape();
+                    edge.graphics.lineStyle(3, 0xC9A24A, 1);
+                    edge.graphics.drawCircle(0, 0, d / 2);
+                    bd.draw(edge, new Matrix(1, 0, 0, 1, maxW / 2, maxH / 2), null, null, null, true);
+                }
+                catch (err:Error)
+                {
                 }
                 sc.picture = bd;
             }
-            var bm:Bitmap = new Bitmap(sc.picture, "auto", true);
-            return bm;
+            return new Bitmap(sc.picture, "auto", true);
         }
 
         private static function classList(bd:Object):String
@@ -1807,6 +1816,7 @@ package
             shout = "";
             overText.text = "";
             overSub.text = "";
+            overBand.graphics.clear();
             targeted = true;
             raidDamage = 0;
             ownDamage = 0;
@@ -2341,7 +2351,12 @@ package
             }
             overText.text = result == "win" ? "VICTORY" : "DEFEATED";
             overText.textColor = result == "win" ? 0x6FD98A : 0xFF5B5B;
-            overSub.text = reason + " - press Restart";
+            overSub.text = reason;
+            overSub.textColor = result == "win" ? 0xFFFFFF : 0xFF4A4A; // the reason you lost, in red, in the middle of the screen
+            overBand.graphics.clear();
+            overBand.graphics.beginFill(0x000000, 0.62);
+            overBand.graphics.drawRect(0, 184, STAGE_W, 150);
+            overBand.graphics.endFill();
             var f:Fight = fight;
             setTimeout(function():void {
                 if (fight === f) // not already restarted by hand
@@ -2570,9 +2585,9 @@ package
             {
                 toggleMusic();
             }
-            else if (e.keyCode == 67 && bossId == "speaker")
+            else if (e.keyCode == 67)
             {
-                chartBig = !chartBig; // C: the role's chart, small / large
+                chartHidden = !chartHidden; // C: hide / show only the chart (the hints stay)
             }
             else if (e.keyCode == 70)
             {
@@ -3038,14 +3053,16 @@ package
             nextText.text = hintsOn ? "Next: " + f.nextLabel() : "";
             nextText.visible = hintsOn;
             nextPanel.visible = hintsOn;
-            logText.visible = hintsOn;
-            logPanel.visible = hintsOn;
+            logText.visible = true; // the log stays, hints or not
+            logPanel.visible = true;
             bannerText.text = (hintsOn && banner != "" && f.t < bannerUntil) ? banner : "";
             if (!f.started && hintsOn)
             {
                 bannerText.text = f.startHint();
             }
             bannerText.textColor = TIP_COLOR; // what to do: purple, to tell it from the yellow announcements
+            pausedText.visible = paused && !(startScreen && startScreen.parent) && !(creditsPanel && creditsPanel.parent);
+            pauseLabel.text = paused ? "Resume (P)" : "Pause (P)";
             shoutText.text = (shout != "" && f.t < shoutUntil) ? shout : "";
             // skill cooldowns on the action bar
             for (var s:int = 0; s < skillSlots.length; s++)
@@ -3114,7 +3131,9 @@ package
             var i:int = sel == "cl" ? 0 : 1;
             var c:MovieClip = crystalMCs[i];
             var cdy:Number = bossDef.crystalDefs[i].stationDy !== undefined ? bossDef.crystalDefs[i].stationDy : 14;
-            return new Point(c.x + (i == 0 ? 1 : -1) * (62 + 52 * idx), c.y + cdy + (idx % 2) * 9);
+            var sb:Number = bossDef.stBase ? bossDef.stBase : 62;
+            var ss:Number = bossDef.stStep ? bossDef.stStep : 52;
+            return new Point(c.x + (i == 0 ? 1 : -1) * (sb + ss * idx), c.y + cdy + (idx % 2) * 9);
         }
 
         private function gramielDir(r:String):int
@@ -3152,7 +3171,7 @@ package
         /** Ultra Speaker: the role's chart (Arch Paladin / Lord of Order chart, the taunt chart for Legion Revenant), only while tips are on */
         private function updateChart():void
         {
-            var key:String = bossId == "speaker" && hintsOn ? (role == "ap" ? "ap" : (role == "loo" ? "loo" : (role == "lr" ? "taunt" : ""))) : "";
+            var key:String = bossId == "speaker" && hintsOn && !chartHidden ? (role == "ap" ? "ap" : (role == "loo" ? "loo" : (role == "lr" ? "taunt" : ""))) : "";
             if (key != chartKey)
             {
                 chartKey = key;
@@ -3170,12 +3189,11 @@ package
             }
             if (chartMC)
             {
-                var h:Number = chartBig ? 470 : (partyShown ? 250 : 360);
-                chartMC.height = h;
+                chartMC.height = partyShown ? 250 : 360;
                 chartMC.scaleX = chartMC.scaleY;
-                chartMC.x = chartBig ? (STAGE_W - chartMC.width) / 2 : 14; // left, under the party frames (the right side is for clicking)
-                chartMC.y = chartBig ? 14 : (partyShown ? 238 : 114);
-                chartMC.alpha = chartBig ? 0.97 : 0.88;
+                chartMC.x = 14; // left, under the party frames (the right side is for clicking)
+                chartMC.y = partyShown ? 238 : 114;
+                chartMC.alpha = 0.88;
             }
         }
 
