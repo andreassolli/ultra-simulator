@@ -1247,7 +1247,7 @@ package
                 playGame();
             });
             startScreen.addChild(play);
-            menuButton("Credits", STAGE_W - 124, 462, 110, showCredits);
+            menuButton("Credits", (STAGE_W - 110) / 2, 462, 110, showCredits);
             startMusicLabel = menuButton("", STAGE_W - 244, 462, 110, toggleMusic);
             syncMusicLabel();
             startHintsLabel = menuButton("", 14, 462, 130, toggleHints);

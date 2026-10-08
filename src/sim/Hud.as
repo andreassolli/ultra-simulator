@@ -10,9 +10,13 @@ package sim
     /** Text / bar helpers shared by the HUD and the floating combat text. */
     public class Hud
     {
+        /** how far Ruffle's _sans sits lower than Flash's, in em */
+        private static const LIFT:Number = 0.16;
+
         public static function label(text:String, size:int = 12, color:uint = 0xFFFFFF, bold:Boolean = false, align:String = "left", width:Number = 0):TextField
         {
-            var f:TextField = new TextField();
+            var f:LiftedText = new LiftedText();
+            f.setLift(Math.round(size * LIFT));
             var fmt:TextFormat = new TextFormat("_sans", size, color, bold);
             fmt.align = align;
             f.defaultTextFormat = fmt;
@@ -22,7 +26,7 @@ package sim
             if (width > 0)
             {
                 f.width = width;
-                f.height = size + 6;
+                f.height = Math.ceil(size * 1.4) + 4; // room for Ruffle's taller lines (the descenders were cut off)
             }
             f.text = text;
             return f;
