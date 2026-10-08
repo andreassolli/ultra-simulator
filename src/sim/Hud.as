@@ -6,27 +6,26 @@ package sim
     import flash.text.TextField;
     import flash.text.TextFormat;
     import flash.text.TextFormatAlign;
+    import ui.Fonts;
 
     /** Text / bar helpers shared by the HUD and the floating combat text. */
     public class Hud
     {
-        /** how far Ruffle's _sans sits lower than Flash's, in em */
-        private static const LIFT:Number = 0.16;
-
-        public static function label(text:String, size:int = 12, color:uint = 0xFFFFFF, bold:Boolean = false, align:String = "left", width:Number = 0):TextField
+        public static function label(text:String, size:int = 12, color:uint = 0xFFFFFF, bold:Boolean = false, align:String = "left", width:Number = 0, font:String = null):TextField
         {
-            var f:LiftedText = new LiftedText();
-            f.setLift(Math.round(size * LIFT));
-            var fmt:TextFormat = new TextFormat("_sans", size, color, bold);
+            Fonts.register();
+            var f:TextField = new TextField();
+            var fmt:TextFormat = new TextFormat(font != null ? font : (bold ? Fonts.BOLD : Fonts.TEXT), size, color, false);
             fmt.align = align;
             f.defaultTextFormat = fmt;
+            f.embedFonts = true;
             f.selectable = false;
             f.mouseEnabled = false;
             f.autoSize = width > 0 ? "none" : "left";
             if (width > 0)
             {
                 f.width = width;
-                f.height = Math.ceil(size * 1.4) + 4; // room for Ruffle's taller lines (the descenders were cut off)
+                f.height = Math.ceil(size * 1.25) + 4;
             }
             f.text = text;
             return f;

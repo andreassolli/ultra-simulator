@@ -14,12 +14,18 @@ Exports (SymbolClass names, all scripts stripped so they are pure artwork):
   UI_AvoidDisplay avoidDisplay      "Miss!" / "Dodge!" style text      (miss, dodge, parry, block)
   UI_AutoIcon     sprite 2811       default auto-attack icon (crossed swords)
   UI_SlotBg       ib1               the round skill-slot background (also used behind buff icons)
+  UI_OptBg        (Options window) the gold-framed dark window with its close button (350 x 432)
+  UI_RedBtn       (Options window) the red glossy button (109 x 28), without its text
+  UI_OptTab       GeneralTab        an Options tab (2 frames: tab, selected tab), without its text
+  UI_GearBtn      btnOption         the in-game menu bar's gear (Options) button
+  UI_CloseX       RedXCloseButton   the round red close button
 """
 import sys
 import xml.etree.ElementTree as ET
 
 ROOTS = {"UI_PlayerBox": 3861, "UI_TargetBox": 3875, "UI_PartyPanel": 3446, "UI_ActBar": 3978,
-         "UI_HitDisplay": 3449, "UI_CritDisplay": 3419, "UI_AvoidDisplay": 3494, "UI_AutoIcon": 2811, "UI_SlotBg": 2747}
+         "UI_HitDisplay": 3449, "UI_CritDisplay": 3419, "UI_AvoidDisplay": 3494, "UI_AutoIcon": 2811, "UI_SlotBg": 2747,
+         "UI_OptBg": 760, "UI_RedBtn": 764, "UI_OptTab": 808, "UI_GearBtn": 3937, "UI_CloseX": 142}
 ID_KEYS = ("shapeId", "spriteId", "characterID", "characterId", "buttonId", "fontId", "fontID", "bitmapId", "imageId", "soundId", "videoId")
 
 

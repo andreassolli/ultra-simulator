@@ -41,6 +41,13 @@ package
 
     import flash.filters.GlowFilter;
 
+    import ui.Fonts;
+    import ui.Aqw;
+    import ui.ClassView;
+    import ui.HomeView;
+    import ui.Keys;
+    import ui.OptionsView;
+    import ui.UIGearBtn;
     import ui.BuffAeternaNox;
     import ui.BuffCog;
     import ui.ChartAp;
@@ -200,6 +207,11 @@ package
         private var chartHidden:Boolean = false;
         private var chatField:TextField;
         private var chatHint:TextField;
+        private var chatTab:Sprite;
+        private var chatLines:Array = [];
+        private var optionsView:OptionsView;
+        private var classPicker:Sprite;
+        private var optionsWasPaused:Boolean = false;
         private var bubbles:Object = {};
         private var targetRing:Shape = new Shape();
         private var runeMC:MovieClip;
@@ -234,7 +246,6 @@ package
         private var churn:Number = 0;           // how much the Flash player has been made to rebuild; see recycle()
         private var partyShown:Boolean = true; // the other characters' HP frames (G)
         private var startScreen:Sprite;
-        private var cards:Object = {};
         private var simSpeed:Number = 1;
         private var cacheMap:Boolean = false;
         private var glowText:Boolean = true; // FlashVars fx=0: plain combat text (cheaper to draw)
@@ -640,7 +651,7 @@ package
             }
             if (chatField)
             {
-                chatField.visible = chatHint.visible = bossId == "gramiel";
+                chatHint.text = bossId == "gramiel" ? "Enter: chat  (1: you + SC, 2: LR + LoO)" : "Press Enter to chat";
             }
             runeMC = sc.rune;
             safeMC = sc.safe;
@@ -862,16 +873,16 @@ package
             }
             clockText = Hud.label("0:00", 14, 0xFFFFFF, true, "right", 100);
             clockText.x = 854;
-            clockText.y = 106; // under the "Next:" panel
+            clockText.y = 68; // under the "Next:" panel
             g.addChild(clockText);
             nextPanel = new Sprite();
             Hud.panel(nextPanel, 0, 0, 262, 26);
             nextPanel.x = 690;
-            nextPanel.y = 78;
+            nextPanel.y = 40;
             g.addChild(nextPanel);
             nextText = Hud.label("", 14, 0xFFFFFF, true, "left", 252);
             nextText.x = 695;
-            nextText.y = 81;
+            nextText.y = 43;
             g.addChild(nextText);
             bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 960);
             bannerText.x = 0;
@@ -898,17 +909,25 @@ package
             pausedText.y = 200;
             pausedText.visible = false;
             g.addChild(pausedText);
+            // the chat: where the game puts it, a tab on top, the messages (the fight's log lines are chat messages) and the input line
+            chatTab = Aqw.tab("Chat", 72);
+            chatTab.x = 690;
+            chatTab.y = 352;
+            g.addChild(chatTab);
             logPanel = new Sprite();
-            Hud.panel(logPanel, 0, 0, 262, 98);
+            logPanel.graphics.lineStyle(1, 0x6B5A2A, 1);
+            logPanel.graphics.beginFill(0x000000, 0.62);
+            logPanel.graphics.drawRect(0, 0, 262, 124);
+            logPanel.graphics.endFill();
             logPanel.x = 690;
-            logPanel.y = 398;
+            logPanel.y = 372;
             g.addChild(logPanel);
-            logText = Hud.label("", 11, 0xFFFFFF, false, "left", 252);
+            logText = Hud.label("", 11, 0xFFFFFF, false, "left", 254);
             logText.multiline = true;
             logText.wordWrap = true;
             logText.height = 92;
-            logText.x = 695;
-            logText.y = 401;
+            logText.x = 694;
+            logText.y = 375;
             logText.autoSize = "none";
             g.addChild(logText);
             bossBuffX = targetBox.x + targetBox["HP"].x;
@@ -934,24 +953,25 @@ package
                 fxLayer.addChild(ctx);
                 crystalTexts.push(ctx);
             }
-            chatHint = Hud.label("Enter = chat   1: you + SC   2: LR + LoO", 10, 0xD8DEEA, false, "left", 230);
-            chatHint.x = 8;
-            chatHint.y = 452;
             chatField = new TextField();
             chatField.type = TextFieldType.INPUT;
-            chatField.defaultTextFormat = new TextFormat("_sans", 13, 0xFFFFFF);
+            chatField.defaultTextFormat = new TextFormat(Fonts.TEXT, 12, 0xFFFFFF);
+            chatField.embedFonts = true;
             chatField.background = true;
-            chatField.backgroundColor = 0x10141f;
+            chatField.backgroundColor = 0x0A0A0A;
             chatField.border = true;
-            chatField.borderColor = 0x3A4560;
-            chatField.maxChars = 40;
-            chatField.x = 8;
-            chatField.y = 470;
-            chatField.width = 230;
-            chatField.height = 22;
-            chatField.visible = chatHint.visible = false;
-            g.addChild(chatHint);
+            chatField.borderColor = 0x6B5A2A;
+            chatField.maxChars = 60;
+            chatField.x = 694;
+            chatField.y = 474;
+            chatField.width = 254;
+            chatField.height = 18;
             g.addChild(chatField);
+            chatHint = Hud.label("", 11, 0x8E8E8E, false, "left", 250);
+            chatHint.x = 697;
+            chatHint.y = 476;
+            chatHint.mouseEnabled = false;
+            g.addChild(chatHint);
         }
 
         /**
@@ -1172,22 +1192,25 @@ package
 
         private function buildButtons():void
         {
-            button("Restart", 676, 4, 70, function():void { newFight(role); showStartScreen(); });
-            button("Auto-pilot", 750, 4, 90, function():void { botOn = !botOn; });
-            pauseLabel = button("Pause (P)", 844, 4, 110, function():void { paused = !paused; });
-            hintsLabel = button("", 676, 28, 150, toggleHints);
-            hintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
-            button("Fullscreen (F)", 836, 28, 118, toggleFullscreen);
-            partyLabel = button("", 676, 52, 150, toggleParty);
-            partyLabel.text = "Party HP: ON (G)";
-            musicLabel = button("", 836, 52, 118, toggleMusic);
-            musicLabel.text = "Music: ON (M)";
+            // the game's own menu-bar gear opens Options (Restart, Auto-pilot, Pause, Hints, Party HP, Fullscreen and Music are in there)
+            var gear:UIGearBtn = new UIGearBtn();
+            var gb:Sprite = new Sprite();
+            gb.addChild(gear);
+            gb.x = STAGE_W - 48;
+            gb.y = 2;
+            Aqw.onClick(gb, showOptions);
+            hudLayer.addChild(gb);
+            // the labels the hotkeys keep up to date (not shown)
+            pauseLabel = Hud.label("");
+            hintsLabel = Hud.label("");
+            partyLabel = Hud.label("");
+            musicLabel = Hud.label("");
         }
 
         private static const TAB_W:Number = 172;
         private static const CARD_ICON:Object = {loo: "LoOaa", ap: "apal1", lr: "LRaa", ca: "Chavengeaa", cn: "iwd1", pc: "PallyChAA", sh: "iwd1", sh2: "iwd1"};
 
-        /** Boss + class selection and Play; the fight sits paused (and untouched) behind it until Play is pressed. */
+        /** The home screen (boss, class, tutorial, options, credits, Play); the fight sits paused (and untouched) behind it. */
         private function showStartScreen():void
         {
             if (startScreen && startScreen.parent)
@@ -1196,68 +1219,225 @@ package
             }
             paused = true;
             music(false); // the main screen has its own track
-            startScreen = new Sprite();
-            startScreen.graphics.beginFill(0x05070d, 0.84);
-            startScreen.graphics.drawRect(0, 0, STAGE_W, STAGE_H);
-            startScreen.graphics.endFill();
-            var title:TextField = Hud.label(bossDef.name, 44, 0xFFD24A, true, "center", STAGE_W);
-            title.y = 36;
-            startScreen.addChild(title);
-            menuButton("Change boss", (STAGE_W - 180) / 2, 98, 180, showBossPicker);
-            var sub:TextField = Hud.label("Select your class", 18, 0xFFFFFF, false, "center", STAGE_W);
-            sub.y = 134;
-            startScreen.addChild(sub);
-            var classes:Array = bossDef.classes;
-            cards = {};
-            var x0:Number = (STAGE_W - (classes.length * 200 + (classes.length - 1) * 20)) / 2;
-            for (var i:int = 0; i < classes.length; i++)
-            {
-                var card:Sprite = new Sprite();
-                card.x = x0 + i * 220;
-                card.y = 166;
-                card.buttonMode = true;
-                var cr:String = classes[i];
-                var C:Class = assetsDomain.getDefinition(CARD_ICON[cr]) as Class;
-                var icon:DisplayObject = new C() as DisplayObject;
-                var ib:Rectangle = icon.getBounds(icon);
-                var k:Number = 76 / Math.max(ib.width, ib.height);
-                icon.scaleX = icon.scaleY = k;
-                icon.x = 100 - (ib.x + ib.width / 2) * k;
-                icon.y = 58 - (ib.y + ib.height / 2) * k;
-                card.addChild(icon);
-                var nm:TextField = Hud.label(cr == "sh" ? "Shaman, P1" : (cr == "sh2" ? "Shaman, P2" : CLASS_NAMES[cr]), 16, 0xFFFFFF, true, "center", 200);
-                nm.y = 106;
-                card.addChild(nm);
-                card.addEventListener(MouseEvent.MOUSE_DOWN, makeCardHandler(cr));
-                startScreen.addChild(card);
-                cards[cr] = card;
-            }
-            var play:Sprite = new Sprite();
-            play.graphics.beginFill(0xE0B84A, 1);
-            play.graphics.drawRoundRect(0, 0, 220, 52, 12, 12);
-            play.graphics.endFill();
-            var pt:TextField = Hud.label("Play", 26, 0x15110a, true, "center", 220);
-            pt.y = 9;
-            play.addChild(pt);
-            play.x = (STAGE_W - 220) / 2;
-            play.y = 350;
-            play.buttonMode = true;
-            play.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
-                e.stopPropagation();
-                playGame();
-            });
-            startScreen.addChild(play);
-            menuButton("Credits", (STAGE_W - 110) / 2, 462, 110, showCredits);
-            startMusicLabel = menuButton("", STAGE_W - 244, 462, 110, toggleMusic);
+            startScreen = new HomeView(this, STAGE_W, STAGE_H);
+            startMusicLabel = Hud.label("");
+            startHintsLabel = Hud.label("");
             syncMusicLabel();
-            startHintsLabel = menuButton("", 14, 462, 130, toggleHints);
-            startHintsLabel.text = "Hints: " + (hintsOn ? "ON" : "OFF") + " (H)";
-            var help:TextField = Hud.label("Left-click: move / target the boss  |  1-6: skills  |  H: hints  |  F: fullscreen", 12, 0x9BA6BD, false, "center", STAGE_W);
-            help.y = 424;
-            startScreen.addChild(help);
             startScreen.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
             addChild(startScreen);
-            markCard();
+        }
+
+        // ------------------------------------------------------------ what the menu views (ui.*) ask of the game
+        public function menuBossName():String
+        {
+            return bossDef.name;
+        }
+
+        public function menuBossFace(w:Number, hh:Number):DisplayObject
+        {
+            return bossPicture(bossId, w, hh);
+        }
+
+        public function menuClassName(r:String = null):String
+        {
+            var c:String = r == null ? (bossId == "gramiel" && gramielP2 ? "sh2" : role) : r;
+            return c == "sh" ? "Shaman, P1" : (c == "sh2" ? "Shaman, P2" : CLASS_NAMES[c]);
+        }
+
+        /** the class' skill icon, `size` px, centred on its own origin */
+        public function menuClassIcon(size:Number, r:String = null):DisplayObject
+        {
+            var C:Class = assetsDomain.getDefinition(CARD_ICON[r == null ? role : r]) as Class;
+            var icon:DisplayObject = new C() as DisplayObject;
+            var ib:Rectangle = icon.getBounds(icon);
+            var k:Number = size / Math.max(ib.width, ib.height);
+            icon.scaleX = icon.scaleY = k;
+            icon.x = -(ib.x + ib.width / 2) * k;
+            icon.y = -(ib.y + ib.height / 2) * k;
+            var holder:Sprite = new Sprite();
+            holder.addChild(icon);
+            return holder;
+        }
+
+        public function menuClasses():Array
+        {
+            var out:Array = [];
+            for each (var c:String in bossDef.classes)
+            {
+                out.push({id: c, name: menuClassName(c), selected: bossId == "gramiel" ? (c == "sh2") == gramielP2 : c == role});
+            }
+            return out;
+        }
+
+        public function menuPick(r:String):Function
+        {
+            return function():void {
+                if (bossId == "gramiel")
+                {
+                    // "Shaman, P1" / "Shaman, P2": the same class, started at Phase 1 or right as the crystals die
+                    gramielP2 = r == "sh2";
+                    newFight("sh");
+                }
+                else if (r != role)
+                {
+                    newFight(r); // rebuilds the party with this class and equips the gear while the screen is up
+                }
+                menuHome();
+            };
+        }
+
+        public function menuHome():void
+        {
+            if (classPicker && classPicker.parent)
+            {
+                removeChild(classPicker);
+            }
+            if (startScreen && startScreen.parent)
+            {
+                removeChild(startScreen);
+            }
+            showStartScreen();
+        }
+
+        public function menuOpenBosses():void
+        {
+            showBossPicker();
+        }
+
+        public function menuOpenClasses():void
+        {
+            if (classPicker && classPicker.parent)
+            {
+                return;
+            }
+            classPicker = new ClassView(this, STAGE_W, STAGE_H);
+            classPicker.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
+            addChild(classPicker);
+        }
+
+        public function menuPlay():void
+        {
+            playGame();
+        }
+
+        public function menuCredits():void
+        {
+            showCredits();
+        }
+
+        public function menuOptions():void
+        {
+            showOptions();
+        }
+
+        public function menuTutorial():void
+        {
+            var ok:Boolean = false;
+            try
+            {
+                ok = ExternalInterface.call("window.gameTutorial") === true;
+            }
+            catch (err:Error)
+            {
+            }
+            if (!ok)
+            {
+                showCredits("Tutorial", ["No tutorial video has been added yet.", "", "Put the link (or a video file) in bin/tutorial.js; see the README."], 350, 190);
+            }
+        }
+
+        public function menuHelpLine():String
+        {
+            return "Left-click: move / target   |   " + Keys.name(Keys.code("s1")) + "-" + Keys.name(Keys.code("s6")) + ": skills   |   " + Keys.name(Keys.code("hints")) + ": hints   |   " + Keys.name(Keys.code("fullscreen")) + ": fullscreen";
+        }
+
+        public function menuState(name:String):Boolean
+        {
+            switch (name)
+            {
+                case "hints":
+                    return hintsOn;
+                case "party":
+                    return partyShown;
+                case "chart":
+                    return !chartHidden;
+                case "music":
+                    return musicOn;
+                case "bot":
+                    return botOn;
+                case "pause":
+                    return optionsWasPaused;
+            }
+            return false;
+        }
+
+        public function menuToggle(name:String):void
+        {
+            switch (name)
+            {
+                case "hints":
+                    toggleHints();
+                    break;
+                case "party":
+                    toggleParty();
+                    break;
+                case "chart":
+                    chartHidden = !chartHidden;
+                    break;
+                case "music":
+                    toggleMusic();
+                    break;
+                case "bot":
+                    botOn = !botOn;
+                    break;
+                case "pause":
+                    optionsWasPaused = !optionsWasPaused;
+                    break;
+            }
+        }
+
+        public function menuRun(name:String):void
+        {
+            if (name == "fullscreen")
+            {
+                toggleFullscreen();
+                return;
+            }
+            menuCloseOptions();
+            if (name == "restart")
+            {
+                newFight(role);
+                paused = false;
+            }
+            else if (name == "home")
+            {
+                newFight(role);
+                showStartScreen();
+            }
+        }
+
+        private function showOptions():void
+        {
+            if (optionsView && optionsView.parent)
+            {
+                return;
+            }
+            // the fight waits while the window is open
+            optionsWasPaused = paused || (startScreen != null && startScreen.parent != null);
+            paused = true;
+            optionsView = new OptionsView(this, STAGE_W, STAGE_H);
+            addChild(optionsView);
+        }
+
+        public function menuCloseOptions():void
+        {
+            if (optionsView && optionsView.parent)
+            {
+                removeChild(optionsView);
+                paused = optionsWasPaused || (startScreen != null && startScreen.parent != null);
+                lastTime = getTimer();
+                refocus();
+            }
         }
 
         private var bossPicker:Sprite;
@@ -1273,7 +1453,7 @@ package
             bossPicker.graphics.beginFill(0x05070d, 0.97);
             bossPicker.graphics.drawRect(0, 0, STAGE_W, STAGE_H);
             bossPicker.graphics.endFill();
-            var title:TextField = Hud.label("Choose a boss", 40, 0xFFD24A, true, "center", STAGE_W);
+            var title:TextField = Hud.label("Choose a boss", 36, 0xFFC93C, false, "center", STAGE_W, Fonts.TITLE);
             title.y = 40;
             bossPicker.addChild(title);
             var gap:Number = 14;
@@ -1339,7 +1519,12 @@ package
         private function bossPicture(id:String, maxW:Number, maxH:Number):Bitmap
         {
             var sc:Object = bossScenes[id];
-            if (!sc.picture)
+            var pkey:String = int(maxW) + "x" + int(maxH);
+            if (!sc.pictures)
+            {
+                sc.pictures = {};
+            }
+            if (!sc.pictures[pkey])
             {
                 var bd:BitmapData = new BitmapData(int(maxW), int(maxH), true, 0x00000000);
                 try
@@ -1370,9 +1555,9 @@ package
                 catch (err:Error)
                 {
                 }
-                sc.picture = bd;
+                sc.pictures[pkey] = bd;
             }
-            return new Bitmap(sc.picture, "auto", true);
+            return new Bitmap(sc.pictures[pkey], "auto", true);
         }
 
         private static function classList(bd:Object):String
@@ -1405,38 +1590,6 @@ package
             };
         }
 
-        private function makeCardHandler(r:String):Function
-        {
-            return function(e:MouseEvent):void {
-                e.stopPropagation();
-                if (bossId == "gramiel")
-                {
-                    // "Shaman, P1" / "Shaman, P2": the same class, started at Phase 1 or right as the crystals die
-                    gramielP2 = r == "sh2";
-                    newFight("sh");
-                }
-                else if (r != role)
-                {
-                    newFight(r); // rebuilds the party with this class and equips the gear while the screen is up
-                }
-                markCard();
-            };
-        }
-
-        private function markCard():void
-        {
-            for (var r:String in cards)
-            {
-                var c:Sprite = cards[r];
-                c.graphics.clear();
-                var on:Boolean = bossId == "gramiel" ? (r == "sh2") == gramielP2 : r == role;
-                c.graphics.lineStyle(on ? 3 : 1, on ? 0xFFD24A : 0x3A4560, 1);
-                c.graphics.beginFill(on ? 0x1d2433 : 0x10141f, 0.95);
-                c.graphics.drawRoundRect(0, 0, 200, 140, 12, 12);
-                c.graphics.endFill();
-            }
-        }
-
         private function playGame():void
         {
             if (startScreen && startScreen.parent)
@@ -1454,12 +1607,16 @@ package
             var text:String = chatField.text.replace(/^\s+|\s+$/g, "");
             chatField.text = "";
             refocus();
-            if (text == "" || fight.over || !fight.started)
+            if (text == "")
             {
                 return;
             }
-            say(role, text);
-            fight.chat(text);
+            chatLine("<font color=\"#FFFFFF\"><b>Proxy:</b> " + escapeHtml(text) + "</font>");
+            if (bossId == "gramiel" && fight.started && !fight.over)
+            {
+                say(role, text);
+                fight.chat(text);
+            }
         }
 
         /** menu track (boss == false) or the boss's track from the start (boss == true) */
@@ -1536,32 +1693,30 @@ package
             "Other useful tools: See aqw.app/tools"
         ];
 
-        private function showCredits():void
+        /** Credits (or a short notice) in the game's own window frame; closes with its X, a click on the dark or Esc */
+        private function showCredits(title:String = "Credits", lines:Array = null, w:Number = 640, hgt:Number = 432):void
         {
             if (creditsPanel && creditsPanel.parent)
             {
                 return;
             }
             creditsPanel = new Sprite();
-            creditsPanel.graphics.beginFill(0x05070d, 0.985);
+            creditsPanel.graphics.beginFill(0x000000, 0.7);
             creditsPanel.graphics.drawRect(0, 0, STAGE_W, STAGE_H);
             creditsPanel.graphics.endFill();
-            var title:TextField = Hud.label("Credits", 36, 0xFFD24A, true, "center", STAGE_W);
-            title.y = 24;
-            creditsPanel.addChild(title);
-            var body:TextField = Hud.label(CREDITS.join("\n"), 13, 0xE6E9EF, false, "left", STAGE_W - 120);
+            var win:Sprite = Aqw.window(title, w, closeCredits, hgt);
+            win.x = (STAGE_W - w) / 2;
+            win.y = (STAGE_H - hgt) / 2;
+            creditsPanel.addChild(win);
+            var body:TextField = Hud.label((lines == null ? CREDITS : lines).join("\n"), 12, 0xE6E9EF, false, "left", w - 60);
             body.multiline = true;
             body.wordWrap = true;
-            body.autoSize = "left";
-            body.x = 60;
-            body.y = 90;
-            creditsPanel.addChild(body);
-            var close:TextField = Hud.label("Click anywhere or press Esc to close", 12, 0x9BA6BD, false, "center", STAGE_W);
-            close.y = 470;
-            creditsPanel.addChild(close);
+            body.height = hgt - 90;
+            body.x = 30;
+            body.y = 50;
+            win.addChild(body);
             creditsPanel.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
                 e.stopPropagation();
-                closeCredits();
             });
             addChild(creditsPanel);
         }
@@ -1573,28 +1728,6 @@ package
                 removeChild(creditsPanel);
             }
             refocus();
-        }
-
-        /** a rounded menu button for the start screen */
-        private function menuButton(text:String, x:Number, y:Number, w:Number, fn:Function):TextField
-        {
-            var b:Sprite = new Sprite();
-            b.graphics.lineStyle(1, 0x3A4560, 1);
-            b.graphics.beginFill(0x10141f, 0.95);
-            b.graphics.drawRoundRect(0, 0, w, 28, 8, 8);
-            b.graphics.endFill();
-            var t:TextField = Hud.label(text, 12, 0xD8DEEA, true, "center", w);
-            t.y = 6;
-            b.addChild(t);
-            b.x = x;
-            b.y = y;
-            b.buttonMode = true;
-            b.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
-                e.stopPropagation();
-                fn();
-            });
-            startScreen.addChild(b);
-            return t;
         }
 
         /** Ruffle keeps some memory for good every time a party is rebuilt; at a quiet moment the page is reloaded (same boss and class) */
@@ -1831,6 +1964,8 @@ package
             ownDamage = 0;
             botQueue = [];
             logLines = [];
+            chatLines = [];
+            logText.htmlText = "";
             for each (var fc:MovieClip in floaters)
             {
                 if (fc.parent)
@@ -2107,7 +2242,25 @@ package
             {
                 logLines.shift();
             }
-            logText.text = logLines.join("\n");
+            chatLine("<font color=\"#8E8E8E\">[" + t.toFixed(1) + "s]</font> <font color=\"" + (CHAT_COLORS[kind] ? CHAT_COLORS[kind] : "#FFE9A8") + "\">" + escapeHtml(message) + "</font>");
+        }
+
+        private static const CHAT_COLORS:Object = {bad: "#FF7B7B", good: "#7BE08F", right: "#7BD3F0"};
+
+        private static function escapeHtml(t:String):String
+        {
+            return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        /** one line in the chat box (HTML: colours) */
+        private function chatLine(html:String):void
+        {
+            chatLines.push(html);
+            while (chatLines.length > 80)
+            {
+                chatLines.shift();
+            }
+            logText.htmlText = chatLines.join("<br>");
             logText.scrollV = logText.maxScrollV; // keep the newest line in view
         }
 
@@ -2482,7 +2635,7 @@ package
         {
             if (!down)
             {
-                if (code == 32)
+                if (code == Keys.code("sprint"))
                 {
                     spaceHeld = false;
                 }
@@ -2500,6 +2653,22 @@ package
         private function handleKey(code:int, ch:String):void
         {
             var e:Object = {keyCode: code};
+            if (optionsView && optionsView.parent)
+            {
+                if (!optionsView.key(code))
+                {
+                    menuCloseOptions();
+                }
+                return;
+            }
+            if (classPicker && classPicker.parent)
+            {
+                if (code == 27)
+                {
+                    removeChild(classPicker);
+                }
+                return;
+            }
             if (bossPicker && bossPicker.parent)
             {
                 if (code == 27)
@@ -2522,11 +2691,11 @@ package
                 {
                     playGame();
                 }
-                else if (e.keyCode == 72) // H: hints on / off before the fight starts
+                else if (Keys.actionFor(code) == "hints") // hints on / off before the fight starts
                 {
                     toggleHints();
                 }
-                else if (e.keyCode == 77)
+                else if (Keys.actionFor(code) == "music")
                 {
                     toggleMusic();
                 }
@@ -2562,47 +2731,48 @@ package
                 stage.focus = chatField;
                 return;
             }
-            if (e.keyCode == 9 && bossDef.multi)
+            var act:String = Keys.actionFor(code);
+            if (act == "target" && bossDef.multi)
             {
                 var order:Array = ["cl", "cr", "boss"];
                 selectTarget(order[(order.indexOf(targetSel) + 1) % 3]);
                 return;
             }
-            if (e.keyCode == 32)
+            if (act == "sprint")
             {
                 spaceHeld = true;
                 return;
             }
-            var k:int = e.keyCode - 48; // keys 1-6 (the number row)
-            if (e.keyCode >= 97 && e.keyCode <= 102)
+            var k:int = act.length == 2 && act.charAt(0) == "s" ? int(act.charAt(1)) : 0; // the skill keys
+            if (code >= 97 && code <= 102)
             {
-                k = e.keyCode - 96; // ... and the numeric keypad
+                k = code - 96; // ... and the numeric keypad
             }
             if (k >= 1 && k <= 6)
             {
                 castKey(k);
             }
-            else if (e.keyCode == 72)
+            else if (act == "hints")
             {
                 toggleHints();
             }
-            else if (e.keyCode == 71)
+            else if (act == "party")
             {
                 toggleParty();
             }
-            else if (e.keyCode == 77)
+            else if (act == "music")
             {
                 toggleMusic();
             }
-            else if (e.keyCode == 67)
+            else if (act == "chart")
             {
-                chartHidden = !chartHidden; // C: hide / show only the chart (the hints stay)
+                chartHidden = !chartHidden; // hide / show only the chart (the hints stay)
             }
-            else if (e.keyCode == 70)
+            else if (act == "fullscreen")
             {
                 toggleFullscreen();
             }
-            else if (e.keyCode == 80)
+            else if (act == "pause")
             {
                 paused = !paused;
             }
@@ -2623,7 +2793,7 @@ package
 
         private function onKeyUp(e:KeyboardEvent):void
         {
-            if (e.keyCode == 32)
+            if (e.keyCode == Keys.code("sprint"))
             {
                 spaceHeld = false;
             }
@@ -3063,6 +3233,7 @@ package
             nextText.visible = hintsOn;
             nextPanel.visible = hintsOn;
             logText.visible = true; // the log stays, hints or not
+            chatHint.visible = chatField.text == "" && stage.focus != chatField;
             logPanel.visible = true;
             bannerText.text = (hintsOn && banner != "" && f.t < bannerUntil) ? banner : "";
             if (!f.started && hintsOn)
