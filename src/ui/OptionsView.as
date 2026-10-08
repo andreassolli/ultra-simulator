@@ -66,6 +66,10 @@ package ui
             addRow(0, "Hints (" + Keys.name(Keys.code("hints")) + ")", "hints", 44);
             addRow(0, "Party HP frames (" + Keys.name(Keys.code("party")) + ")", "party", 82);
             addRow(0, "Skill chart (" + Keys.name(Keys.code("chart")) + ")", "chart", 120);
+            var vr:Sprite = Aqw.toggleRow("Visuals (GPU use)", 314, function():String { return h.menuVisuals(); }, function():void { h.menuCycleVisuals(); });
+            vr.x = 18;
+            vr.y = 158;
+            pages[0].addChild(vr);
             addRow(1, "Auto-pilot", "bot", 4);
             addRow(1, "Paused (" + Keys.name(Keys.code("pause")) + ")", "pause", 42);
             var rs:Sprite = Aqw.redButton("Restart fight", 150, function():void { h.menuRun("restart"); });

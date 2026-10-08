@@ -165,7 +165,8 @@ package ui
             r.addChild(right);
             r.addChild(v);
             var refresh:Function = function():void {
-                v.text = value() ? "ON" : "OFF";
+                var x:* = value();
+                v.text = x is String ? String(x) : (x ? "ON" : "OFF");
             };
             refresh();
             onClick(r, function():void {

@@ -272,6 +272,9 @@ package
         private var targetBox:MovieClip;
         private var actBar:MovieClip;
         private var iface:MovieClip;
+        private var lastInput:int = 0;
+        private var frozen:Bitmap = null;
+        private static const FREEZE_AFTER_MS:int = 5000;
         private var partyPanels:Object = {};
         private var buffIcons:Object = {};
         private var bossBuffX:Number = 245;
@@ -331,6 +334,10 @@ package
         {
             removeEventListener(Event.ADDED_TO_STAGE, init);
             stage.frameRate = 24;
+            if (loaderInfo.parameters["sq"])
+            {
+                stage.quality = String(loaderInfo.parameters["sq"]);
+            }
             // scale the whole 960x500 game to the window / full screen, keeping the aspect ratio
             stage.scaleMode = StageScaleMode.SHOW_ALL;
             stage.align = "";
@@ -433,6 +440,8 @@ package
             buildHud();
             selectBoss(initialBoss);
             stage.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
+            stage.addEventListener(MouseEvent.MOUSE_MOVE, onActivity);
+            stage.addEventListener(KeyboardEvent.KEY_DOWN, onActivity);
             stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
             stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp);
             stage.focus = stage; // keys work from the first frame
@@ -1280,6 +1289,7 @@ package
             startHintsLabel = Hud.label("");
             syncMusicLabel();
             startScreen.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
+            startScreen.cacheAsBitmap = true; // static: drawn once, not every frame
             addChild(startScreen);
         }
 
@@ -1368,6 +1378,7 @@ package
             }
             classPicker = new ClassView(this, STAGE_W, STAGE_H);
             classPicker.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
+            classPicker.cacheAsBitmap = true; // static: drawn once, not every frame
             addChild(classPicker);
         }
 
@@ -1405,6 +1416,35 @@ package
         public function menuHelpLine():String
         {
             return "Left-click: move / target   |   " + Keys.name(Keys.code("s1")) + "-" + Keys.name(Keys.code("s6")) + ": skills   |   " + Keys.name(Keys.code("hints")) + ": hints   |   " + Keys.name(Keys.code("fullscreen")) + ": fullscreen";
+        }
+
+        /** the Visuals row: how wide the page draws the game (LOW 960, MED 1280, HIGH 1920 px; the GPU's work follows) */
+        public function menuVisuals():String
+        {
+            try
+            {
+                var v:* = ExternalInterface.call("window.gameVisuals");
+                if (v is String)
+                {
+                    return String(v);
+                }
+            }
+            catch (err:Error)
+            {
+            }
+            return "HIGH";
+        }
+
+        public function menuCycleVisuals():void
+        {
+            var order:Array = ["LOW", "MED", "HIGH"];
+            try
+            {
+                ExternalInterface.call("window.gameVisuals", order[(order.indexOf(menuVisuals()) + 1) % 3]);
+            }
+            catch (err:Error)
+            {
+            }
         }
 
         public function menuState(name:String):Boolean
@@ -1482,6 +1522,7 @@ package
             optionsWasPaused = paused || (startScreen != null && startScreen.parent != null);
             paused = true;
             optionsView = new OptionsView(this, STAGE_W, STAGE_H);
+            optionsView.cacheAsBitmap = true; // static: drawn once, not every frame
             addChild(optionsView);
         }
 
@@ -1573,6 +1614,7 @@ package
             back.y = 392;
             bossPicker.addChild(back);
             bossPicker.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
+            bossPicker.cacheAsBitmap = true; // static: drawn once, not every frame
             addChild(bossPicker);
         }
 
@@ -1788,6 +1830,7 @@ package
             creditsPanel.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
                 e.stopPropagation();
             });
+            creditsPanel.cacheAsBitmap = true; // static: drawn once, not every frame
             addChild(creditsPanel);
         }
 
@@ -2627,6 +2670,11 @@ package
             }
         }
 
+        private function onActivity(e:Event):void
+        {
+            lastInput = getTimer();
+        }
+
         private function onMouseDown(e:MouseEvent):void
         {
             if (chatField && e.target == chatField)
@@ -2929,6 +2977,21 @@ package
         private function onFrame(e:Event):void
         {
             frameCount++;
+            // nothing moves on the menus, while paused or when the fight is over: after a few quiet seconds the scene is replaced by one
+            // picture of itself (one textured quad for the GPU instead of ten thousand objects) until the mouse or a key wakes it
+            var idleNow:Boolean = paused || fight.over != null;
+            if (!idleNow)
+            {
+                lastInput = getTimer();
+            }
+            if (idleNow && frozen == null && getTimer() - lastInput > FREEZE_AFTER_MS)
+            {
+                freezeScene(true);
+            }
+            else if (frozen != null && (!idleNow || getTimer() - lastInput < 200))
+            {
+                freezeScene(false);
+            }
             if (targetBlade && fight.started)
             {
                 showTarget(false); // after the opening Quix the target is Nulgath again
@@ -3936,6 +3999,45 @@ package
         }
 
         // ============================================================ state for tests
+        /** how many display objects hang below `d` (the display list should not grow from fight to fight) */
+        private static function countObjs(d:DisplayObject):int
+        {
+            var n:int = 1;
+            var c:flash.display.DisplayObjectContainer = d as flash.display.DisplayObjectContainer;
+            if (c)
+            {
+                for (var i:int = 0; i < c.numChildren; i++)
+                {
+                    n += countObjs(c.getChildAt(i));
+                }
+            }
+            return n;
+        }
+
+        private function freezeScene(on:Boolean):void
+        {
+            if (on)
+            {
+                var bd:BitmapData = new BitmapData(STAGE_W * 2, STAGE_H * 2, false, 0x000000); // twice the size: it is scaled to the window
+                var m:Matrix = new Matrix(2, 0, 0, 2, 0, 0);
+                for each (var layer:Sprite in [mapLayer, actorLayer, fxLayer, hudLayer])
+                {
+                    bd.draw(layer, m, null, null, null, true);
+                }
+                frozen = new Bitmap(bd, "auto", true);
+                frozen.scaleX = frozen.scaleY = 0.5;
+                addChildAt(frozen, 0);
+                mapLayer.visible = actorLayer.visible = fxLayer.visible = hudLayer.visible = false;
+            }
+            else if (frozen != null)
+            {
+                mapLayer.visible = actorLayer.visible = fxLayer.visible = hudLayer.visible = true;
+                removeChild(frozen);
+                frozen.bitmapData.dispose();
+                frozen = null;
+            }
+        }
+
         public function getState():String
         {
             var f:Fight = fight;
@@ -3944,7 +4046,7 @@ package
                 ",\"over\":" + (f.over ? "\"" + f.over.result + ": " + f.over.reason + "\"" : "null") +
                 ",\"boss\":\"" + bossLabel + "\",\"frame\":" + bossMC.currentFrame + ",\"zone\":\"" + zoneRole + "\",\"role\":\"" + role + "\",\"boss_id\":\"" + bossId + "\",\"plate\":\"" + plateId + "\"" +
                 ",\"player\":[" + Math.round(actors[role].mc.x) + "," + Math.round(actors[role].mc.y) + "]" +
-                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"pose\":\"" + actors[role].pose + "\",\"moving\":" + actors[role].moving + ",\"keys\":[" + nativeKeys + "," + pageKeys + "],\"own\":" + Math.round(ownDamage) + ",\"raid\":" + Math.round(raidDamage) + ",\"gram\":" + (bossId == "gramiel" ? (f as GramielFight).debug() : (bossId == "drago" ? (f as DragoFight).debug() : "null")) + ",\"started\":" + f.started + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
+                ",\"gear\":\"" + gearState() + "\",\"bossBox\":" + box(bossMC) + ",\"playerBox\":" + box(actors[role].mc) + ",\"pose\":\"" + actors[role].pose + "\",\"moving\":" + actors[role].moving + ",\"keys\":[" + nativeKeys + "," + pageKeys + "],\"own\":" + Math.round(ownDamage) + ",\"raid\":" + Math.round(raidDamage) + ",\"gram\":" + (bossId == "gramiel" ? (f as GramielFight).debug() : (bossId == "drago" ? (f as DragoFight).debug() : "null")) + ",\"frozen\":" + (frozen != null) + ",\"objs\":" + countObjs(stage) + ",\"started\":" + f.started + ",\"frames\":" + frameCount + ",\"mana\":" + Math.round(f.mana) + ",\"counters\":" + JSON.stringify(f.counters) + ",\"log\":" + JSON.stringify(logLines.slice(-6)) + "}";
         }
 
         private function box(d:DisplayObject):String

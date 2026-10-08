@@ -22,7 +22,7 @@
 <!-- Ruffle itself is in ./ruffle (nothing is downloaded) -->
 <script>
   window.RufflePlayer = { config: { autoplay: "on", splashScreen: false, unmuteOverlay: "hidden",
-    allowScriptAccess: true, warnOnUnsupportedContent: false, letterbox: "on" } };
+    allowScriptAccess: true, warnOnUnsupportedContent: false, letterbox: "on", backgroundExecutionMode: "none" } };
   // rq = Ruffle's quality (low | medium | high | best), res = render resolution factor (see below)
   const urlOpts = new URLSearchParams(location.search);
   if (urlOpts.get("rq")) { window.RufflePlayer.config.quality = urlOpts.get("rq"); }
@@ -44,12 +44,21 @@
     // Render resolution: the player is laid out smaller and scaled up by the browser, so a big window or a hi-dpi screen does
     // not mean millions of pixels for the GPU. Default: at most about 1280 pixels wide; ?res=1 for full resolution, ?res=0.5 for less.
     const box = document.getElementById("c");
+    // Visuals (Options): the widest the game is drawn, in pixels. The browser scales it up to the window, so this is what sets the
+    // GPU's work (fill rate). ?res= still forces a factor.
+    const VISUALS = { LOW: 960, MED: 1280, HIGH: 1920 };
+    let visuals = "HIGH";
+    try { const v = localStorage.getItem("ultraVisuals"); if (VISUALS[v]) visuals = v; } catch (e) {}
     const fitGame = () => {
       let res = parseFloat(urlOpts.get("res"));
-      if (!(res > 0)) res = Math.min(1, 1280 / (window.innerWidth * (window.devicePixelRatio || 1)));
+      if (!(res > 0)) res = Math.min(1, VISUALS[visuals] / (window.innerWidth * (window.devicePixelRatio || 1)));
       box.style.width = Math.round(window.innerWidth * res) + "px";
       box.style.height = Math.round(window.innerHeight * res) + "px";
       box.style.transform = "scale(" + (1 / res) + ")";
+    };
+    window.gameVisuals = (level) => {
+      if (level && VISUALS[level]) { visuals = level; try { localStorage.setItem("ultraVisuals", level); } catch (e) {} fitGame(); }
+      return visuals;
     };
     fitGame();
     window.addEventListener("resize", fitGame);
