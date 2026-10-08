@@ -6,6 +6,7 @@ package
     import flash.display.Bitmap;
     import flash.display.BitmapData;
     import flash.display.DisplayObject;
+    import flash.display.InteractiveObject;
     import flash.display.Loader;
     import flash.display.MovieClip;
     import flash.display.Shape;
@@ -18,6 +19,7 @@ package
     import flash.events.MouseEvent;
     import flash.external.ExternalInterface;
     import flash.display.GradientType;
+    import flash.geom.ColorTransform;
     import flash.geom.Matrix;
     import flash.geom.Point;
     import flash.geom.Rectangle;
@@ -48,7 +50,7 @@ package
     import ui.HomeView;
     import ui.Keys;
     import ui.OptionsView;
-    import ui.UIGearBtn;
+    import ui.UIInterface;
     import ui.BuffAeternaNox;
     import ui.BuffCog;
     import ui.ChartAp;
@@ -269,6 +271,7 @@ package
         private var playerBox:MovieClip;
         private var targetBox:MovieClip;
         private var actBar:MovieClip;
+        private var iface:MovieClip;
         private var partyPanels:Object = {};
         private var buffIcons:Object = {};
         private var bossBuffX:Number = 245;
@@ -917,22 +920,70 @@ package
             logText = Hud.label("", 12, 0xFFFFFF, false, "left", 332);
             logText.multiline = true;
             logText.wordWrap = true;
-            logText.height = 84;
+            logText.height = 86;
             logText.x = 10;
-            logText.y = STAGE_H - 30 - 88;
+            logText.y = 0; // set under the interface
             logText.autoSize = "none";
             logText.filters = [new GlowFilter(0x000000, 1, 3, 3, 6, 1)];
             g.addChild(logText);
             bossBuffX = targetBox.x + targetBox["HP"].x;
             playerBuffX = playerBox.x + playerBox["HP"].x;
             buildBuffIcons();
-            actBar = ui("UI_ActBar");
-            // centre the six round slots on the stage
-            actBar.x = 0;
-            actBar.x = STAGE_W / 2 - (actBar["blank0"].getBounds(actBar).left + actBar["blank5"].getBounds(actBar).right) / 2;
-            actBar.y = STAGE_H - actBar["blank0"].getBounds(actBar).bottom - 6; // on the map, no black strip below
+            // the game's own bottom overlay (Spider.swf's mcInterface): chat bar, skill bar, menu icons, XP bars
+            iface = new UIInterface();
+            iface.y = 0;
+            iface.y = STAGE_H - iface.getChildAt(0).getBounds(iface).bottom;
+            for each (var unused:String in ["areaList", "t1", "bMinMax", "bShortTall", "tl", "textLine", "te", "tt", "mcGold", "bCannedChat", "ncHistory"])
+            {
+                if (iface[unused])
+                {
+                    iface[unused].visible = false;
+                }
+            }
+            for (var xi:int = 0; xi < iface.numChildren; xi++)
+            {
+                if (iface.getChildAt(xi) is TextField && iface.getChildAt(xi).name.indexOf("keyA") != 0 && iface.getChildAt(xi).name != "ncPrefix")
+                {
+                    iface.getChildAt(xi).visible = false;
+                }
+            }
+            // what is not used here looks disabled, as a button does in the game
+            for each (var dn:String in ["ncCannedChat", "ncModeChat"])
+            {
+                var dis:DisplayObject = iface[dn];
+                dis.transform.colorTransform = new ColorTransform(0.4, 0.4, 0.4, 0.75);
+                (dis as InteractiveObject).mouseEnabled = false;
+            }
+            var menu:MovieClip = iface["mcMenu"] as MovieClip;
+            for (var mi:int = 0; mi < menu.numChildren; mi++)
+            {
+                var mb:DisplayObject = menu.getChildAt(mi);
+                if (mb.name != "btnOption")
+                {
+                    mb.transform.colorTransform = new ColorTransform(0.4, 0.4, 0.4, 0.75);
+                    (mb as InteractiveObject).mouseEnabled = false;
+                }
+            }
+            menu.getChildByName("btnOption").addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void {
+                e.stopPropagation();
+                showOptions();
+            });
+            for each (var xpn:String in ["mcXPBar", "mcRepBar"])
+            {
+                var xb:MovieClip = iface[xpn] as MovieClip;
+                for (var xk:int = 0; xk < xb.numChildren; xk++)
+                {
+                    if (xb.getChildAt(xk) is TextField)
+                    {
+                        TextField(xb.getChildAt(xk)).text = "";
+                    }
+                }
+            }
+            logText.y = iface.y - 90;
+            actBar = iface["actBar"] as MovieClip;
             actBar.addEventListener(MouseEvent.MOUSE_DOWN, onBarDown);
-            g.addChild(actBar);
+            iface.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent):void { e.stopPropagation(); });
+            g.addChild(iface);
             buildButtons();
             // Ultra Gramiel: crystal HP bars and the chat field
             for (var cb:int = 0; cb < 2; cb++)
@@ -946,56 +997,28 @@ package
                 fxLayer.addChild(ctx);
                 crystalTexts.push(ctx);
             }
-            // the chat bar along the bottom, like the game's: bubble, "Chat:", the input and SEND (the skills sit on top of it)
-            var cbar:Sprite = new Sprite();
-            var bm:Matrix = new Matrix();
-            bm.createGradientBox(STAGE_W, 30, Math.PI / 2, 0, STAGE_H - 30);
-            cbar.graphics.beginGradientFill(GradientType.LINEAR, [0x2A2A30, 0x08080B], [1, 1], [0, 255], bm);
-            cbar.graphics.drawRect(0, STAGE_H - 30, STAGE_W, 30);
-            cbar.graphics.endFill();
-            cbar.graphics.lineStyle(1, 0x55555E, 1);
-            cbar.graphics.moveTo(0, STAGE_H - 30);
-            cbar.graphics.lineTo(STAGE_W, STAGE_H - 30);
-            cbar.graphics.lineStyle(2, 0x8A8A92, 1);
-            cbar.graphics.beginFill(0x0D0D10, 1);
-            cbar.graphics.drawCircle(22, STAGE_H - 14, 11);
-            cbar.graphics.endFill();
-            cbar.graphics.lineStyle(0, 0, 0);
-            cbar.graphics.beginFill(0xFFFFFF, 1);
-            cbar.graphics.drawRoundRect(16, STAGE_H - 19, 13, 9, 4, 4);
-            cbar.graphics.moveTo(18, STAGE_H - 11);
-            cbar.graphics.lineTo(18, STAGE_H - 7);
-            cbar.graphics.lineTo(23, STAGE_H - 11);
-            cbar.graphics.endFill();
-            cbar.graphics.lineStyle(1, 0x2A2A30, 1);
-            cbar.graphics.beginFill(0x101013, 1);
-            cbar.graphics.drawRoundRect(46, STAGE_H - 26, 318, 22, 12, 12);
-            cbar.graphics.endFill();
-            cbar.graphics.lineStyle(2, 0xCCCCCC, 1);
-            cbar.graphics.moveTo(55, STAGE_H - 12);
-            cbar.graphics.lineTo(60, STAGE_H - 17);
-            cbar.graphics.lineTo(65, STAGE_H - 12);
-            g.addChildAt(cbar, 0);
-            var chatLabel:TextField = Hud.label("Chat:", 13, 0xFFFFFF, false, "left", 50);
-            chatLabel.x = 72;
-            chatLabel.y = STAGE_H - 24;
-            g.addChildAt(chatLabel, 1);
+            // the interface's chat bar: its input area (ncTxtBG) is where the text goes, its SEND button sends
+            var chatBG:DisplayObject = iface["ncTxtBG"];
+            var cx0:Number = iface["ncText"].x;
+            var cy0:Number = iface["ncText"].y;
+            iface["ncText"].visible = false;
             chatField = new TextField();
             chatField.type = TextFieldType.INPUT;
             chatField.defaultTextFormat = new TextFormat(Fonts.TEXT, 12, 0xFFFFFF);
             chatField.embedFonts = true;
             chatField.maxChars = 60;
-            chatField.x = 118;
-            chatField.y = STAGE_H - 23;
-            chatField.width = 170;
+            chatField.x = iface.x + cx0 - 2;
+            chatField.y = iface.y + cy0 - 1;
+            chatField.width = 150;
             chatField.height = 18;
             g.addChild(chatField);
-            chatHint = Hud.label("", 11, 0x8E8E8E, false, "left", 168);
-            chatHint.x = 120;
-            chatHint.y = STAGE_H - 22;
+            chatHint = Hud.label("", 11, 0x8E8E8E, false, "left", 148);
+            chatHint.x = chatField.x;
+            chatHint.y = chatField.y + 1;
             chatHint.mouseEnabled = false;
             g.addChild(chatHint);
-            var send:Sprite = Aqw.redButton("SEND", 60, function():void {
+            var doSend:Function = function(e:MouseEvent):void {
+                e.stopPropagation();
                 if (chatField.text == "")
                 {
                     stage.focus = chatField;
@@ -1004,11 +1027,9 @@ package
                 {
                     sendChat();
                 }
-            });
-            send.scaleY = 0.78;
-            send.x = 298;
-            send.y = STAGE_H - 27;
-            g.addChild(send);
+            };
+            iface["bsend"].addEventListener(MouseEvent.MOUSE_DOWN, doSend);
+            iface["ncSendText"].addEventListener(MouseEvent.MOUSE_DOWN, doSend);
         }
 
         /**
@@ -1229,14 +1250,6 @@ package
 
         private function buildButtons():void
         {
-            // the game's own menu-bar gear opens Options (Restart, Auto-pilot, Pause, Hints, Party HP, Fullscreen and Music are in there)
-            var gear:UIGearBtn = new UIGearBtn();
-            var gb:Sprite = new Sprite();
-            gb.addChild(gear);
-            gb.x = STAGE_W - 50;
-            gb.y = STAGE_H - 44;
-            Aqw.onClick(gb, showOptions);
-            hudLayer.addChild(gb);
             // the red Music On / Music Off button at the top, as in the game
             musicTop = Aqw.redButton("Music On", 110, toggleMusic);
             musicTop.x = 452;
@@ -1471,10 +1484,20 @@ package
             addChild(optionsView);
         }
 
+        /** the numbers under the skills follow the keybinds */
+        private function refreshKeyLabels():void
+        {
+            for (var i:int = 0; i < 6; i++)
+            {
+                (iface["keyA" + i] as TextField).text = Keys.name(Keys.code("s" + (i + 1)));
+            }
+        }
+
         public function menuCloseOptions():void
         {
             if (optionsView && optionsView.parent)
             {
+                refreshKeyLabels();
                 removeChild(optionsView);
                 paused = optionsWasPaused || (startScreen != null && startScreen.parent != null);
                 lastTime = getTimer();
@@ -1848,7 +1871,7 @@ package
         {
             for each (var old:Object in skillSlots)
             {
-                for each (var d:DisplayObject in [old.icon, old.cd, old.mp, old.key])
+                for each (var d:DisplayObject in [old.icon, old.cd, old.mp])
                 {
                     if (d && d.parent)
                     {
@@ -1903,10 +1926,9 @@ package
                 mpo.x = cx;
                 mpo.y = cy;
                 actBar.addChild(mpo);
-                var key:TextField = Hud.label(String(i + 1), 10, 0xFFFFFF, true);
-                key.x = b.x + 1;
-                key.y = b.y - 3;
-                actBar.addChild(key);
+                var key:TextField = iface["keyA" + i] as TextField; // the number under the slot, as in the game
+                key.visible = true;
+                key.text = Keys.name(Keys.code("s" + (i + 1)));
                 var cdt:TextField = actBar["txtCD" + i] as TextField;
                 if (cdt)
                 {

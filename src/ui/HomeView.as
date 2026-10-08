@@ -19,29 +19,29 @@ package ui
      */
     public class HomeView extends Sprite
     {
-        private static const COL_X:Number = 250;
-        private static const COL_W:Number = 460;
+        private static const COL_X:Number = 290;
+        private static const COL_W:Number = 380;
 
         public function HomeView(h:Object, w:Number, hgt:Number)
         {
             graphics.beginFill(0x000000, 0.8);
             graphics.drawRect(0, 0, w, hgt);
             graphics.endFill();
-            var title:TextField = Hud.label(h.menuBossName(), 40, 0xFFC93C, false, "center", w, Fonts.TITLE);
-            title.y = 14;
+            var title:TextField = Hud.label(h.menuBossName(), 34, 0xFFC93C, false, "center", w, Fonts.TITLE);
+            title.y = 12;
             title.filters = [new GlowFilter(0x4A2300, 1, 4, 4, 8, 1), new DropShadowFilter(3, 90, 0, 0.8, 4, 4, 1)];
             addChild(title);
-            var sub:TextField = Hud.label("Ultra boss practice", 16, 0xE8A850, false, "center", w);
-            sub.y = 66;
+            var sub:TextField = Hud.label("Ultra boss practice", 14, 0xE8A850, false, "center", w);
+            sub.y = 58;
             addChild(sub);
-            bigRow(96, h.menuBossFace(40, 40), "BOSS", h.menuBossName().toUpperCase(), h.menuOpenBosses);
-            bigRow(152, h.menuClassIcon(36), "CLASS", h.menuClassName().toUpperCase(), h.menuOpenClasses);
-            menuRow(212, "TUTORIAL", 0, h.menuTutorial);
-            menuRow(258, "OPTIONS", 1, h.menuOptions);
-            menuRow(304, "CREDITS", 2, h.menuCredits);
+            bigRow(88, h.menuBossFace(34, 34), "BOSS", h.menuBossName().toUpperCase(), h.menuOpenBosses);
+            bigRow(134, h.menuClassIcon(30), "CLASS", h.menuClassName().toUpperCase(), h.menuOpenClasses);
+            menuRow(184, "TUTORIAL", 0, h.menuTutorial);
+            menuRow(222, "OPTIONS", 1, h.menuOptions);
+            menuRow(260, "CREDITS", 2, h.menuCredits);
             addChild(playButton(h.menuPlay, w));
             var help:TextField = Hud.label(h.menuHelpLine(), 12, 0x9BA6BD, false, "center", w);
-            help.y = 474;
+            help.y = 410;
             addChild(help);
         }
 
@@ -63,50 +63,51 @@ package ui
         /** a row that shows a pick: its picture, a small grey caption and the name in bold capitals */
         private function bigRow(y:Number, pic:DisplayObject, caption:String, name:String, fn:Function):void
         {
-            var s:Sprite = panel(y, 50);
+            var s:Sprite = panel(y, 42);
             pic.x = 14 + 20 - pic.width / 2 + (pic is Bitmap ? 0 : 0);
             pic.y = 5;
             if (pic is Bitmap)
             {
-                pic.x = 14;
-                pic.y = 5;
+                pic.x = 12;
+                pic.y = 4;
             }
             else
             {
-                pic.x = 34;
-                pic.y = 25;
+                pic.x = 29;
+                pic.y = 21;
             }
             s.addChild(pic);
-            var c:TextField = Hud.label(caption, 11, 0x8E8E8E, true, "left", 200);
-            c.x = 70;
-            c.y = 6;
+            var c:TextField = Hud.label(caption, 10, 0x8E8E8E, true, "left", 200);
+            c.x = 58;
+            c.y = 4;
             s.addChild(c);
-            var n:TextField = Hud.label(name, 18, 0xFFFFFF, true, "left", COL_W - 140);
-            n.x = 70;
-            n.y = 22;
+            var n:TextField = Hud.label(name, 15, 0xFFFFFF, true, "left", COL_W - 140);
+            n.x = 58;
+            n.y = 17;
             s.addChild(n);
-            var ch:Sprite = Aqw.chevron(32);
-            ch.x = COL_W - 30;
-            ch.y = 25;
+            var ch:Sprite = Aqw.chevron(26);
+            ch.x = COL_W - 24;
+            ch.y = 21;
             s.addChild(ch);
             Aqw.onClick(s, fn);
         }
 
         private function menuRow(y:Number, text:String, icon:int, fn:Function):void
         {
-            var s:Sprite = panel(y, 40);
+            var s:Sprite = panel(y, 34);
             var ic:Shape = new Shape();
             drawIcon(ic, icon);
-            ic.x = 38;
-            ic.y = 20;
+            ic.scaleX = ic.scaleY = 0.8;
+            ic.x = 30;
+            ic.y = 17;
             s.addChild(ic);
-            var t:TextField = Hud.label(text, 16, 0xFFFFFF, true, "left", COL_W - 150);
-            t.x = 90;
-            t.y = 9;
+            var t:TextField = Hud.label(text, 14, 0xFFFFFF, true, "left", COL_W - 120);
+            t.x = 66;
+            t.y = 7;
             s.addChild(t);
-            var ch:Sprite = Aqw.chevron(28);
-            ch.x = COL_W - 26;
-            ch.y = 20;
+            var ch:Sprite = Aqw.chevron(22);
+            ch.x = COL_W - 22;
+            ch.y = 17;
             s.addChild(ch);
             Aqw.onClick(s, fn);
         }
@@ -179,19 +180,19 @@ package ui
             var s:Sprite = new Sprite();
             var art:UIPlayBtn = new UIPlayBtn();
             var b:Rectangle = art.getBounds(art);
-            var k:Number = 2.3;
+            var k:Number = 1.7;
             art.scaleX = art.scaleY = k;
             art.x = -b.x * k;
             art.y = -b.y * k;
             s.addChild(art);
             var bw:Number = b.width * k, bh:Number = b.height * k;
-            var t:TextField = Hud.label("Play", 40, 0xFFF3E0, false, "center", bw, Fonts.TITLE);
-            t.y = (bh - 50) / 2 + 1;
+            var t:TextField = Hud.label("Play", 30, 0xFFF3E0, false, "center", bw, Fonts.TITLE);
+            t.y = (bh - 40) / 2;
             t.mouseEnabled = false;
             t.filters = [new DropShadowFilter(2, 90, 0x300000, 0.9, 3, 3, 1)];
             s.addChild(t);
             s.x = (w - bw) / 2;
-            s.y = 346;
+            s.y = 308;
             Aqw.onClick(s, fn);
             return s;
         }

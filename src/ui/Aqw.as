@@ -1,5 +1,7 @@
 package ui
 {
+    import flash.display.Bitmap;
+    import flash.display.BitmapData;
     import flash.display.DisplayObject;
     import flash.display.MovieClip;
     import flash.display.Shape;
@@ -7,6 +9,7 @@ package ui
     import flash.events.MouseEvent;
     import flash.filters.DropShadowFilter;
     import flash.geom.Matrix;
+    import flash.geom.Point;
     import flash.geom.Rectangle;
     import flash.text.TextField;
     import sim.Hud;
@@ -49,6 +52,44 @@ package ui
             return s;
         }
 
+        private static var frameBD:BitmapData = null;
+
+        /**
+         * The Options window's gold frame at any size, cut in nine: the corners (with the close button) as they are, the edges and the
+         * middle stretched. (Ruffle's scale9Grid stretched the close button too.)
+         */
+        public static function frame(w:Number, h:Number):Sprite
+        {
+            if (frameBD == null)
+            {
+                frameBD = new BitmapData(WIN_W * 2, WIN_H * 2, true, 0x00000000);
+                frameBD.draw(new UIOptBg(), new Matrix(2, 0, 0, 2, 0, 0), null, null, null, true);
+            }
+            var s:Sprite = new Sprite();
+            var c:int = 100; // the corner, in source pixels (twice the stage's)
+            var W:int = WIN_W * 2, H:int = WIN_H * 2;
+            var piece:Function = function(sx:int, sy:int, sw:int, sh:int, dx:Number, dy:Number, dw:Number, dh:Number):void {
+                var bd:BitmapData = new BitmapData(sw, sh, true, 0x00000000);
+                bd.copyPixels(frameBD, new Rectangle(sx, sy, sw, sh), new Point(0, 0));
+                var bm:Bitmap = new Bitmap(bd, "auto", true);
+                bm.x = dx;
+                bm.y = dy;
+                bm.width = dw;
+                bm.height = dh;
+                s.addChild(bm);
+            };
+            piece(c, c, W - 2 * c, H - 2 * c, 50, 50, w - 100, h - 100);
+            piece(c, 0, W - 2 * c, c, 50, 0, w - 100, 50);
+            piece(c, H - c, W - 2 * c, c, 50, h - 50, w - 100, 50);
+            piece(0, c, c, H - 2 * c, 0, 50, 50, h - 100);
+            piece(W - c, c, c, H - 2 * c, w - 50, 50, 50, h - 100);
+            piece(0, 0, c, c, 0, 0, 50, 50);
+            piece(W - c, 0, c, c, w - 50, 0, 50, 50);
+            piece(0, H - c, c, c, 0, h - 50, 50, 50);
+            piece(W - c, H - c, c, c, w - 50, h - 50, 50, 50);
+            return s;
+        }
+
         /** the gold-framed dark window with its red close button; the title is in the game's title font */
         public static function window(title:String, w:Number, onClose:Function, hgt:Number = 432):Sprite
         {
@@ -56,14 +97,7 @@ package ui
             s.graphics.beginFill(0x1B1B1B, 1);
             s.graphics.drawRoundRect(5, 5, w - 10, hgt - 10, 18, 18);
             s.graphics.endFill();
-            var bg:MovieClip = new UIOptBg();
-            if (w != WIN_W || hgt != WIN_H)
-            {
-                bg.scale9Grid = new flash.geom.Rectangle(50, 50, WIN_W - 100, WIN_H - 100);
-                bg.width = w;
-                bg.height = hgt;
-            }
-            s.addChild(bg);
+            s.addChild(frame(w, hgt));
             var t:TextField = Hud.label(title, 22, 0xFFFFFF, false, "center", w, Fonts.TITLE);
             t.y = 9;
             s.addChild(t);

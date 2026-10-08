@@ -326,3 +326,9 @@ Ruffle draws the whole 960x500 scene with its own renderer, so the load is mostl
 - **Play:** Spider.swf's ornate login button (red with gold swirls), with its text replaced by "Play".
 - **Tutorial:** put a YouTube link or a video file in `bin/tutorial.js` (`TUTORIAL_URL`); the row plays it in a frame. Until then it says that no video has been added.
 - **Font:** the game's own Arial / Arial Bold and BD Merced (window titles), exported from its SWF into `src/_assets/fonts/` and embedded, so the text looks the same in every browser (the earlier text-too-low problem came from Ruffle's `_sans` metrics).
+
+### The bottom overlay and window frames
+
+- The bottom of the screen is Spider.swf's own `mcInterface` (`UI_Interface` in `src/_assets/ui.swf`): the chat bar (input, SEND), the skill bar with the key under each slot (it follows your keybinds), the menu icons and the XP bars. Only the gear (Options) works; the other menu icons and the chat-mode icons are drawn dimmed, as a disabled button is. The area list, gold counter and other parts that mean nothing here are hidden.
+- Windows (Options, Keybinds, Credits, Tutorial notice) use the Options window's frame cut in nine (`Aqw.frame`): the corners with the close button stay as they are and only the edges stretch, so the close button is no longer stretched on the wide Credits window.
+- The home screen's rows and Play button are smaller.

@@ -19,6 +19,7 @@ Exports (SymbolClass names, all scripts stripped so they are pure artwork):
   UI_OptTab       GeneralTab        an Options tab (2 frames: tab, selected tab), without its text
   UI_GearBtn      btnOption         the in-game menu bar's gear (Options) button
   UI_CloseX       RedXCloseButton   the round red close button
+  UI_Interface    mcInterface       the whole bottom overlay: chat bar, skill bar, menu icons, XP bars (children by instance name)
   UI_TabGameplay  GameTab           the Options tab "Gameplay" (UI_OptTab is "General")
   UI_Arrow        btnLeftQual       the red arrow of the option rows (points up; the game turns it 90 degrees to either side)
   UI_PlayBtn      btnLogin          the ornate red and gold button of the login screen, WITHOUT its "Login" text (STRIP below)
@@ -29,7 +30,7 @@ import xml.etree.ElementTree as ET
 ROOTS = {"UI_PlayerBox": 3861, "UI_TargetBox": 3875, "UI_PartyPanel": 3446, "UI_ActBar": 3978,
          "UI_HitDisplay": 3449, "UI_CritDisplay": 3419, "UI_AvoidDisplay": 3494, "UI_AutoIcon": 2811, "UI_SlotBg": 2747,
          "UI_OptBg": 760, "UI_RedBtn": 764, "UI_OptTab": 808, "UI_GearBtn": 3937,
-         "UI_TabGameplay": 806, "UI_Arrow": 784, "UI_PlayBtn": 3573, "UI_CloseX": 142}
+         "UI_Interface": 4011, "UI_TabGameplay": 806, "UI_Arrow": 784, "UI_PlayBtn": 3573, "UI_CloseX": 142}
 # text / shapes taken out of a sprite: {sprite id: [character ids placed in it]}
 STRIP = {3572: [3566]}
 ID_KEYS = ("shapeId", "spriteId", "characterID", "characterId", "buttonId", "fontId", "fontID", "bitmapId", "imageId", "soundId", "videoId")
