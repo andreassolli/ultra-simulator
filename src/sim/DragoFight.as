@@ -1,31 +1,31 @@
 package sim
 {
     /**
-     * Ultra Drago fight rules (Legion Revenant or Arch Paladin, with the sim's Chrono ShadowSlayer and Lord of Order), from ultradrago.mdx.
+     * Ultra Drago fight rules (Legion Revenant or ArchPaladin, with the sim's Chrono ShadowSlayer and Lord of Order), from ultradrago.mdx.
      *
      * Executioner Dene (left, 3 500 000 HP): auto attacks every 2.25 s (tauntable; each hit stacks Defenses Shattered on the one hit and
      * makes Dene take 1 % less damage per player hit) and, after 8 autos, Execution, the special that nukes and has to be Sealed by the
-     * Arch Paladin. Bowmaster Algie (right, 2 000 000 HP): auto attacks (tauntable; Damage Drained on the one hit, he deals 1 % more per
+     * ArchPaladin. Bowmaster Algie (right, 2 000 000 HP): auto attacks (tauntable; Damage Drained on the one hit, he deals 1 % more per
      * player hit) and, after 5 autos, Triple Shot with Bleeding. Damage over 75 000 a hit is cut (excess ^ 0.7). When one of the two dies the
      * other heals fully and gains Ally Boost (x2 damage, half damage taken). King Drago (1 000 HP) cannot be damaged until both are dead and
      * simply dies with them; if the fight lasts 160 s he starts Judgement Day, which kills everybody 20 s later.
      *
-     * The Legion Revenant taunts Algie and the Arch Paladin taunts Dene on repeat (the one that is not the player's class is played by the
-     * sim). Lord of Order and the Arch Paladin fight Dene from the start (range); the Legion Revenant and the Chrono ShadowSlayer kill
-     * Algie first and then join on Dene. Execution is not listed with a seal window in the guide: it is a nuke that the Arch Paladin's Seal
+     * The Legion Revenant taunts Algie and the ArchPaladin taunts Dene on repeat (the one that is not the player's class is played by the
+     * sim). Lord of Order and the ArchPaladin fight Dene from the start (range); the Legion Revenant and the Chrono ShadowSlayer kill
+     * Algie first and then join on Dene. Execution is not listed with a seal window in the guide: it is a nuke that the ArchPaladin's Seal
      * (skill 4, 7 s) has to be up for, a missed Seal loses. Raid damage is tuned so everything is dead in under a minute.
      */
     public class DragoFight extends Fight
     {
         public static const D_ROLES:Array = ["lr", "ap", "cs", "loo"];
-        public static const D_NAMES:Object = {lr: "Legion Revenant", ap: "Arch Paladin", cs: "Chrono ShadowSlayer", loo: "Lord of Order"};
+        public static const D_NAMES:Object = {lr: "Legion Revenant", ap: "ArchPaladin", cs: "Chrono ShadowSlayer", loo: "Lord of Order"};
         public static const D_SKILLS:Object = {
             lr: {2: "shade", 3: "wicked", 4: "depraved", 5: "anathema", 6: "taunt"},
             ap: {2: "commandment", 3: "heal", 4: "seal", 5: "eden", 6: "taunt"}
         };
         private static const LISTED_CD:Object = {
             shade: 6000, wicked: 6000, depraved: 6000, anathema: 12000, taunt: 10000,
-            commandment: 2500, heal: 5000, seal: 12500, eden: 12500 // the Arch Paladin's are the raid values (50 % cooldown reduction), as in the Speaker fight
+            commandment: 2500, heal: 5000, seal: 12500, eden: 12500 // the ArchPaladin's are the raid values (50 % cooldown reduction), as in the Speaker fight
         };
         private static const SKILL:Object = {
             shade: {f: 0.85, mp: 10, crit: true}, wicked: {f: 1, mp: 15}, depraved: {f: 0, mp: 15}, anathema: {f: 3, mp: 20},
@@ -70,7 +70,7 @@ package sim
         public var depravedUntil:Number = 0;
         public var executionAt:Number = -1;             // when the next Execution lands (for the Next: line)
         public var casts:Object = {taunted: 0};
-        public var algieTaunts:int = 0;                 // the player's taunts on the boss their class holds (Legion Revenant: Algie, Arch Paladin: Dene)
+        public var algieTaunts:int = 0;                 // the player's taunts on the boss their class holds (Legion Revenant: Algie, ArchPaladin: Dene)
 
         private var host2:IFightHost;
         private var timers2:Array = [];
@@ -180,7 +180,7 @@ package sim
             return !over && t >= cd[n];
         }
 
-        /** who each character attacks: Lord of Order and the Arch Paladin stay on Dene; the others kill Algie, then Dene */
+        /** who each character attacks: Lord of Order and the ArchPaladin stay on Dene; the others kill Algie, then Dene */
         override public function targetOf(role:String):String
         {
             if (role == playerRole)
@@ -262,7 +262,7 @@ package sim
         private function begin():void
         {
             started = true;
-            host2.log("Taunt the side bosses on repeat; the Arch Paladin Seals Executioner Dene's Execution", "");
+            host2.log("Taunt the side bosses on repeat; the ArchPaladin Seals Executioner Dene's Execution", "");
             host2.bossAnim("Idle", false);
             deneCycle(2000);
             algieCycle(3000);
@@ -352,7 +352,7 @@ package sim
                 if (t >= sealUntil)
                 {
                     host2.log("Execution was not Sealed", "bad");
-                    finish("lose", "Missed Seal: Executioner Dene's Execution hit everybody (Arch Paladin Seal, skill 4)");
+                    finish("lose", "Missed Seal: Executioner Dene's Execution hit everybody (ArchPaladin Seal, skill 4)");
                     return;
                 }
                 for each (var r:String in D_ROLES)
@@ -502,11 +502,11 @@ package sim
             host2.log(name + " is dead", "good");
             if ((sel == "cr" && playerClass == "lr") || playerClass == "ap")
             {
-                // the tank has to keep its boss taunted (Legion Revenant: Algie, Arch Paladin: Dene): at least one taunt, two after 10 s, three after 20 s
+                // the tank has to keep its boss taunted (Legion Revenant: Algie, ArchPaladin: Dene): at least one taunt, two after 10 s, three after 20 s
                 var need:int = Math.min(3, 1 + int(t / 10000));
                 if (algieTaunts < need)
                 {
-                    var who:String = playerClass == "lr" ? "Legion Revenant only taunted Bowmaster Algie " : "Arch Paladin only taunted Executioner Dene ";
+                    var who:String = playerClass == "lr" ? "Legion Revenant only taunted Bowmaster Algie " : "ArchPaladin only taunted Executioner Dene ";
                     finish("lose", who + algieTaunts + " time(s): taunt him (6) on repeat, at least " + need + " times by now");
                     return;
                 }
@@ -747,7 +747,7 @@ package sim
         // ------------------------------------------------------------ the sim's characters
         private function npcPlay():void
         {
-            // the sim's tank (Arch Paladin on Dene / Legion Revenant on Algie) taunts on repeat
+            // the sim's tank (ArchPaladin on Dene / Legion Revenant on Algie) taunts on repeat
             var nc:String = npcClass();
             if (alive(nc) && t >= npcCd.taunt && t > 1000)
             {
@@ -801,7 +801,7 @@ package sim
                 }
                 var pw:Object = Dmg.profile(w);
                 var aa:Object = NPC_AA[w];
-                // the Arch Paladin and Lord of Order spend most of their time on heals, Seals and taunts: they only add a share
+                // the ArchPaladin and Lord of Order spend most of their time on heals, Seals and taunts: they only add a share
                 var perHit:Number = Dmg.average(pw, aa.f, aa.src, aa.type) * GEAR * aa.share;
                 var hits:Number = 1000 / Dmg.cooldown(aa.cd, pw.haste) * tick / 1000;
                 var sel:String = targetOf(w);

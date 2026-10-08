@@ -141,9 +141,9 @@ package
         private static const PORTRAIT_SIZE:Number = 58;
 
         private static const ROLE_COLOR:Object = {ap: 0xE8D9A0, lr: 0xE0507A, loo: 0xE0B84A, dps: 0x5AA86A};
-        private static const ROLE_FULL:Object = {ap: "Arch Paladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS",
+        private static const ROLE_FULL:Object = {ap: "ArchPaladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS",
             ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer", cs: "Chrono ShadowSlayer", da: "DPS 1", db: "DPS 2", sh: "Shaman", sc: "StoneCrusher"};
-        private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "Arch Paladin", lr: "Legion Revenant", ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer", sh: "Shaman"};
+        private static const CLASS_NAMES:Object = {loo: "Lord of Order", ap: "ArchPaladin", lr: "Legion Revenant", ca: "Chaos Avenger", cn: "Classic Ninja", pc: "Paladin Chronomancer", sh: "Shaman"};
 
         // skill bar: slot -> [label, icon class in Assets.swf]. The SWF ships aa + 4 numbered icons per class.
         private static const SKILLS:Object = {
@@ -836,11 +836,11 @@ package
             // Spider.swf's own HUD pieces (bin/runtime/ui.swf, see tools/extract_ui.py), at their in-game positions
             playerBox = ui("UI_PlayerBox");
             playerBox.x = 1;
-            playerBox.y = 2;
+            playerBox.y = -10;
             g.addChild(playerBox);
             targetBox = ui("UI_TargetBox");
             targetBox.x = 235;
-            targetBox.y = 2;
+            targetBox.y = -10;
             g.addChild(targetBox);
             // portrait rings, filled the way World/Game showPortraitBox() does it: swap the face (and helm) classes into mcHead.head
             targetBox["btnOption"].visible = false;
@@ -877,16 +877,16 @@ package
             }
             clockText = Hud.label("0:00", 14, 0xFFFFFF, true, "right", 100);
             clockText.x = 854;
-            clockText.y = 68; // under the "Next:" panel
+            clockText.y = 30; // under the "Next:" panel
             g.addChild(clockText);
             nextPanel = new Sprite();
             Hud.panel(nextPanel, 0, 0, 262, 26);
             nextPanel.x = 690;
-            nextPanel.y = 40;
+            nextPanel.y = 2;
             g.addChild(nextPanel);
             nextText = Hud.label("", 14, 0xFFFFFF, true, "left", 252);
             nextText.x = 695;
-            nextText.y = 43;
+            nextText.y = 5;
             g.addChild(nextText);
             bannerText = Hud.label("", 16, 0xFFD24A, true, "center", 960);
             bannerText.x = 0;
@@ -1162,12 +1162,12 @@ package
                 if (ic.boss)
                 {
                     ic.sp.x = bossBuffX + col * (ic.size + 4); // directly under the boss' bars
-                    ic.sp.y = 76 + row * (ic.size + 4);
+                    ic.sp.y = 64 + row * (ic.size + 4);
                 }
                 else
                 {
                     ic.sp.x = playerBuffX + col * (ic.size + 3); // directly under our bars
-                    ic.sp.y = 86 + row * (ic.size + 3);
+                    ic.sp.y = 74 + row * (ic.size + 3);
                 }
             }
             // a second row of our effects pushes the party frames down so nothing overlaps
@@ -1189,7 +1189,7 @@ package
                 }
             }
             partyPanels = {};
-            var y:Number = 111;
+            var y:Number = 99;
             for each (var r:String in roles)
             {
                 if (r == role)
@@ -1251,9 +1251,10 @@ package
         private function buildButtons():void
         {
             // the red Music On / Music Off button at the top, as in the game
-            musicTop = Aqw.redButton("Music On", 110, toggleMusic);
-            musicTop.x = 452;
-            musicTop.y = 6;
+            musicTop = Aqw.redButton("Music On", 84, toggleMusic);
+            musicTop.scaleY = 0.72;
+            musicTop.x = (STAGE_W - 84) / 2;
+            musicTop.y = 2;
             hudLayer.addChild(musicTop);
             // the labels the hotkeys keep up to date (not shown)
             pauseLabel = Hud.label("");
@@ -2415,7 +2416,7 @@ package
             {
                 if (ability == "execution")
                 {
-                    setBanner(role == "ap" ? "EXECUTION - SEAL NOW (4)" : "Executioner Dene's Execution - the Arch Paladin Seals it", role == "ap" ? 0xFF5B5B : 0xFFD24A, 3200);
+                    setBanner(role == "ap" ? "EXECUTION - SEAL NOW (4)" : "Executioner Dene's Execution - the ArchPaladin Seals it", role == "ap" ? 0xFF5B5B : 0xFFD24A, 3200);
                     if (botOn && role == "ap")
                     {
                         botQueue.push({at: fight.t + 300, until: fight.t + 2400, k: 4});
@@ -3416,7 +3417,7 @@ package
             return Point.distance(new Point(a.mc.x, a.mc.y), p) <= 45;
         }
 
-        /** Ultra Speaker: the role's chart (Arch Paladin / Lord of Order chart, the taunt chart for Legion Revenant), only while tips are on */
+        /** Ultra Speaker: the role's chart (ArchPaladin / Lord of Order chart, the taunt chart for Legion Revenant), only while tips are on */
         private function updateChart():void
         {
             var key:String = bossId == "speaker" && hintsOn && !chartHidden ? (role == "ap" ? "ap" : (role == "loo" ? "loo" : (role == "lr" ? "taunt" : ""))) : "";
@@ -3437,10 +3438,10 @@ package
             }
             if (chartMC)
             {
-                chartMC.height = 366;
+                chartMC.height = logText.y - 4 - 96; // from under our frame down to the chat
                 chartMC.scaleX = chartMC.scaleY;
-                chartMC.x = STAGE_W - chartMC.width - 8; // right, under the Next panel (the chat has the bottom left now)
-                chartMC.y = 94;
+                chartMC.x = 14; // left, over the party frames
+                chartMC.y = 96;
                 chartMC.alpha = 0.88;
             }
         }
@@ -3768,7 +3769,7 @@ package
                     botQueue.splice(i, 1);
                 }
             }
-            // targets: the Legion Revenant takes Algie first and then Dene, the Arch Paladin stays on Dene
+            // targets: the Legion Revenant takes Algie first and then Dene, the ArchPaladin stays on Dene
             var want:String = role == "lr" ? (f.algieHp > 0 ? "cr" : "cl") : "cl";
             if (f.deneHp <= 0 && f.algieHp > 0)
             {

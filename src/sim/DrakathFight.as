@@ -56,7 +56,7 @@ package sim
         /** the taunts each class owns (millions of HP) */
         private static const TAUNTS:Object = {lr: [16, 12], pc: [18, 14, 8, 6, 4]};
 
-        /** max HP at level 100 (see Dmg): Lord of Order's Harmony and the Arch Paladin's heal buff add to it, as in the Ultra Speaker fight */
+        /** max HP at level 100 (see Dmg): Lord of Order's Harmony and the ArchPaladin's heal buff add to it, as in the Ultra Speaker fight */
         private static const START_HP:Object = {lr: 2910, pc: 4970, loo: 3505, cs: 2835};
         private static const HARMONY_HP:Number = 0.062;
         private static const APHEAL_HP:Number = 0.0756;
@@ -780,7 +780,7 @@ package sim
         // ------------------------------------------------------------ the sim's own class
         private function npcPlay():void
         {
-            // Lord of Order and the Arch Paladin keep their buffs and heals going (the player is never one of them)
+            // Lord of Order and the ArchPaladin keep their buffs and heals going (the player is never one of them)
             if (alive("loo"))
             {
                 if (t >= npcHarmonyAt)

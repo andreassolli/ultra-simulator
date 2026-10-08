@@ -150,7 +150,7 @@ package sim
         }
 
         /**
-         * Mana a hit gives back to Lord of Order, Arch Paladin and Legion Revenant ("from all hits landed, especially on crits, the
+         * Mana a hit gives back to Lord of Order, ArchPaladin and Legion Revenant ("from all hits landed, especially on crits, the
          * amount depends on the damage relative to their own HP"): bigger hits give more, up to 15, and a crit gives half again.
          */
         public static function manaFor(dmg:Number, crit:Boolean, maxHp:Number):Number

@@ -83,11 +83,11 @@ The same caveat as for any public site applies: the maps, bosses and items belon
 
 ## Mana
 
-Everybody the player can be spends and regenerates mana like the class text says: Lord of Order, Arch Paladin and Legion Revenant get mana back from every hit they land (more for big hits compared to their HP, x1.5 on crits; Legion Revenant's auto attack gives 15), Chaos Avenger 60 per Chaos Greatsword hit, Paladin Chronomancer 14 per strike, 12 per hit taken and 45 over 5 s from Spirits Within. Every class also regenerates 4 per second. Skill costs are the JSON's `mp`; with too little mana a skill says "Not enough mana".
+Everybody the player can be spends and regenerates mana like the class text says: Lord of Order, ArchPaladin and Legion Revenant get mana back from every hit they land (more for big hits compared to their HP, x1.5 on crits; Legion Revenant's auto attack gives 15), Chaos Avenger 60 per Chaos Greatsword hit, Paladin Chronomancer 14 per strike, 12 per hit taken and 45 over 5 s from Spirits Within. Every class also regenerates 4 per second. Skill costs are the JSON's `mp`; with too little mana a skill says "Not enough mana".
 
 ## Ultra Nulgath (Flash)
 
-`runtime/town-ultranulgath.swf`, `monster-UltraNulgath.swf` and `monster-OverfiendBlade.swf`; rules in `src/sim/NulgathFight.as` (from `ultranulgath.mdx`). Classes: Legion Revenant and Lord of Order; the other of the two is played by the sim, with Arch Paladin and Chrono ShadowSlayer.
+`runtime/town-ultranulgath.swf`, `monster-UltraNulgath.swf` and `monster-OverfiendBlade.swf`; rules in `src/sim/NulgathFight.as` (from `ultranulgath.mdx`). Classes: Legion Revenant and Lord of Order; the other of the two is played by the sim, with ArchPaladin and Chrono ShadowSlayer.
 
 - **Start:** no fight starts until you use a skill. As Lord of Order that first skill has to be Quix (5), cast with the Overfiend Blade clicked (it becomes your target and shows in the target frame; click Nulgath again afterwards): without it the Blade's Sword Charge kills everybody 5 s in. Nobody attacks the Blade; it keeps hitting the party with its auto attacks.
 - **Taunts:** a Contract of the Abyss (every 7 s: 6, 13, 20, 27, 34 s) must hit somebody who taunted, and not somebody who still has the previous one (Frailty -> Despair -> Stagnation), so Lord of Order and Legion Revenant take turns. Lord of Order taunts 5 s in and each time his Frailty wears off (16 s, 30 s); Legion Revenant at each "Behold the power of the Abyss!" (9, 23, 37 s). The sim's class does its own. Hints on show "TAUNT NOW" for yours.
@@ -135,7 +135,7 @@ Try it: `index.html?boss=drakath&class=lr&autoplay=1&bot=1&speed=4`.
 
 ## Speaker attack animations and Seals
 
-Truth = ChargeB, ChargeBLoop, Attack2; Listen = ChargeA, ChargeALoop, Absorption; Equal = PowerUp, PowerLoop, Magic. Seals (Arch Paladin): Truths 2, 3, 4, 6, 7 and 8 of the cycle of four zones need one (5 and 9 need Quix). The auto-pilot seals at the 1st (DPS) and 3rd (AP) zone so the Seal reaches the Truth after the zone, then seals the next Truth; at the 2nd and 4th zone it seals only the first Truth after it, so the Seal is ready again for the next zone. Eden follows each Seal once the Truth has landed.
+Truth = ChargeB, ChargeBLoop, Attack2; Listen = ChargeA, ChargeALoop, Absorption; Equal = PowerUp, PowerLoop, Magic. Seals (ArchPaladin): Truths 2, 3, 4, 6, 7 and 8 of the cycle of four zones need one (5 and 9 need Quix). The auto-pilot seals at the 1st (DPS) and 3rd (AP) zone so the Seal reaches the Truth after the zone, then seals the next Truth; at the 2nd and 4th zone it seals only the first Truth after it, so the Seal is ready again for the next zone. Eden follows each Seal once the Truth has landed.
 
 ## Damage maths (Dage and Drakath)
 
@@ -145,7 +145,7 @@ Everything the players deal, heal and wait for in the Ultra Dage and Champion Dr
 - Crit chance and crit damage, haste (`cooldown x (1 - haste)`, for skills and auto attacks), healing power, and the boss' resistances (Dage 50 % physical / magical) with the "damage over 150 000 / 75 000 is reduced to the excess ^ 0.8" cap.
 - Skill damage factor, damage source, cooldown and mana cost per skill come from `classes.json`; class passives (Unending Rage, Dark Scholar, Sacred Blessing ...) change the stats. Mana is spent and recovered as the class text says (the player's MP bar is real now); Legion Revenant also has Infinita Nox and Paladin Chronomancer Temporal Rift / Reprisal / Guardian Angel.
 - **Class stats:** `Dmg.as` holds the level-100 stat totals given for Paladin Chronomancer, Legion Revenant, Lord of Order, Chaos Avenger, ArchPaladin and Shaman (for a later boss): attack / spell power, hit, cooldown reduction, crit chance and multiplier, boosts, resistances, healing, max HP. Cooldowns (and auto attacks) use the Cooldown Reduction, damage and heals use the boosts, incoming damage uses the resistances (Chaos Avenger's 35 % physical resistance, the others' damage resistance on Drakath's autos), max HP is theirs. Other characters (the Ultra Dage party) get the ArchPaladin's stats.
-- **Ultra Speaker:** the player's class (Lord of Order, Arch Paladin, Legion Revenant) uses the same stats: auto attack and Anathema through `Dmg` (damage source, factor and cooldown from classes.json, `GEAR` 2.5), the skills' cooldowns are the listed ones halved (a perfect run has a permanent 50 % cooldown reduction from Lord of Order; the 12.5 s Seal / Eden), max HP 3505 / 3670 / 2910 (Harmony and Arch Paladin heal add the same amounts as before). Boss rules, the party's raid damage and the damage the boss deals are unchanged.
+- **Ultra Speaker:** the player's class (Lord of Order, ArchPaladin, Legion Revenant) uses the same stats: auto attack and Anathema through `Dmg` (damage source, factor and cooldown from classes.json, `GEAR` 2.5), the skills' cooldowns are the listed ones halved (a perfect run has a permanent 50 % cooldown reduction from Lord of Order; the 12.5 s Seal / Eden), max HP 3505 / 3670 / 2910 (Harmony and ArchPaladin heal add the same amounts as before). Boss rules, the party's raid damage and the damage the boss deals are unchanged.
 - **Champion Drakath party:** Legion Revenant, Paladin Chronomancer, Lord of Order and Chrono ShadowSlayer (Lord of Order is not selectable). Chrono ShadowSlayer ("Chrono ShadowHunter" in classes.json; Valiance weapon, Lucky class, Forge helm, Penitence cape) has the ArchPaladin's primary stats (same enhancements, same Full Hybrid split: STR 316, INT 316, DEX 167, END 167, WIS 68, LCK 350) with Blessed Ammunition's Luck x1.2: attack / spell power 926, crit chance 42.61 %, crit multiplier 416.7 %, hit 109.58 %, +10 % damage, 2835 HP. Lord of Order's Harmony raises max HP (Legion Revenant 2910 -> 3090). Depraved Empowerment (Legion Revenant's Empowerment, skill 4) gives an Arcane Shield (30 % of its Spell Power) and a heal over time for 12 s, which is what gets Legion Revenant through the 3000 true damage of the Chaos Slams it taunts. The fight waits for your first skill before it starts.
 - **Flux exception:** with the Chaos Avenger's real 11.64 % cooldown reduction Flux (15 s) could not be up for every Decaying Strike (9 s apart), which the guide asks for, so Flux is fixed at 6 s.
 - **Not available:** the two Google documents (the advanced-mechanics site and the damage doc) are behind a network block here, so the primary-stat conversions and the player's defence rules are not from them. The calculator has no `AoE1`, `EX1`, `Chrono2`, `Avenger1` or `Leech1` damage source (they are taken as spell power / attack power, `Chrono2` is rebuilt from the skill text); its weapon is the default 85 dps, range 1, 51 % x 50 % boost.
@@ -186,7 +186,7 @@ game's `showPortraitBox()` does it: the boss's `mcHeadUltraMalg` into the target
 helm into the player ring. `Loader3.swf` only downloads the game from the AQ servers, so it is not needed here. The
 stage is the game's 960x500 and scales to the window / full screen (`StageScaleMode.SHOW_ALL`).
 The four players are `AvatarMC` instances (the recovered character), each with a health bar over its head. Rules (`src/sim/Fight.as`) are a port of the web simulator: the boss rotation (auto / Truth / Listen /
-Equal), Somber + armor, Seal / Quix / taunt requirements, and the Lord of Order, Arch Paladin and Legion Revenant
+Equal), Somber + armor, Seal / Quix / taunt requirements, and the Lord of Order, ArchPaladin and Legion Revenant
 skills. Pick your class with the buttons top right; the other roles are scripted.
 
 ```sh
@@ -253,8 +253,8 @@ Monsters without listed stats use the default secondary stats (hit 90 %, haste 3
 
 ## Ultra Speaker: charts and strict mechanics
 
-- With tips on, the left side, under the party frames, shows the chart of your role: the Arch Paladin chart, the Lord of Order chart, and (no Legion Revenant chart was supplied) the taunt chart for the Legion Revenant. Press **C** to hide / show only the chart (the tips stay); turning tips off (H) hides both. The combat log is always shown. **P** pauses the game (a PAUSED overlay appears). The boss picker shows each boss's face; losing shows a red DEFEATED banner with the reason in the middle of the screen. Arch Paladin loses if they do not taunt their boss in Ultra Drago, like Legion Revenant.
-- Legion Revenant has to use Decay (2) when the Equal Zone appears (within its 3 s); missing it loses. A Truth that needed the Arch Paladin's Seal and did not get it loses.
+- With tips on, the left side, under the party frames, shows the chart of your role: the ArchPaladin chart, the Lord of Order chart, and (no Legion Revenant chart was supplied) the taunt chart for the Legion Revenant. Press **C** to hide / show only the chart (the tips stay); turning tips off (H) hides both. The combat log is always shown. **P** pauses the game (a PAUSED overlay appears). The boss picker shows each boss's face; losing shows a red DEFEATED banner with the reason in the middle of the screen. ArchPaladin loses if they do not taunt their boss in Ultra Drago, like Legion Revenant.
+- Legion Revenant has to use Decay (2) when the Equal Zone appears (within its 3 s); missing it loses. A Truth that needed the ArchPaladin's Seal and did not get it loses.
 
 ## Ultra Gramiel Phase 2 timing
 
@@ -281,12 +281,12 @@ One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between,
 
 ## Ultra Drago (Flash)
 
-`runtime/town-ultradrago.swf`, `monster-KingDrago.swf`, `monster-ExecutionerDene.swf` and `monster-BowmasterAlgie.swf`; rules in `src/sim/DragoFight.as` (from `ultradrago.mdx`). Classes: Legion Revenant and Arch Paladin; the other one plus the Chrono ShadowSlayer and Lord of Order are played by the sim.
+`runtime/town-ultradrago.swf`, `monster-KingDrago.swf`, `monster-ExecutionerDene.swf` and `monster-BowmasterAlgie.swf`; rules in `src/sim/DragoFight.as` (from `ultradrago.mdx`). Classes: Legion Revenant and ArchPaladin; the other one plus the Chrono ShadowSlayer and Lord of Order are played by the sim.
 
 - **Targets:** click Executioner Dene (left), Bowmaster Algie (right) or King Drago (middle), or press Tab; your character walks beside it. Key 1 walks to the current target.
-- **Taunts:** the Legion Revenant taunts Algie and the Arch Paladin taunts Dene on repeat (6 s taunts, 10 s cooldown). An untaunted auto hits all four: Dene's autos make him take 1 % less damage per player hit (stacking), Algie's make him deal 1 % more, so taunting keeps them down.
-- **Execution:** every 8 Dene autos he raises his axe (banner + "Next: Execution in ..."). The Arch Paladin's Seal (skill 4, 7 s) has to be up when it lands or the fight is lost. The guide gives no damage for the nuke; unsealed it is lethal here, sealed it is small.
-- **Who attacks what:** Lord of Order and the Arch Paladin stay on Dene (range); the Legion Revenant and Chrono ShadowSlayer kill Algie first, then join on Dene. When one side boss dies the other heals fully and gets Ally Boost (x2 damage, half damage taken), so the Dene damage done before Algie dies is wasted. King Drago (1 000 HP) cannot be hurt and falls when both are dead; after 160 s he starts Judgement Day and everybody dies 20 s later.
+- **Taunts:** the Legion Revenant taunts Algie and the ArchPaladin taunts Dene on repeat (6 s taunts, 10 s cooldown). An untaunted auto hits all four: Dene's autos make him take 1 % less damage per player hit (stacking), Algie's make him deal 1 % more, so taunting keeps them down.
+- **Execution:** every 8 Dene autos he raises his axe (banner + "Next: Execution in ..."). The ArchPaladin's Seal (skill 4, 7 s) has to be up when it lands or the fight is lost. The guide gives no damage for the nuke; unsealed it is lethal here, sealed it is small.
+- **Who attacks what:** Lord of Order and the ArchPaladin stay on Dene (range); the Legion Revenant and Chrono ShadowSlayer kill Algie first, then join on Dene. When one side boss dies the other heals fully and gets Ally Boost (x2 damage, half damage taken), so the Dene damage done before Algie dies is wasted. King Drago (1 000 HP) cannot be hurt and falls when both are dead; after 160 s he starts Judgement Day and everybody dies 20 s later.
 - **Length:** raid damage is tuned so everything is dead in about 45-50 seconds. Damage over 75 000 a hit is cut (excess ^ 0.7).
 - **Music:** `bin/audio/drago.mp3` is the map's own track, extracted from `town-ultradrago.swf` (the `OMGmusic` sound in the SWF).
 
@@ -297,7 +297,7 @@ One 30 s cycle: Death's Door at 6 / 16 / 26 s with an auto every 2 s in between,
 - On the start screen **H** (or the Hints button, bottom left) turns hints off or on before the fight starts, **M** the music.
 - The **Change boss** screen shows a picture of each boss (drawn from the boss clips themselves) with the available classes on a dark, see-through panel.
 
-**Ultra Drago additions:** the Legion Revenant has to keep Bowmaster Algie taunted: when Algie dies the fight is lost if the player taunted him fewer than 1 / 2 / 3 times (by 0 / 10 / 20 s into the fight). The Arch Paladin and Lord of Order only add a share of their auto-attack damage (they heal, Seal and taunt). Ultra Dage: the Chaos Avenger's taunt (Flux, skill 3) shows Flux's icon on the boss instead of the taunt skull. Skills that cost more mana than you have are dimmed like a disabled button.
+**Ultra Drago additions:** the Legion Revenant has to keep Bowmaster Algie taunted: when Algie dies the fight is lost if the player taunted him fewer than 1 / 2 / 3 times (by 0 / 10 / 20 s into the fight). The ArchPaladin and Lord of Order only add a share of their auto-attack damage (they heal, Seal and taunt). Ultra Dage: the Chaos Avenger's taunt (Flux, skill 3) shows Flux's icon on the boss instead of the taunt skull. Skills that cost more mana than you have are dimmed like a disabled button.
 
 
 ## Performance (GPU load and memory)

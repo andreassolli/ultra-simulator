@@ -3,7 +3,7 @@ package sim
     /**
      * Ultra Speaker fight rules. Boss rotation, cast times, cooldowns, damage
      * ranges, taunt / seal / quix / zone requirements and the Lord of Order,
-     * Arch Paladin and Legion Revenant numbers come from the web simulator
+     * ArchPaladin and Legion Revenant numbers come from the web simulator
      * (speaker.js, lordoforder.js, archpaladin.js, legionrevenant.js,
      * party-manager.js). All times are in milliseconds.
      */
@@ -26,7 +26,7 @@ package sim
 
         public static const ZONE_ROLES:Object = {1: "dps", 2: "lr", 3: "ap", 4: "loo"};
         public static const ROLES:Array = ["ap", "lr", "loo", "dps"];
-        public static const ROLE_NAMES:Object = {ap: "Arch Paladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS"};
+        public static const ROLE_NAMES:Object = {ap: "ArchPaladin", lr: "Legion Revenant", loo: "Lord of Order", dps: "DPS"};
 
         private static const TIMINGS:Object = {auto: 2000, truth: 7000, listen: 12000, zone: 16000};
         private static const CAST:Object = {auto: 1200, truth: 2000, listen: 2000, zone: 3000};
@@ -431,7 +431,7 @@ package sim
                 {
                     host.floater(null, "Missed Seal", "bad");
                     counters.seal++;
-                    end("lose", "Missed Seal: Truth #" + n + " needed the Arch Paladin's Seal");
+                    end("lose", "Missed Seal: Truth #" + n + " needed the ArchPaladin's Seal");
                     return;
                 }
                 if (need == "quix" && t >= quixUntil)

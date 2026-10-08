@@ -22,7 +22,7 @@ package sim
         /** Is the player standing inside the SafeA box? */
         function playerInZone():Boolean;
 
-        /** Is the player close enough to the middle to use Arch Paladin skills? */
+        /** Is the player close enough to the middle to use ArchPaladin skills? */
         function playerCentered():Boolean;
 
         /** Cosmetic cast effect (kind = skill id) on a role's character. */

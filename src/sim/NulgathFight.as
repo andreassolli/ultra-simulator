@@ -16,7 +16,7 @@ package sim
     public class NulgathFight extends Fight
     {
         public static const NUL_ROLES:Array = ["lr", "loo", "ap", "cs"];
-        public static const NUL_NAMES:Object = {lr: "Legion Revenant", loo: "Lord of Order", ap: "Arch Paladin", cs: "Chrono ShadowSlayer"};
+        public static const NUL_NAMES:Object = {lr: "Legion Revenant", loo: "Lord of Order", ap: "ArchPaladin", cs: "Chrono ShadowSlayer"};
         public static const NUL_SKILLS:Object = {
             lr: {2: "shade", 3: "wicked", 4: "depraved", 5: "anathema", 6: "taunt"},
             loo: {2: "harmony", 3: "ordinance", 4: "axiom", 5: "quix", 6: "taunt"}
