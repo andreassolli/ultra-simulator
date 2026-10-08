@@ -41,6 +41,7 @@ package
     import sim.GramielFight;
     import sim.Hud;
     import sim.IFightHost;
+    import sim.DarkonFight;
     import sim.NulgathFight;
 
     import flash.filters.GlowFilter;
@@ -134,7 +135,12 @@ package
                     {swf: "runtime/monster-BowmasterAlgie.swf", cls: "BowmasterAlgie", head: "mcHeadBowmasterAlgie", name: "Bowmaster Algie", pad: new Point(850, 214), scale: 1.3, hitDx: 85, hitUp: 190, stationDy: 150, loops: {}}],
                 roles: ["lr", "ap", "cs", "loo"], pad: new Point(478, 268), home: new Point(495, 400), scale: 1.25, charScale: 1.15, stBase: 84, stStep: 70,
                 stack: {lr: [150, 4], cs: [78, 6], ap: [-62, 6], loo: [-138, -3]},
-                loops: {}}
+                loops: {}},
+            // Ultra Darkon: the Lord of Order's fight (Legion Revenant taunts first, the sim plays it with StoneCrusher and Chrono ShadowSlayer)
+            {id: "darkon", name: "Ultra Darkon", classes: ["loo"], mapFrame: "r2", idleStop: true, dieLabel: "Die",
+                mapSwf: "runtime/town-ultradarkon.swf", bossSwf: "runtime/monster-UltraDarkon.swf", bossClass: "DarkonTheConductor", headClass: "mcHeadDarkonTheConductor",
+                roles: ["loo", "lr", "sc", "cs"], pad: new Point(480, 292), home: new Point(480, 405), scale: 0.95, charScale: 0.85,
+                loops: {Chargeloop: [236, 246]}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
         private static const PORTRAIT_CX:Number = 50;
@@ -305,7 +311,7 @@ package
         {
             world = {
                 map: {bossChargeSpell: onBossChargeSpell},
-                getQuestValue: function(id:int):int { return 20; }, // quest 488 done: the Boss frame is open
+                getQuestValue: function(id:int):int { return id == 454 ? 40 : 20; }, // 454: Ultra Darkon's map only opens once 'The World' is done (>= 32) // quest 488 done: the Boss frame is open
                 moveToCell: function(cell:*, pad:*):void {},
                 initMap: function():Object {
                     return {
@@ -349,7 +355,7 @@ package
             {
                 role = p["class"];
             }
-            initialBoss = ["dage", "drakath", "nulgath", "gramiel", "drago"].indexOf(p["boss"]) >= 0 ? p["boss"] : "speaker";
+            initialBoss = ["dage", "drakath", "nulgath", "gramiel", "drago", "darkon"].indexOf(p["boss"]) >= 0 ? p["boss"] : "speaker";
             glowText = p["fx"] != "0";
             cacheMap = p["cache"] == "1";
             botOn = p["bot"] == "1";
@@ -907,7 +913,7 @@ package
             bannerText.y = 140; // the tips sit under the announcement
             bannerText.filters = [new GlowFilter(0xFFFFFF, 0.6, 4, 4, 2, 1)]; // a light edge, the purple is dark
             g.addChild(bannerText);
-            shoutText = Hud.label("", 19, 0xFFD24A, true, "center", 960); // boss speech: yellow, larger
+            shoutText = Hud.label("", 14, 0xFFD24A, false, "center", 960); // boss speech: yellow, regular weight and size
             shoutText.x = 0;
             shoutText.y = 114;
             g.addChild(shoutText);
@@ -2049,6 +2055,10 @@ package
             {
                 fight = new NulgathFight(this, role, 10000000, [0, 0]);
             }
+            else if (bossId == "darkon")
+            {
+                fight = new DarkonFight(this, role, DarkonFight.HP_P1, [0, 0]);
+            }
             else if (bossId == "drago")
             {
                 fight = new DragoFight(this, role, 1000, [0, 0]);
@@ -2480,6 +2490,26 @@ package
                 if (botOn)
                 {
                     botQueue.push({at: fight.t, until: fight.t + 3000, k: 6});
+                }
+                return;
+            }
+            if (bossId == "darkon")
+            {
+                if (ability == "taunt")
+                {
+                    setBanner("TAUNT NOW (6) - the Legion Revenant's taunt is almost over", 0xFF5B5B, 1800);
+                    if (botOn)
+                    {
+                        botQueue.push({at: fight.t + 250, until: fight.t + 1700, k: 6});
+                    }
+                }
+                else if (ability == "quixstop")
+                {
+                    setBanner("STOP USING QUIX (5) from 13M HP - until 5M", 0xFF5B5B, 4000);
+                }
+                else
+                {
+                    setBanner("QUIX NOW (5) - between 5M and 4.5M HP", 0xFF5B5B, 4000);
                 }
                 return;
             }
@@ -3648,6 +3678,11 @@ package
                 runNulgathBot(f, a);
                 return;
             }
+            if (bossId == "darkon")
+            {
+                runDarkonBot(f as DarkonFight, a);
+                return;
+            }
             if (bossId == "gramiel")
             {
                 runGramielBot(f as GramielFight, a);
@@ -3932,6 +3967,55 @@ package
         private var botStop:Boolean = false;     // the auto-pilot stepped away from Gramiel before a threshold
 
         /** Auto-pilot for Ultra Nulgath: Quix on the Blade first (Lord of Order), taunt on cue, heal when somebody is low. */
+        /** Auto-pilot for Ultra Darkon (Lord of Order): taunts on the cue, Quix until 13M and in the 5M - 4.5M window, heals, buffs */
+        private function runDarkonBot(f:DarkonFight, a:Object):void
+        {
+            for (var i:int = botQueue.length - 1; i >= 0; i--)
+            {
+                var q:Object = botQueue[i];
+                if (f.t > q.until)
+                {
+                    botQueue.splice(i, 1);
+                }
+                else if (f.started && f.t >= q.at && f.cast(q.k))
+                {
+                    botQueue.splice(i, 1);
+                }
+            }
+            var home:Point = spot(homeAt, role);
+            if (a.moveTo == null && Point.distance(new Point(a.mc.x, a.mc.y), home) > 20)
+            {
+                a.moveTo = home;
+            }
+            if (!f.started)
+            {
+                f.cast(2);
+                return;
+            }
+            var lowest:Number = 1;
+            for each (var al:String in roles)
+            {
+                if (f.hp[al] > 0)
+                {
+                    lowest = Math.min(lowest, f.hp[al] / f.maxHp(al));
+                }
+            }
+            if (lowest < 0.6)
+            {
+                f.cast(3);
+            }
+            if (f.phase == 1 || (f.phase == 2 && f.bossHp > DarkonFight.QUIX_STOP))
+            {
+                f.cast(5);
+            }
+            else if (f.phase == 2 && f.bossHp <= DarkonFight.QUIX_WINDOW_HI && f.bossHp >= DarkonFight.QUIX_WINDOW_LO && !f.quixInWindow)
+            {
+                f.cast(5);
+            }
+            f.cast(2);
+            f.cast(4);
+        }
+
         private function runNulgathBot(f:Fight, a:Object):void
         {
             for (var i:int = botQueue.length - 1; i >= 0; i--)

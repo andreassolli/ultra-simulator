@@ -78,7 +78,6 @@ package sim
         private var seqIdx:int = 0;       // position in the intro / loop
         private var zoneCount:int = 0;
         private var nextAt:Number = START_AT;
-        private var regenAt:Number = 60000;
         private var queue:Array = [];     // abilities that come before the pattern resumes
         private var tauntDue:int = 0;     // autos still to be tanked after a Decaying Strike
         private var hpTickAt:Number = 1000;
@@ -307,7 +306,10 @@ package sim
         }
 
         // ------------------------------------------------------- boss pattern
-        /** the ability at position i of the pattern */
+        /**
+         * The ability at position i of the pattern (ultradage.mdx): intro 4 autos, Decaying Strike, 2 autos; then the loop: Zone,
+         * Decaying Strike, 2 autos, an auto (after every 3rd Zone: Summon Legion Mages instead), Decaying Strike, 2 autos.
+         */
         private function abilityAt(i:int):String
         {
             var intro:Array = ["auto", "auto", "auto", "auto", "decay", "auto", "auto"];
@@ -321,20 +323,14 @@ package sim
             {
                 return loop[k];
             }
-            return "auto"; // Summon Legion Mages is on the clock instead, see regenDue()
-        }
-
-        /** Summon Legion Mages always starts at 1:00 (and every minute after): the next ability waits for it if it would run into it. */
-        private function regenDue(ability:String):Boolean
-        {
-            return nextAt + SLOT[ability] > regenAt;
+            var zones:int = int((i - intro.length) / loop.length) + 1; // the Zone this loop began with
+            return zones % 3 == 0 ? "regen" : "auto";
         }
 
         override public function nextLabel():String
         {
             var names:Object = {auto: "Auto attack", decay: "Decaying Strike", zone: "Summon Brute Undead (plate)", regen: "Summon Legion Mages"};
-            var a:String = abilityAt(seqIdx);
-            return names[regenDue(a) ? "regen" : a];
+            return names[abilityAt(seqIdx)];
         }
 
         private function fire(ability:String):void
@@ -803,28 +799,9 @@ package sim
             if (t >= nextAt)
             {
                 var ability:String = abilityAt(seqIdx);
-                if (queue.length > 0)
-                {
-                    var q1:String = queue.shift();
-                    fire(q1);
-                    nextAt = t + SLOT[q1];
-                }
-                else if (regenDue(ability))
-                {
-                    if (t >= regenAt)
-                    {
-                        fire("regen");
-                        nextAt = t + SLOT.regen;
-                        queue = ["decay", "auto", "auto"]; // as in the guide: Legion Mages, Decaying Strike, 2 autos
-                        regenAt += 60000;
-                    }
-                }
-                else
-                {
-                    fire(ability);
-                    nextAt = t + SLOT[ability];
-                    seqIdx++;
-                }
+                fire(ability);
+                nextAt = t + SLOT[ability];
+                seqIdx++;
             }
             for each (var r:String in DAGE_ROLES)
             {
