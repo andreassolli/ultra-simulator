@@ -1,5 +1,6 @@
 package ui
 {
+    import flash.display.MovieClip;
     import flash.display.Sprite;
     import flash.text.TextField;
     import sim.Hud;
@@ -39,51 +40,42 @@ package ui
             win.x = (W - Aqw.WIN_W) / 2;
             win.y = (H - Aqw.WIN_H) / 2;
             addChild(win);
-            var names:Array = ["General", "Gameplay"];
-            for (var i:int = 0; i < names.length; i++)
+            for (var i:int = 0; i < 2; i++)
             {
-                var tab:Sprite = Aqw.tab(names[i], 103);
-                tab.x = 22 + i * 108;
+                var tab:MovieClip = Aqw.tab(i);
+                tab.x = 22 + i * 82;
                 tab.y = 44;
-                Aqw.onClick(tab, makeTab(i));
+                tab.addEventListener("mouseDown", makeTabHandler(i));
+                tab.buttonMode = true;
                 win.addChild(tab);
                 tabs.push(tab);
                 var page:Sprite = new Sprite();
-                page.y = 70;
+                page.y = 76;
                 win.addChild(page);
                 pages.push(page);
             }
-            // General: the Music button like the game's, then the rows
+            // General: the Music button like the game's, the rows, then the buttons
             musicBtn = Aqw.redButton("Music", 150, function():void { h.menuToggle("music"); refresh(); });
             musicBtn.x = 18;
             musicBtn.y = 4;
             pages[0].addChild(musicBtn);
-            var fs:Sprite = Aqw.redButton("Fullscreen", 150, function():void { h.menuRun("fullscreen"); });
-            fs.x = 182;
-            fs.y = 4;
-            pages[0].addChild(fs);
+            var kb:Sprite = Aqw.redButton("Keybinds", 150, toggleKeys);
+            kb.x = 182;
+            kb.y = 4;
+            pages[0].addChild(kb);
             addRow(0, "Hints (" + Keys.name(Keys.code("hints")) + ")", "hints", 44);
             addRow(0, "Party HP frames (" + Keys.name(Keys.code("party")) + ")", "party", 82);
             addRow(0, "Skill chart (" + Keys.name(Keys.code("chart")) + ")", "chart", 120);
             addRow(1, "Auto-pilot", "bot", 4);
             addRow(1, "Paused (" + Keys.name(Keys.code("pause")) + ")", "pause", 42);
-            // buttons under the pages
-            var kb:Sprite = Aqw.redButton("Keybinds", 150, toggleKeys);
-            kb.x = 18;
-            kb.y = 340;
-            win.addChild(kb);
             var rs:Sprite = Aqw.redButton("Restart fight", 150, function():void { h.menuRun("restart"); });
-            rs.x = 182;
-            rs.y = 340;
+            rs.x = 18;
+            rs.y = 378;
             win.addChild(rs);
             var mm:Sprite = Aqw.redButton("Main menu", 150, function():void { h.menuRun("home"); });
-            mm.x = 18;
+            mm.x = 182;
             mm.y = 378;
             win.addChild(mm);
-            var cr:Sprite = Aqw.redButton("Close", 150, h.menuCloseOptions);
-            cr.x = 182;
-            cr.y = 378;
-            win.addChild(cr);
             var ver:TextField = Hud.label("Ultra boss simulator - not affiliated with Artix Entertainment", 10, 0x8E8E8E, false, "center", Aqw.WIN_W);
             ver.y = 406;
             win.addChild(ver);
@@ -100,9 +92,12 @@ package ui
             rows.push(r);
         }
 
-        private function makeTab(i:int):Function
+        private function makeTabHandler(i:int):Function
         {
-            return function():void { showTab(i); };
+            return function(e:Object):void {
+                e.stopPropagation();
+                showTab(i);
+            };
         }
 
         private function showTab(i:int):void
@@ -110,7 +105,7 @@ package ui
             for (var k:int = 0; k < pages.length; k++)
             {
                 pages[k].visible = k == i;
-                tabs[k].alpha = k == i ? 1 : 0.55;
+                tabs[k].gotoAndStop(k == i ? 2 : 1);
             }
         }
 

@@ -7,6 +7,7 @@ package ui
     import flash.events.MouseEvent;
     import flash.filters.DropShadowFilter;
     import flash.geom.Matrix;
+    import flash.geom.Rectangle;
     import flash.text.TextField;
     import sim.Hud;
     import flash.display.GradientType;
@@ -75,23 +76,10 @@ package ui
             return s;
         }
 
-        /** a tab like the Options window's: black with a rounded top */
-        public static function tab(text:String, w:Number):Sprite
+        /** one of the Options window's tabs (0 General, 1 Gameplay): Spider.swf's own art, which has its text in it */
+        public static function tab(kind:int):MovieClip
         {
-            var s:Sprite = new Sprite();
-            s.graphics.lineStyle(1, 0x3A3A3A, 1);
-            s.graphics.beginFill(0x000000, 1);
-            s.graphics.moveTo(0, 20);
-            s.graphics.lineTo(0, 7);
-            s.graphics.curveTo(0, 0, 7, 0);
-            s.graphics.lineTo(w - 7, 0);
-            s.graphics.curveTo(w, 0, w, 7);
-            s.graphics.lineTo(w, 20);
-            s.graphics.endFill();
-            var t:TextField = Hud.label(text, 12, 0xFFFFFF, false, "center", w);
-            t.y = 2;
-            s.addChild(t);
-            return s;
+            return kind == 0 ? new UIOptTab() : new UITabGameplay();
         }
 
         /** a black option row; the label sits at the left */
@@ -109,23 +97,18 @@ package ui
             return s;
         }
 
-        /** a red arrow, like the ones in the game's option rows */
-        public static function arrow(dir:int):Shape
+        /** the red arrow of the game's option rows (Spider.swf's own), pointing left (dir -1) or right (1) */
+        public static function arrow(dir:int):Sprite
         {
-            var a:Shape = new Shape();
-            var g:* = a.graphics;
-            g.lineStyle(1.5, 0x3A0A0A, 1);
-            g.beginGradientFill(GradientType.LINEAR, [0xE23B3B, 0x7A0F0F], [1, 1], [0, 255], new Matrix(0, 0.05, -0.05, 0, 0, 0));
-            g.moveTo(dir * 11, 0);
-            g.lineTo(0, -9);
-            g.lineTo(0, -4);
-            g.lineTo(-dir * 11, -4);
-            g.lineTo(-dir * 11, 4);
-            g.lineTo(0, 4);
-            g.lineTo(0, 9);
-            g.lineTo(dir * 11, 0);
-            g.endFill();
-            return a;
+            var art:UIArrow = new UIArrow();
+            var b:Rectangle = art.getBounds(art);
+            art.x = -(b.x + b.width / 2);
+            art.y = -(b.y + b.height / 2);
+            var s:Sprite = new Sprite();
+            s.addChild(art);
+            s.rotation = dir * 90;
+            s.scaleX = s.scaleY = 0.69;
+            return s;
         }
 
         /**
@@ -135,10 +118,10 @@ package ui
         public static function toggleRow(text:String, w:Number, value:Function, fn:Function):MovieClip
         {
             var r:MovieClip = row(text, w);
-            var left:Shape = arrow(-1);
+            var left:Sprite = arrow(-1);
             left.x = w - 110;
             left.y = 16;
-            var right:Shape = arrow(1);
+            var right:Sprite = arrow(1);
             right.x = w - 20;
             right.y = 16;
             var v:TextField = Hud.label("", 12, 0xFFFFFF, false, "center", 60);

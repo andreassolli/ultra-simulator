@@ -8,6 +8,7 @@ package ui
     import flash.filters.DropShadowFilter;
     import flash.filters.GlowFilter;
     import flash.geom.Matrix;
+    import flash.geom.Rectangle;
     import flash.text.TextField;
     import sim.Hud;
 
@@ -40,7 +41,7 @@ package ui
             menuRow(304, "CREDITS", 2, h.menuCredits);
             addChild(playButton(h.menuPlay, w));
             var help:TextField = Hud.label(h.menuHelpLine(), 12, 0x9BA6BD, false, "center", w);
-            help.y = 448;
+            help.y = 474;
             addChild(help);
         }
 
@@ -172,35 +173,25 @@ package ui
             }
         }
 
-        /** the big gold-framed red button */
+        /** Spider.swf's ornate red and gold button (the login screen's, without its "Login") with "Play" in the game's title font */
         private function playButton(fn:Function, w:Number):Sprite
         {
-            var bw:Number = COL_W + 20, bh:Number = 62;
             var s:Sprite = new Sprite();
-            var g:* = s.graphics;
-            var m:Matrix = new Matrix();
-            m.createGradientBox(bw, bh, Math.PI / 2);
-            g.lineStyle(2, 0x5A3A06, 1);
-            g.beginGradientFill(GradientType.LINEAR, [0xFFE27A, 0xD39A1E, 0x8E5A08], [1, 1, 1], [0, 120, 255], m);
-            g.drawRoundRect(0, 0, bw, bh, 30, 30);
-            g.endFill();
-            var m2:Matrix = new Matrix();
-            m2.createGradientBox(bw - 24, bh - 18, Math.PI / 2);
-            g.lineStyle(2, 0x3A0000, 1);
-            g.beginGradientFill(GradientType.LINEAR, [0xFF3B2F, 0xC00F12, 0x7A060A], [1, 1, 1], [0, 140, 255], m2);
-            g.drawRoundRect(12, 9, bw - 24, bh - 18, 20, 20);
-            g.endFill();
-            g.lineStyle(0, 0, 0);
-            g.beginFill(0xFFFFFF, 0.16);
-            g.drawRoundRect(20, 12, bw - 40, (bh - 18) / 2 - 3, 12, 12);
-            g.endFill();
-            var t:TextField = Hud.label("Play", 38, 0xFFFFFF, false, "center", bw, Fonts.TITLE);
-            t.y = 8;
-            t.filters = [new DropShadowFilter(2, 90, 0, 0.9, 3, 3, 1)];
+            var art:UIPlayBtn = new UIPlayBtn();
+            var b:Rectangle = art.getBounds(art);
+            var k:Number = 2.3;
+            art.scaleX = art.scaleY = k;
+            art.x = -b.x * k;
+            art.y = -b.y * k;
+            s.addChild(art);
+            var bw:Number = b.width * k, bh:Number = b.height * k;
+            var t:TextField = Hud.label("Play", 40, 0xFFF3E0, false, "center", bw, Fonts.TITLE);
+            t.y = (bh - 50) / 2 + 1;
+            t.mouseEnabled = false;
+            t.filters = [new DropShadowFilter(2, 90, 0x300000, 0.9, 3, 3, 1)];
             s.addChild(t);
             s.x = (w - bw) / 2;
-            s.y = 362;
-            s.cacheAsBitmap = true;
+            s.y = 346;
             Aqw.onClick(s, fn);
             return s;
         }

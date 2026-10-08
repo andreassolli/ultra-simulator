@@ -17,6 +17,7 @@ package
     import flash.events.KeyboardEvent;
     import flash.events.MouseEvent;
     import flash.external.ExternalInterface;
+    import flash.display.GradientType;
     import flash.geom.Matrix;
     import flash.geom.Point;
     import flash.geom.Rectangle;
@@ -207,7 +208,7 @@ package
         private var chartHidden:Boolean = false;
         private var chatField:TextField;
         private var chatHint:TextField;
-        private var chatTab:Sprite;
+        private var musicTop:Sprite;
         private var chatLines:Array = [];
         private var optionsView:OptionsView;
         private var classPicker:Sprite;
@@ -651,7 +652,7 @@ package
             }
             if (chatField)
             {
-                chatHint.text = bossId == "gramiel" ? "Enter: chat  (1: you + SC, 2: LR + LoO)" : "Press Enter to chat";
+                chatHint.text = bossId == "gramiel" ? "1: you + SC, 2: LR + LoO" : "";
             }
             runeMC = sc.rune;
             safeMC = sc.safe;
@@ -909,26 +910,18 @@ package
             pausedText.y = 200;
             pausedText.visible = false;
             g.addChild(pausedText);
-            // the chat: where the game puts it, a tab on top, the messages (the fight's log lines are chat messages) and the input line
-            chatTab = Aqw.tab("Chat", 72);
-            chatTab.x = 690;
-            chatTab.y = 352;
-            g.addChild(chatTab);
-            logPanel = new Sprite();
-            logPanel.graphics.lineStyle(1, 0x6B5A2A, 1);
-            logPanel.graphics.beginFill(0x000000, 0.62);
-            logPanel.graphics.drawRect(0, 0, 262, 124);
-            logPanel.graphics.endFill();
-            logPanel.x = 690;
-            logPanel.y = 372;
+            // the chat, where the game puts it: the messages (the fight's log lines are chat messages) bottom left over the map
+            logPanel = new Sprite(); // (nothing: the chat has no box, only text)
+            logPanel.visible = false;
             g.addChild(logPanel);
-            logText = Hud.label("", 11, 0xFFFFFF, false, "left", 254);
+            logText = Hud.label("", 12, 0xFFFFFF, false, "left", 332);
             logText.multiline = true;
             logText.wordWrap = true;
-            logText.height = 92;
-            logText.x = 694;
-            logText.y = 375;
+            logText.height = 84;
+            logText.x = 10;
+            logText.y = STAGE_H - 30 - 88;
             logText.autoSize = "none";
+            logText.filters = [new GlowFilter(0x000000, 1, 3, 3, 6, 1)];
             g.addChild(logText);
             bossBuffX = targetBox.x + targetBox["HP"].x;
             playerBuffX = playerBox.x + playerBox["HP"].x;
@@ -953,25 +946,69 @@ package
                 fxLayer.addChild(ctx);
                 crystalTexts.push(ctx);
             }
+            // the chat bar along the bottom, like the game's: bubble, "Chat:", the input and SEND (the skills sit on top of it)
+            var cbar:Sprite = new Sprite();
+            var bm:Matrix = new Matrix();
+            bm.createGradientBox(STAGE_W, 30, Math.PI / 2, 0, STAGE_H - 30);
+            cbar.graphics.beginGradientFill(GradientType.LINEAR, [0x2A2A30, 0x08080B], [1, 1], [0, 255], bm);
+            cbar.graphics.drawRect(0, STAGE_H - 30, STAGE_W, 30);
+            cbar.graphics.endFill();
+            cbar.graphics.lineStyle(1, 0x55555E, 1);
+            cbar.graphics.moveTo(0, STAGE_H - 30);
+            cbar.graphics.lineTo(STAGE_W, STAGE_H - 30);
+            cbar.graphics.lineStyle(2, 0x8A8A92, 1);
+            cbar.graphics.beginFill(0x0D0D10, 1);
+            cbar.graphics.drawCircle(22, STAGE_H - 14, 11);
+            cbar.graphics.endFill();
+            cbar.graphics.lineStyle(0, 0, 0);
+            cbar.graphics.beginFill(0xFFFFFF, 1);
+            cbar.graphics.drawRoundRect(16, STAGE_H - 19, 13, 9, 4, 4);
+            cbar.graphics.moveTo(18, STAGE_H - 11);
+            cbar.graphics.lineTo(18, STAGE_H - 7);
+            cbar.graphics.lineTo(23, STAGE_H - 11);
+            cbar.graphics.endFill();
+            cbar.graphics.lineStyle(1, 0x2A2A30, 1);
+            cbar.graphics.beginFill(0x101013, 1);
+            cbar.graphics.drawRoundRect(46, STAGE_H - 26, 318, 22, 12, 12);
+            cbar.graphics.endFill();
+            cbar.graphics.lineStyle(2, 0xCCCCCC, 1);
+            cbar.graphics.moveTo(55, STAGE_H - 12);
+            cbar.graphics.lineTo(60, STAGE_H - 17);
+            cbar.graphics.lineTo(65, STAGE_H - 12);
+            g.addChildAt(cbar, 0);
+            var chatLabel:TextField = Hud.label("Chat:", 13, 0xFFFFFF, false, "left", 50);
+            chatLabel.x = 72;
+            chatLabel.y = STAGE_H - 24;
+            g.addChildAt(chatLabel, 1);
             chatField = new TextField();
             chatField.type = TextFieldType.INPUT;
             chatField.defaultTextFormat = new TextFormat(Fonts.TEXT, 12, 0xFFFFFF);
             chatField.embedFonts = true;
-            chatField.background = true;
-            chatField.backgroundColor = 0x0A0A0A;
-            chatField.border = true;
-            chatField.borderColor = 0x6B5A2A;
             chatField.maxChars = 60;
-            chatField.x = 694;
-            chatField.y = 474;
-            chatField.width = 254;
+            chatField.x = 118;
+            chatField.y = STAGE_H - 23;
+            chatField.width = 170;
             chatField.height = 18;
             g.addChild(chatField);
-            chatHint = Hud.label("", 11, 0x8E8E8E, false, "left", 250);
-            chatHint.x = 697;
-            chatHint.y = 476;
+            chatHint = Hud.label("", 11, 0x8E8E8E, false, "left", 168);
+            chatHint.x = 120;
+            chatHint.y = STAGE_H - 22;
             chatHint.mouseEnabled = false;
             g.addChild(chatHint);
+            var send:Sprite = Aqw.redButton("SEND", 60, function():void {
+                if (chatField.text == "")
+                {
+                    stage.focus = chatField;
+                }
+                else
+                {
+                    sendChat();
+                }
+            });
+            send.scaleY = 0.78;
+            send.x = 298;
+            send.y = STAGE_H - 27;
+            g.addChild(send);
         }
 
         /**
@@ -1196,10 +1233,15 @@ package
             var gear:UIGearBtn = new UIGearBtn();
             var gb:Sprite = new Sprite();
             gb.addChild(gear);
-            gb.x = STAGE_W - 48;
-            gb.y = 2;
+            gb.x = STAGE_W - 50;
+            gb.y = STAGE_H - 44;
             Aqw.onClick(gb, showOptions);
             hudLayer.addChild(gb);
+            // the red Music On / Music Off button at the top, as in the game
+            musicTop = Aqw.redButton("Music On", 110, toggleMusic);
+            musicTop.x = 452;
+            musicTop.y = 6;
+            hudLayer.addChild(musicTop);
             // the labels the hotkeys keep up to date (not shown)
             pauseLabel = Hud.label("");
             hintsLabel = Hud.label("");
@@ -1648,6 +1690,10 @@ package
         private function setMusicLabels():void
         {
             musicLabel.text = "Music: " + (musicOn ? "ON" : "OFF") + " (M)";
+            if (musicTop)
+            {
+                musicTop["text"].text = musicOn ? "Music On" : "Music Off";
+            }
             if (startMusicLabel)
             {
                 startMusicLabel.text = "Music: " + (musicOn ? "ON" : "OFF") + " (M)";
@@ -2242,10 +2288,10 @@ package
             {
                 logLines.shift();
             }
-            chatLine("<font color=\"#8E8E8E\">[" + t.toFixed(1) + "s]</font> <font color=\"" + (CHAT_COLORS[kind] ? CHAT_COLORS[kind] : "#FFE9A8") + "\">" + escapeHtml(message) + "</font>");
+            chatLine("<font color=\"#C8C8C8\">" + t.toFixed(1) + "s</font>   <font color=\"" + (CHAT_COLORS[kind] ? CHAT_COLORS[kind] : "#7FE3F5") + "\">" + escapeHtml(message) + "</font>");
         }
 
-        private static const CHAT_COLORS:Object = {bad: "#FF7B7B", good: "#7BE08F", right: "#7BD3F0"};
+        private static const CHAT_COLORS:Object = {bad: "#FF8A8A", good: "#A6F26B", right: "#F5E66B"};
 
         private static function escapeHtml(t:String):String
         {
@@ -3369,10 +3415,10 @@ package
             }
             if (chartMC)
             {
-                chartMC.height = partyShown ? 250 : 360;
+                chartMC.height = 366;
                 chartMC.scaleX = chartMC.scaleY;
-                chartMC.x = 14; // left, under the party frames (the right side is for clicking)
-                chartMC.y = partyShown ? 238 : 114;
+                chartMC.x = STAGE_W - chartMC.width - 8; // right, under the Next panel (the chat has the bottom left now)
+                chartMC.y = 94;
                 chartMC.alpha = 0.88;
             }
         }
