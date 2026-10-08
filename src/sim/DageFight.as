@@ -14,7 +14,7 @@ package sim
     public class DageFight extends Fight
     {
         public static const DAGE_ROLES:Array = ["ca", "cn", "da", "db"];
-        public static const DAGE_NAMES:Object = {ca: "Chaos Avenger", cn: "Classic Ninja", da: "DPS 1", db: "DPS 2"};
+        public static const DAGE_NAMES:Object = {ca: "Chaos Avenger", cn: "ArchFiend", da: "Verus DoomKnight", db: "Low DPS"};
 
         /** player skill slots 2-6 per class (slot 1 is the auto attack, slot 6 is the potion slot) */
         public static const DAGE_SKILLS:Object = {

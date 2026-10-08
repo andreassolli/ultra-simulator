@@ -12,11 +12,11 @@
 (function () {
   "use strict";
   var SOURCES = {
-    local: "ruffle/ruffle.js"
-    // patched: "https://example.com/ruffle-aqw/ruffle.js"
+    local: "ruffle/ruffle.js",
+    patched: "https://aqw-ruffle-browser-production.up.railway.app/ruffle-aqw/ruffle.js?b=847b4309374e39101d07"
   };
   var DEFAULT = "local";
-  var want = "";
+  var want = "patched";
   try { want = new URLSearchParams(location.search).get("ruffle") || ""; } catch (e) {}
   var name = Object.prototype.hasOwnProperty.call(SOURCES, want) ? want : DEFAULT;
   window.RUFFLE_SOURCE = name;

@@ -46,7 +46,7 @@
     const box = document.getElementById("c");
     const fitGame = () => {
       let res = parseFloat(urlOpts.get("res"));
-      if (!(res > 0)) res = Math.min(1, 1280 / (window.innerWidth * (window.devicePixelRatio || 1)));
+      if (!(res > 0)) res = Math.min(1, 1920 / (window.innerWidth * (window.devicePixelRatio || 1)));
       box.style.width = Math.round(window.innerWidth * res) + "px";
       box.style.height = Math.round(window.innerHeight * res) + "px";
       box.style.transform = "scale(" + (1 / res) + ")";
