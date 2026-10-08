@@ -274,6 +274,7 @@ package
         private var actBar:MovieClip;
         private var iface:MovieClip;
         private var simpleFx:Boolean = false;
+        private var visualsLevel:String = "MED";
         private var lastInput:int = 0;
         private var frozen:Bitmap = null;
         private static const FREEZE_AFTER_MS:int = 5000;
@@ -455,6 +456,7 @@ package
                 if (ExternalInterface.available)
                 {
                     ExternalInterface.addCallback("getState", getState);
+                    ExternalInterface.addCallback("tally", tally);
                     ExternalInterface.addCallback("jsKey", onPageKey);
                     ExternalInterface.addCallback("keyCount", function():int { return nativeKeys; });
                     ExternalInterface.addCallback("setBot", function(on:Boolean):void { botOn = on; });
@@ -1456,7 +1458,8 @@ package
 
         private function syncVisuals():void
         {
-            simpleFx = menuVisuals() != "HIGH";
+            visualsLevel = menuVisuals();
+            simpleFx = visualsLevel != "HIGH";
         }
 
         public function menuCycleVisuals():void
@@ -3007,11 +3010,15 @@ package
         private function onFrame(e:Event):void
         {
             frameCount++;
-            if (simpleFx && (frameCount & 1) == 0)
+            if (simpleFx)
             {
                 plainBlends(bossMC);
                 plainBlends(actorLayer);
                 plainBlends(fxLayer);
+                if ((frameCount & 7) == 0)
+                {
+                    plainBlends(hudLayer);
+                }
             }
             // nothing moves on the menus, while paused or when the fight is over: after a few quiet seconds the scene is replaced by one
             // picture of itself (one textured quad for the GPU instead of ten thousand objects) until the mouse or a key wakes it
@@ -4065,6 +4072,10 @@ package
             {
                 d.blendMode = "normal";
             }
+            if (visualsLevel == "LOW" && d.filters.length > 0)
+            {
+                d.filters = [];
+            }
             var c:flash.display.DisplayObjectContainer = d as flash.display.DisplayObjectContainer;
             if (c != null)
             {
@@ -4077,6 +4088,45 @@ package
                     }
                 }
             }
+        }
+
+        /** debugging aid (player.tally() in the page): how many visible objects use blend modes / filters / masks / caches, per part of the scene */
+        private function tallyScene(d:DisplayObject, t:Object):void
+        {
+            if (d.blendMode != "normal")
+            {
+                t[d.blendMode] = (t[d.blendMode] ? t[d.blendMode] : 0) + 1;
+            }
+            if (d.filters.length > 0)
+            {
+                t["filter"] = (t["filter"] ? t["filter"] : 0) + 1;
+            }
+            if (d.mask != null)
+            {
+                t["mask"] = (t["mask"] ? t["mask"] : 0) + 1;
+            }
+            t["n"] = (t["n"] ? t["n"] : 0) + 1;
+            var c:flash.display.DisplayObjectContainer = d as flash.display.DisplayObjectContainer;
+            for (var i:int = 0; c != null && i < c.numChildren; i++)
+            {
+                var k:DisplayObject = c.getChildAt(i);
+                if (k.visible)
+                {
+                    tallyScene(k, t);
+                }
+            }
+        }
+
+        public function tally():String
+        {
+            var out:Object = {};
+            for each (var pair:Array in [["boss", bossMC], ["map", mapLayer], ["actors", actorLayer], ["fx", fxLayer], ["hud", hudLayer]])
+            {
+                var t:Object = {};
+                tallyScene(pair[1], t);
+                out[pair[0]] = t;
+            }
+            return JSON.stringify(out);
         }
 
         private function freezeScene(on:Boolean):void

@@ -50,6 +50,7 @@
     const VISUALS = { LOW: 960, MED: 1280, HIGH: 1920 };
     let visuals = "MED";
     try { const v = localStorage.getItem("ultraVisuals"); if (VISUALS[v]) visuals = v; } catch (e) {}
+    if (VISUALS[urlOpts.get("vis")]) visuals = urlOpts.get("vis"); // ?vis=LOW|MED|HIGH for this visit only
     const fitGame = () => {
       let res = parseFloat(urlOpts.get("res"));
       if (!(res > 0)) res = Math.min(1, VISUALS[visuals] / (window.innerWidth * (window.devicePixelRatio || 1)));

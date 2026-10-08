@@ -43,7 +43,9 @@ package sim
 
         private static const CAST:Object = {auto: 500, decay: 500, zone: 3000, regen: 10000};
         private static const SLOT:Object = {auto: 2250, decay: 2250, zone: 4500, regen: 11500};
-        private static const START_AT:int = 2500;
+        /** the player may already have left the plate this long before the damage lands and still counts as on it (ms) */
+        private static const PLATE_GRACE:int = 700;
+        private static const START_AT:int = 400; // the first auto attack comes right after the player's first attack (it used to wait 2.5 s)
 
         private static const START_HP:Object = {ca: 4910, cn: 3670, da: 3670, db: 3670};
         private static const FOCUS_MS:int = 4000;
@@ -68,6 +70,7 @@ package sim
         public var ravaged:int = 0;
         public var branded:Boolean = false;
         public var plateId:String = "";
+        private var lastOnPlate:Number = -99999; // when the player was last on the lit plate
         public var casts:Object = {taunted: 0, missedTaunt: 0, plates: 0, missedPlate: 0};
 
         private var host2:IFightHost;
@@ -470,6 +473,7 @@ package sim
                     var on:Boolean = host2.roleOnPlate(r, id);
                     if (r == playerRole)
                     {
+                        on = on || t - lastOnPlate <= PLATE_GRACE; // running off as the blast lands (or a moment before) is fine
                         casts[on ? "plates" : "missedPlate"]++;
                         if (!on)
                         {
@@ -783,6 +787,10 @@ package sim
                 {
                     return;
                 }
+            }
+            if (plateId != "" && host2.roleOnPlate(playerRole, plateId))
+            {
+                lastOnPlate = t;
             }
             if (!introCue && t >= START_AT + 1100)
             {
