@@ -30,6 +30,7 @@ package
     import flash.text.TextFieldType;
     import flash.text.TextFormat;
     import flash.utils.getQualifiedClassName;
+    import flash.utils.Dictionary;
     import flash.utils.getTimer;
     import flash.utils.setTimeout;
 
@@ -272,6 +273,7 @@ package
         private var targetBox:MovieClip;
         private var actBar:MovieClip;
         private var iface:MovieClip;
+        private var simpleFx:Boolean = false;
         private var lastInput:int = 0;
         private var frozen:Bitmap = null;
         private static const FREEZE_AFTER_MS:int = 5000;
@@ -475,6 +477,7 @@ package
             {
             }
             ready = true;
+            syncVisuals();
             if (loaderInfo.parameters["autoplay"] == "1")
             {
                 paused = false;
@@ -1162,7 +1165,7 @@ package
             for each (var a:Object in active)
             {
                 var ic:Object = buffIcons[a.name];
-                ic.cnt.text = a.count;
+                st(ic.cnt, String(a.count));
                 Hud.pie(ic.ov, ic.size * 0.46, a.frac >= 0 ? a.frac : 0); // dark overlay clears clockwise as it runs out
                 ic.sp.visible = true;
                 var n:int = ic.boss ? bossN++ : meN++;
@@ -1217,6 +1220,18 @@ package
         }
 
         /** HP / MP style bar of a Spider.swf frame: scale the fill and set its number. */
+        /** text for a field, set only when it changed: Ruffle redraws (and re-filters) a field every time it is assigned, even to the same text */
+        private static var lastText:Dictionary = new Dictionary(true);
+
+        private static function st(t:TextField, v:String):void
+        {
+            if (lastText[t] !== v)
+            {
+                lastText[t] = v;
+                t.text = v;
+            }
+        }
+
         private static function setBar(box:MovieClip, group:String, bar:String, text:String, frac:Number, value:String):void
         {
             var g:MovieClip = box[group] as MovieClip;
@@ -1227,12 +1242,16 @@ package
             var b:DisplayObject = g[bar];
             if (b)
             {
-                b.scaleX = Math.max(0, Math.min(1, frac));
+                var sx:Number = Math.max(0, Math.min(1, frac));
+                if (b.scaleX != sx)
+                {
+                    b.scaleX = sx;
+                }
             }
             var t:TextField = g[text] as TextField;
             if (t)
             {
-                t.text = value;
+                st(t, value);
             }
         }
 
@@ -1435,6 +1454,11 @@ package
             return "HIGH";
         }
 
+        private function syncVisuals():void
+        {
+            simpleFx = menuVisuals() != "HIGH";
+        }
+
         public function menuCycleVisuals():void
         {
             var order:Array = ["LOW", "MED", "HIGH"];
@@ -1445,6 +1469,7 @@ package
             catch (err:Error)
             {
             }
+            syncVisuals();
         }
 
         public function menuState(name:String):Boolean
@@ -1977,6 +2002,7 @@ package
                 if (cdt)
                 {
                     cdt.text = "";
+                    lastText[cdt] = "";
                     cdt.mouseEnabled = false; // the countdown sits on top of the slot, clicks must go through it
                     actBar.setChildIndex(cdt, actBar.numChildren - 1);
                 }
@@ -2256,6 +2282,10 @@ package
             }
         }
 
+        /** how far past the glowing plate's own edge still counts as standing on it (a share of its width / height, each side) */
+        private static const PLATE_SLACK_X:Number = 0.25;
+        private static const PLATE_SLACK_Y:Number = 0.3;
+
         private function plateRect(id:String):Rectangle
         {
             var clip:MovieClip = id == "a" ? safeMC : safe2MC;
@@ -2264,7 +2294,7 @@ package
                 return new Rectangle(0, 0, 0, 0);
             }
             var b:Rectangle = clip.getBounds(mapHolder);
-            b.inflate(-b.width * 0.1, 0);
+            b.inflate(b.width * PLATE_SLACK_X, b.height * PLATE_SLACK_Y); // a little more than the plate itself: the middle does not have to be hit exactly
             b.y -= 20; // the characters' feet stand a little below the plate's edge
             b.height += 50;
             return b;
@@ -2977,6 +3007,12 @@ package
         private function onFrame(e:Event):void
         {
             frameCount++;
+            if (simpleFx && (frameCount & 1) == 0)
+            {
+                plainBlends(bossMC);
+                plainBlends(actorLayer);
+                plainBlends(fxLayer);
+            }
             // nothing moves on the menus, while paused or when the fight is over: after a few quiet seconds the scene is replaced by one
             // picture of itself (one textured quad for the GPU instead of ten thousand objects) until the mouse or a key wakes it
             var idleNow:Boolean = paused || fight.over != null;
@@ -3257,7 +3293,7 @@ package
         {
             var f:Fight = fight;
             // Spider.swf status boxes: player and target (the boss)
-            playerBox["strClass"].text = CLASS_NAMES[role];
+            st(playerBox["strClass"], CLASS_NAMES[role]);
             setBar(playerBox, "HP", "intHPbar", "strIntHP", f.hp[role] / f.maxHp(role), Fight.fmt(f.hp[role]));
             setBar(playerBox, "MP", "intMPbar", "strIntMP", f.mana / 100, String(Math.round(f.mana)));
             setBar(playerBox, "SP", "intSPbar", "strIntSP", stamina / 100, String(Math.round(stamina)));
@@ -3285,7 +3321,7 @@ package
                 setBar(partyPanels[r], "HP", "intHPbar", "strIntHP", f.hp[r] / f.maxHp(r), Fight.fmt(f.hp[r]));
                 setBar(partyPanels[r], "MP", "intMPbar", "strIntMP", 1, "");
                 var sm:int = f.somber[r];
-                partyPanels[r]["strName"].text = ROLE_FULL[r] + (sm > 0 ? "  x" + sm : "");
+                st(partyPanels[r]["strName"], ROLE_FULL[r] + (sm > 0 ? "  x" + sm : ""));
             }
             // buff chips
             var chips:Array = [];
@@ -3355,27 +3391,27 @@ package
                 chipTexts[c].visible = c < chips.length;
                 if (c < chips.length)
                 {
-                    chipTexts[c].text = chips[c];
+                    st(chipTexts[c], chips[c]);
                 }
             }
             var secs:Number = f.t / 1000;
-            clockText.text = int(secs / 60) + ":" + (int(secs % 60) < 10 ? "0" : "") + int(secs % 60);
+            st(clockText, int(secs / 60) + ":" + (int(secs % 60) < 10 ? "0" : "") + int(secs % 60));
             // with hints off nothing says whose zone it is, who must taunt, or what is coming next
-            nextText.text = hintsOn ? "Next: " + f.nextLabel() : "";
+            st(nextText, hintsOn ? "Next: " + f.nextLabel() : "");
             nextText.visible = hintsOn;
             nextPanel.visible = hintsOn;
             logText.visible = true; // the log stays, hints or not
             chatHint.visible = chatField.text == "" && stage.focus != chatField;
             logPanel.visible = true;
-            bannerText.text = (hintsOn && banner != "" && f.t < bannerUntil) ? banner : "";
+            st(bannerText, (hintsOn && banner != "" && f.t < bannerUntil) ? banner : "");
             if (!f.started && hintsOn)
             {
-                bannerText.text = f.startHint();
+                st(bannerText, f.startHint());
             }
             bannerText.textColor = TIP_COLOR; // what to do: purple, to tell it from the yellow announcements
             pausedText.visible = paused && !(startScreen && startScreen.parent) && !(creditsPanel && creditsPanel.parent);
-            pauseLabel.text = paused ? "Resume (P)" : "Pause (P)";
-            shoutText.text = (shout != "" && f.t < shoutUntil) ? shout : "";
+            st(pauseLabel, paused ? "Resume (P)" : "Pause (P)");
+            st(shoutText, (shout != "" && f.t < shoutUntil) ? shout : "");
             // skill cooldowns on the action bar
             for (var s:int = 0; s < skillSlots.length; s++)
             {
@@ -3388,7 +3424,7 @@ package
                 Hud.pie(slot.cd, slot.r * 0.92, left > 0 ? Math.min(1, left / Math.max(len, left)) : 0);
                 if (slot.txt)
                 {
-                    slot.txt.text = left > 50 ? (left / 1000).toFixed(left > 9950 ? 0 : 1) : "";
+                    st(slot.txt, left > 50 ? (left / 1000).toFixed(left > 9950 ? 0 : 1) : "");
                 }
                 var low:Boolean = name != null && f.mana < f.skillCost(name);
                 slot.icon.alpha = (f.stunned() && k >= 2) || low ? 0.5 : 1; // a disabled button: dimmed picture under a faint grey veil
@@ -4012,6 +4048,35 @@ package
                 }
             }
             return n;
+        }
+
+        /**
+         * MED and LOW Visuals: the additive (and other) blend modes of the effects are drawn as normal ones. Ruffle draws every blended
+         * object with an extra pass over what is behind it, and phase 2 of Drakath has some sixty of them: the biggest single cost
+         * measured (about a quarter of the frame time on characters and effects, another third on the boss).
+         */
+        private function plainBlends(d:DisplayObject):void
+        {
+            if (d == null)
+            {
+                return;
+            }
+            if (d.blendMode != "normal")
+            {
+                d.blendMode = "normal";
+            }
+            var c:flash.display.DisplayObjectContainer = d as flash.display.DisplayObjectContainer;
+            if (c != null)
+            {
+                for (var i:int = c.numChildren - 1; i >= 0; i--)
+                {
+                    var k:DisplayObject = c.getChildAt(i);
+                    if (k != null && k.visible)
+                    {
+                        plainBlends(k);
+                    }
+                }
+            }
         }
 
         private function freezeScene(on:Boolean):void

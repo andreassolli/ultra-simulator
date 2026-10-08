@@ -48,7 +48,7 @@
     // Visuals (Options): the widest the game is drawn, in pixels. The browser scales it up to the window, so this is what sets the
     // GPU's work (fill rate). ?res= still forces a factor.
     const VISUALS = { LOW: 960, MED: 1280, HIGH: 1920 };
-    let visuals = "HIGH";
+    let visuals = "MED";
     try { const v = localStorage.getItem("ultraVisuals"); if (VISUALS[v]) visuals = v; } catch (e) {}
     const fitGame = () => {
       let res = parseFloat(urlOpts.get("res"));
