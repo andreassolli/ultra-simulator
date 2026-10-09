@@ -344,13 +344,40 @@ Ruffle draws the whole 960x500 scene with its own renderer, so the load is mostl
 
 ## Ultra Darkon
 
-Files: `runtime/town-ultradarkon.swf` (the map, its music is `bin/audio/darkon.mp3`) and `runtime/monster-UltraDarkon.swf` (Darkon the Conductor); rules in `src/sim/DarkonFight.as`. You play the **Lord of Order**; the Legion Revenant, StoneCrusher and Chrono ShadowSlayer are played by the sim. (The wiki page could not be opened from the build machine, so the rules below follow the community guide pasted into the project plus what is known of the fight; timings and damage are tuned, see the constants at the top of `DarkonFight.as`.)
+Files: `runtime/town-ultradarkon.swf` (the map, its music is `bin/audio/darkon.mp3`) and `runtime/monster-UltraDarkon.swf` (Darkon the Conductor); rules in `src/sim/DarkonFight.as`. You play the **Lord of Order**; the Legion Revenant, StoneCrusher and Chrono ShadowSlayer are played by the sim. The rules follow the *Darkon the Conductor* guide (stats, attacks, phases, attack pattern); the wiki itself could not be opened from the build machine. Damage and healing are tuned (constants at the top of `DarkonFight.as`) so a correct run takes about 3 minutes and nobody dies.
 
-- **HP:** Phase 1 22 222 222 -> 15 555 555, Phase 2 15 555 555 -> 4 444 444, then Darkon regains his health: Phase 3 20 000 000 -> 0. The fight starts with your first skill; the whole run takes about 3 minutes (about 35 s, 50 s and 95 s per phase).
-- **Pattern:** blocks of 15 s: opening block auto, auto, Elegy (the mouth animation); second block auto, auto, nuke, Elegy; then the loop auto, auto, Elegy / auto, nuke, Elegy. Every attack only hits whoever holds the taunt. If it lands with nobody holding it, you lose ("Missed Taunt"). The Elegies land on the Revenant and on you in turn.
-- **Taunt loop:** the Legion Revenant taunts at the start and then every 10 s; you taunt (6) when its 6 s taunt is nearly over, 4 to 6 s after it (aim for 4.5 s; hints show "TAUNT NOW" and the auto-pilot does it), and keep that up. Your own taunt is on a 10 s cooldown, so it is the same loop the whole fight.
-- **Quix (5):** use it freely at first, **stop at 13 000 000 HP** (using it from there on loses) and **use it once between 5 000 000 and 4 500 000 HP** (missing that window loses). Banners remind you at both points.
-- **Phase 1:** every auto -50 % hit chance; two Elegies on the same character stun it (loses); the phase has to be over by 72 s or Darkon one-shots everybody.
-- **Phase 2:** every auto takes 6 % haste from the one it hits (22 stacks); taunting an Elegy removes it; the same character holding two Elegies in a row gets its crits reversed (they heal Darkon), three in a row kills it.
-- **Phase 3:** autos hit harder until 50 s into the phase, nukes add a damage over time for 8 s, autos give an 80 % healing debuff, and taunting an Elegy raises your mana costs.
-- The yellow boss text (the indicators) is now regular weight and size instead of bold.
+- **HP / phases:** Phase 1 (Overture) 22 222 222 -> 15 555 555, Phase 2 (Recitative) 15 555 555 -> 4 444 444, then Aria: Darkon heals to 20 000 000 and Phase 3 runs to 0. Damage above 122 222 is reduced. Yellow texts: "The curtain rises on our final performance.", "Prepare for the next act!", "No... It can't end like this...".
+- **The Cycle's End:** every 30 s Darkon takes +10 % damage (10 stacks max).
+- **Pattern (one attack per 2.25 s):** Intro `A A E A A N E`, then Loop `A A E A N E` (A auto, N nuke, E Elegy = the mouth). After each phase transition he switches to the Swap pattern `A A E N A E`.
+- **Auto:** hits all four, ignores Focus, always crits. P1 -50 % hit chance (no stack); P2 -6 % haste per auto (22 stacks); P3 -80 % healing taken. In P1 each nuke adds an aura that makes autos stronger; in the first 50 s of P3 autos hit hard, after that Darkon deals no more damage.
+- **Nuke:** 90 % of the current HP of the player holding the taunt (anybody if nobody does), always hits; the raid's healer heals that player right after. P3: damage over time for 8 s.
+- **Elegy (mouth, tauntable):** lands on the taunt holder; the Revenant takes every other one and you the others. Nobody holding the taunt = everybody is hit = you lose ("Missed Taunt"). P1: a second Elegy within 8 s stuns (loses). P2: Seed Planted removes your haste debuff, a second one within 8 s reverses your crits (they heal Darkon), a third kills. P3: Dirge of Astravia, +25 % mana costs per stack (12 s, 22 stacks).
+- **Taunt loop:** the Revenant taunts 2.75 s before its mouth lands, you taunt (6) when the cue says so, which is 4.2-4.8 s after the Revenant's taunt (about 1.75 s window; the auto-pilot does it). Your taunt is on a 10 s cooldown, so it is the same loop the whole fight.
+- **Quix (5):** use it freely at first, **stop at 13 000 000 HP** (using it from there on loses) and **use it once between 5 000 000 and 4 500 000 HP** (missing that window loses).
+- **Phase 3 (Aria):** Darkon is immune for the first 50 s (Major auras) and takes +200 % afterwards; Aria itself hits everybody for half their health.
+- **Enrage:** Phase 1 has to end before 72 s (six nukes and he one-shots); at 4:30 "End of the World" kills everybody 3 s later (Curtain Call).
+- The yellow boss text (the indicators) is regular weight and size instead of bold.
+
+## Fixing animations (which animation goes with which attack)
+
+Every boss' attacks are timed in its `src/sim/<Boss>Fight.as`; the animation each attack plays is one `host2.bossAnim("<frame label>", loop)` call, and the label is a frame label inside the boss' SWF (`bin/runtime/monster-*.swf`). To change an animation you only change that label (and, if needed, how long it plays).
+
+1. **See which labels the SWF has.** Serve `bin/` (`cd bin && python3 -m http.server 8767`), open `http://localhost:8767/play.html?boss=darkon&autoplay=1` and in the browser console run `player.bossLabels()`. It prints every frame label with its first frame, e.g. `Idle@8, Attack1@42, Attack2@88, Attack3@129, PowerUp@175, Charge@210, Chargeloop@236, ChargeAttack@247 ...`. A label plays until the next label (24 frames per second), so the length of an animation is `(next label's frame - this frame) / 24` seconds.
+2. **Preview a label.** Either add `&anim=<Label>` to the URL (`...?boss=darkon&anim=Attack3`, the boss plays it as soon as the map has loaded and the fight has not started) or, in the console, `player.playAnim("Attack3", false)` (second argument = loop). Try the labels until one looks like the attack; `player.playAnim("Idle", false)` stops it. `?boss=` takes `dage`, `drakath`, `nulgath`, `gramiel`, `drago`, `darkon` (Speaker is the default).
+3. **Change the mapping.**
+   - **Darkon:** all of it is in the `ANIM` table at the top of `DarkonFight.as` (`auto1`, `auto2`, `nuke`, `elegyOpen`, `elegyHold`, `elegyHit`, `transform`, `idle`) with the time each one is left to run in `ANIM_MS` (the length of the label divided by 24, in ms) and, in `HIT_AT`, how long after the animation starts the damage lands.
+   - **The other bosses** have the label as a string in the function that casts the attack:
+
+     | Boss (file) | Function: labels |
+     |---|---|
+     | Dage (`DageFight.as`) | `autoAttack`: Attack1 - `decaying`: Attack2 - `brutes`: Powerup, PowerLoop (looped), Aoe - `mages`: Charge, ChargeLoop (looped), DageNuke |
+     | Drakath (`DrakathFight.as`) | `autoAttack`: Attack1 / FAttack1 (phase 2) - `special`: Special / FSpecial - `transform`: Transform - `meteor`: Charge, Execute - `idle`: Idle / FIdle |
+     | Nulgath (`NulgathFight.as`) | `contract`: Attack1 - `abyssalCharge`: Charge, Chargeloop (looped), ChargeAttack |
+     | Gramiel (`GramielFight.as`) | `gloryOfGrace`: Attack1 - `graceBurst`, `deathsDoor`: Attack2 - `celestialRuin`: Attack3 - `startDrain`, `startPhase2`, `graceUnleashed`: Charge1, ChargeLoop1, ChargeAttack1 - `checkVanquish`: Charge2, ChargeLoop2, ChargeAttack2 - `shieldBroken`: Hit |
+     | Drago (`DragoFight.as`) | `step` (the Execute): Charge, Execute |
+
+   Speaker's attacks are in `UltraSim.as` (search for `bossAnim`).
+4. **Timing.** `later(ms, fn)` runs `fn` that many milliseconds after now: put the `bossAnim` call at the moment the attack should start, and the damage/effect where the animation hits. Calls such as `later(1200, function():void { host2.bossAnim("Idle", false); })` send the boss back to Idle; set the delay to the animation's length so it is not cut off (or left running over the next attack).
+5. **Looped parts.** A label that should repeat while the attack is held (`Chargeloop`, `PowerLoop`...) is passed `true` as the second argument and needs an entry in that boss' `loops` in the `BOSSES` table of `UltraSim.as`: `loops: {Chargeloop: [236, 246]}` = first and last frame to repeat (from `bossLabels()`: the label's frame up to the next label's frame minus one). Other per-boss fields in the same table: `idleStop` (the boss stands still on `Idle` instead of walking on into `Walk`), `dieLabel` (played on the win), `mapFrame` (the map's frame label).
+6. **Rebuild and test.** `./build.sh` (needs the Apache Flex SDK: set `FLEX_SDK`, `AIR_HOME` and `PLAYERGLOBAL_HOME`), reload, and try the fight with `&bot=1&speed=1` so the auto-pilot plays it while you watch the boss.
+

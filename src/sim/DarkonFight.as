@@ -1,28 +1,35 @@
 package sim
 {
     /**
-     * Ultra Darkon fight rules (the Lord of Order's fight), from the AQW wiki (Darkon the Conductor) and the community guide.
+     * Ultra Darkon fight rules (the Lord of Order's fight), from the Darkon the Conductor guide.
      *
-     * Darkon: Phase 1 22 222 222 -> 15 555 555 HP, Phase 2 15 555 555 -> 4 444 444 HP, then he regains his health (Phase 3, 20 000 000 -> 0).
-     * He attacks in fixed blocks of 15 s: autos (every 2.25 s), a nuke now and then, and one "Elegy" (the mouth animation, tauntable) that
-     * lands 12 s into each block. Pattern, as in the guide: opening block auto, auto, Elegy; second block auto, auto, nuke, Elegy; then it
-     * loops auto, auto, Elegy / auto, nuke, Elegy. Every attack only hits whoever holds the taunt, and one that lands with nobody holding
-     * it loses the fight.
+     * Darkon: Phase 1 "Overture" 22 222 222 -> 15 555 555 HP, Phase 2 "Recitative" 15 555 555 -> 4 444 444 HP, then "Aria": he heals to
+     * 20 000 000 HP and Phase 3 runs to 0. Damage on him above 122 222 is reduced (CAP). Every 30 s "The Cycle's End" adds +10 % damage
+     * taken (10 stacks max).
      *
-     * Taunts: the Legion Revenant (played by the sim) taunts at the start and then every 10 s (the skill's cooldown); the player's Lord of
-     * Order has to taunt when the Revenant's 6 s taunt is nearly over (it has to be between 4 and 6 s after it, aim for 4.5 s) and
-     * keeps that up, so the two of them keep the boss held for the whole fight and the Elegies fall on them in turn. The other two
-     * characters (StoneCrusher and Chrono ShadowSlayer) are played by the sim.
-     *   Phase 1: every auto -50 % hit chance (does not stack); two Elegies on the same character stun it (loses); the phase has to end
-     *            before 72 s or Darkon one-shots everybody.
-     *   Phase 2: every auto -6 % haste on the one it hits (22 stacks); taunting an Elegy removes the haste stacks; the same character
-     *            holding two Elegies in a row has its crits reversed (they heal Darkon), three in a row kills it.
-     *   Phase 3: autos hit harder until 50 s into the phase; taunting an Elegy raises your mana costs; nukes add a damage over time for
-     *            8 s; autos give an 80 % healing debuff.
+     * His attacks come one per 2.25 s slot (SLOT), in the guide's patterns (A = auto, N = nuke, E = Elegy / mouth):
+     *   Intro  A A E A A N E        (once, from the start)        Loop  A A E A N E        (then forever)
+     *   Swap   A A E N A E          (after each phase transition: "he changes his nuke timings")
+     *   - Auto: hits all four, ignores Focus, always crits; P1 -50 % hit chance (no stack), P2 -6 % haste per auto (22 stacks),
+     *           P3 -80 % healing taken. In the first 50 s of Phase 3 autos hit much harder, after that Darkon deals no damage any more.
+     *   - Nuke: 90 % of the current HP of one player (the taunt holder). Always hits. P1: every nuke adds an aura that makes his autos
+     *           stronger (six of them and he one-shots: the reason Phase 1 has to end before 72 s); P3: damage over time for 8 s.
+     *   - Elegy (the mouth, tauntable): lands on whoever holds the taunt; nobody holding it = everybody takes it = lost (Missed Taunt).
+     *           P1: a second Elegy within 8 s stuns (lost). P2: Seed Planted (8 s) removes your haste debuff, a 2nd one within 8 s = crits
+     *           reversed (Grown), a 3rd = fatal. P3: Dirge of Astravia, +25 % mana costs per stack (12 s, 22 stacks).
+     *   - 4:30 (270 s) "End of the World": 3 s later Curtain Call kills everybody.
+     *   Phase 3 starts with Aria: Darkon is immune for 50 s (Major auras), then takes +200 % damage.
+     *
+     * Taunts: the Legion Revenant (played by the sim) takes the Elegies on every other mouth, the Lord of Order (you) on the others,
+     * so each of you is hit once per 13.5 s. The Revenant taunts 2.75 s before its mouth lands, you have to taunt 4.2-4.8 s after the
+     * Revenant's taunt (when it has 20-30 % left): the HUD cue tells you when (the window is about 1.75 s wide). Healing: the nuke
+     * target is healed right after the nuke by the raid's healer. The other two characters (StoneCrusher, Chrono ShadowSlayer) are
+     * played by the sim.
      * Quix (Lord of Order, skill 5): it may be used from the start, but not any more from 13 000 000 HP on (before he regains health), and
      * it has to be used once between 5 000 000 and 4 500 000 HP. Using it in between, or missing the window, loses. Anybody dying loses too.
      *
-     * The raid's damage is tuned so that the fight takes about three minutes: see GEAR and PHASE_DAMAGE.
+     * ANIMATIONS: which frame label of monster-UltraDarkon.swf plays for each attack is the ANIM table below (see README "Fixing
+     * animations"). The raid's damage is tuned so that the fight takes about three minutes: see GEAR.
      */
     public class DarkonFight extends Fight
     {
@@ -45,18 +52,41 @@ package sim
         public static const QUIX_WINDOW_HI:Number = 5000000;  // ... until Quix has to be used once between these two
         public static const QUIX_WINDOW_LO:Number = 4500000;
         private static const ENRAGE_MS:int = 72000;           // Phase 1 has to be over by then
-        private static const BLOCK_MS:int = 15000;
-        private static const FIRST_BLOCK:int = 1000;
-        private static const ELEGY_CHARGE_AT:int = 8000;
-        private static const ELEGY_HIT_AT:int = 12000;
+        private static const CURTAIN_MS:int = 270000;         // 4:30: End of the World
+        private static const CURTAIN_CHARGE:int = 3000;
+        private static const CYCLE_MS:int = 30000;            // The Cycle's End: +10 % damage taken, 10 stacks
+        private static const SLOT:int = 2250;                 // one boss attack every 2.25 s
+        private static const FIRST_SLOT:int = 1000;
+        private static const ELEGY_HIT_AFTER:int = 2000;      // mouth opens at its slot, lands this long after
+        private static const LR_TAUNT_BEFORE:int = 2750;      // the Revenant taunts this long before its mouth lands
+        private static const LOO_CUE_BEFORE:int = 5000;       // "taunt now" cue this long before the mouth you take lands
+        private static const DEBUFF_MS:int = 8000;            // Elegy of Madness / Seed Planted
         private static const TAUNT_MS:int = 6000;
-        private static const LR_LOOP_MS:int = 10000;          // the Revenant taunts whenever its cooldown allows
-        private static const LOO_CUE_AFTER:int = 4200;        // "taunt now" this long after the Revenant's taunt
-        private static const CAP:Number = 150000;
-        private static const GEAR:Number = 33;
-        /** how much of the raid's damage is kept in each phase: tuned for roughly 40 s / 60 s / 85 s */
-        private static const PHASE_DAMAGE:Object = {1: 1.0, 2: 1.0, 3: 1.0};
-        private static const AUTO:Number = 850;               // Darkon's auto on a tank (tuned, see README)
+        private static const IMMUNE_MS:int = 50000;           // Phase 3: B/C Major auras
+        private static const INTRO:String = "AAEAANE";
+        private static const LOOP:String = "AAEANE";
+        private static const SWAP:String = "AAENAE";
+        private static const CAP:Number = 122222;
+        private static const GEAR:Number = 27;
+        private static const AUTO:Number = 500;               // Darkon's auto on a tank (tuned, see README)
+
+        /**
+         * ANIMATION TABLE: the frame label of monster-UltraDarkon.swf that each attack plays, and how long (ms) it is left to run before
+         * going back to Idle. Change a label here if an attack shows the wrong animation (README: "Fixing animations").
+         * Available labels: Idle, Attack1, Attack2, Attack3, Charge, Chargeloop, ChargeAttack, PowerUp, Die (+ Walk, Hit ...).
+         */
+        private static const ANIM:Object = {
+            auto1: "Attack1",             // first auto of a pair
+            auto2: "Attack2",             // second auto
+            nuke: "Attack3",
+            elegyOpen: "Charge",          // the mouth opens
+            elegyHold: "Chargeloop",      // looped while the mouth stays open (frames in BOSSES.darkon.loops)
+            elegyHit: "ChargeAttack",     // the Elegy lands
+            transform: "PowerUp",         // Recitative / Aria / End of the World
+            idle: "Idle"
+        };
+        private static const ANIM_MS:Object = {auto: 1900, nuke: 1900, elegyHold: 1100, elegyHit: 2400, transform: 1450}; // frames / 24 fps
+        private static const HIT_AT:Object = {auto: 450, nuke: 800};  // when the damage lands after the animation starts
         private static const LIFESTEAL:Number = 300;
         private static const HEAL_BOOST:Number = 1.4;
         private static const GCD:int = 400;
@@ -80,11 +110,16 @@ package sim
         private var timers2:Array = [];
         private var playerClass:String;
         private var me:Object;
-        private var blockIdx:int = 0;
-        private var blockStart:Number = FIRST_BLOCK;
-        private var lastElegyHolder:String = "";
-        private var npcLrAt:Number = 300;
-        private var npcLrLast:Number = -99999;
+        private var elegyCount:int = 0;        // Elegies scheduled so far: even ones are the Revenant's, odd ones yours
+        private var nukeCount:int = 0;         // nukes landed in the current phase (auras)
+        private var cycleStacks:int = 0;       // The Cycle's End
+        private var cycleAt:Number = CYCLE_MS;
+        private var curtainAt:Number = -1;
+        private var elegyDebuffUntil:Object = {};
+        private var growUntil:Object = {};
+        private var dirgeStacks:Object = {};
+        private var dirgeUntil:Object = {};
+        private var nextPattern:String = INTRO;
         private var npcDepravedAt:Number = 2500;
         private var cuedStop:Boolean = false;
         private var cuedWindow:Boolean = false;
@@ -115,6 +150,10 @@ package sim
                 elegyRun[r] = 0;
                 healDebuffUntil[r] = 0;
                 dotUntil[r] = 0;
+                elegyDebuffUntil[r] = 0;
+                growUntil[r] = 0;
+                dirgeStacks[r] = 0;
+                dirgeUntil[r] = 0;
             }
         }
 
@@ -135,6 +174,19 @@ package sim
             timers2.push({at: abs, fn: fn, kind: kind});
         }
 
+        private var animToken:int = 0;
+
+        /** play a boss animation; if `backMs` > 0 he goes back to Idle after it, unless another animation started meanwhile */
+        private function anim(label:String, loop:Boolean, backMs:Number = 0):void
+        {
+            var mine:int = ++animToken;
+            host2.bossAnim(label, loop);
+            if (backMs > 0)
+            {
+                later(backMs, function():void { if (mine == animToken && !over) { host2.bossAnim(ANIM.idle, false); } });
+            }
+        }
+
         private function alive(r:String):Boolean
         {
             return hp[r] > 0;
@@ -148,7 +200,7 @@ package sim
 
         override public function startHint():String
         {
-            return "Use any skill to start the fight (Legion Revenant taunts first; you taunt 4.5 s later)";
+            return "Use any skill to start the fight (Legion Revenant taunts first; you taunt when the cue says so)";
         }
 
         override public function maxHp(role:String):int
@@ -170,7 +222,12 @@ package sim
         override public function skillCost(name:String):Number
         {
             var base:Number = SKILL[name] ? SKILL[name].mp : 0;
-            return t < manaDebuffUntil && name != "taunt" ? base * 1.5 : base;
+            return name != "taunt" ? base * (1 + 0.25 * dirgeNow(playerRole)) : base;
+        }
+
+        private function dirgeNow(r:String):int
+        {
+            return t < dirgeUntil[r] ? dirgeStacks[r] : 0;
         }
 
         override public function skillCdMs(name:String):Number
@@ -214,7 +271,7 @@ package sim
             }
             else
             {
-                label = "Auto attack in " + Math.max(0, Math.ceil((blockStart + BLOCK_MS + 500 - t) / 1000)) + " s";
+                label = "Next attack soon";
             }
             if (phase < 3 && bossHp > QUIX_STOP && bossHp < QUIX_STOP + 2500000)
             {
@@ -311,7 +368,7 @@ package sim
             {
                 return;
             }
-            var d:int = int(Dmg.taken(dmg * PHASE_DAMAGE[phase] * (t < depravedUntil ? 1.3 : 1), 1, CAP));
+            var d:int = int(Dmg.taken(dmg * takenMult() * (t < depravedUntil ? 1.3 : 1), 1, CAP));
             if (who == "player" && crit && critReversed[playerRole])
             {
                 // the Elegies were taunted twice in a row: the player's crits heal Darkon
@@ -319,9 +376,24 @@ package sim
                 host2.floater(null, "Crit heals Darkon", "bad");
                 return;
             }
+            if (d <= 0)
+            {
+                return;
+            }
             bossHp = Math.max(0, bossHp - d);
             host2.bossDamage(d, crit, who);
             checkThresholds();
+        }
+
+        /** what multiplies the raid's damage: The Cycle's End (+10 % per stack), Phase 3's Major auras (immune for 50 s, then +200 %) */
+        private function takenMult():Number
+        {
+            var m:Number = 1 + 0.1 * cycleStacks;
+            if (phase == 3)
+            {
+                m *= (t - phaseStart < IMMUNE_MS) ? 0 : 3;
+            }
+            return m;
         }
 
         private function checkThresholds():void
@@ -335,16 +407,11 @@ package sim
                 finish("win", "Ultra Darkon defeated");
                 return;
             }
-            if (phase == 1 && bossHp <= HP_P2)
+            if (phase == 1 && bossHp <= HP_P2 && !transforming)
             {
-                phase = 2;
-                phaseStart = t;
-                host2.log("Phase 2: every auto takes 6 % haste (22 stacks); taunting the mouth removes it, but not twice in a row", "bad");
-                host2.announce("The Conductor raises his baton!");
-                host2.bossAnim("PowerUp", false);
-                later(1600, function():void { host2.bossAnim("Idle", false); });
+                transitionTo(2);
             }
-            if (phase == 2)
+            if (phase == 2 && !transforming)
             {
                 if (bossHp < QUIX_STOP && !cuedStop)
                 {
@@ -357,117 +424,136 @@ package sim
                 }
                 if (bossHp <= HP_REGAIN)
                 {
-                    transform();
+                    transitionTo(3);
                 }
             }
         }
 
-        /** Darkon regains his health: Phase 3 */
-        private function transform():void
+        /** Recitative (Phase 2) at 70 % and Aria (Phase 3) at 20 %: what he had queued is cancelled, the Swap pattern starts */
+        private function transitionTo(next:int):void
         {
             transforming = true;
-            // what he had queued is cancelled; the blocks go on on the same beat (the Elegies stay on alternate characters)
             var keep:Array = [];
             for each (var tm:Object in timers2)
             {
                 if (tm.kind == "")
                 {
-                    keep.push(tm); // (the boss' own attacks and the block clock are cancelled)
+                    keep.push(tm);
                 }
             }
             timers2 = keep;
-            host2.announce("Darkon: \"The song is not over!\"");
-            host2.log("Darkon regains his health: Phase 3 (20 000 000 HP)", "bad");
-            host2.bossAnim("PowerUp", false);
-            var from:Number = bossHp;
-            later(1000, function():void { bossHp = from + (HP_P3 - from) * 0.4; });
-            later(2000, function():void { bossHp = from + (HP_P3 - from) * 0.8; });
+            anim(ANIM.transform, false, ANIM_MS.transform);
+            var r:String;
+            if (next == 2)
+            {
+                host2.announce("Prepare for the next act!");
+                host2.log("Phase 2 (Recitative): every auto takes 6 % haste (22 stacks); taunting the mouth removes it, but not twice in a row", "bad");
+                for each (r in DK_ROLES)
+                {
+                    elegyDebuffUntil[r] = 0; // the Overture auras are removed
+                }
+            }
+            else
+            {
+                host2.announce("No\u2026 It can't end like this\u2026");
+                host2.log("Phase 3 (Aria): Darkon heals to 20 000 000 HP and is immune for 50 s; the mouth now raises your mana costs", "bad");
+                var from:Number = bossHp;
+                later(1000, function():void { bossHp = from + (HP_P3 - from) * 0.4; });
+                later(2000, function():void { bossHp = from + (HP_P3 - from) * 0.8; });
+            }
+            nukeCount = 0;
             later(3000, function():void {
-                bossMaxHp = HP_P3;
-                bossHp = HP_P3;
-                phase = 3;
+                if (next == 3)
+                {
+                    bossMaxHp = HP_P3;
+                    bossHp = HP_P3;
+                    for each (var q:String in DK_ROLES) // Aria: devastating physical damage to everybody (ignores Focus)
+                    {
+                        hit(q, 0.5 * maxHp(q), "Aria");
+                    }
+                    if (over)
+                    {
+                        return;
+                    }
+                }
+                phase = next;
                 phaseStart = t;
                 transforming = false;
-                for each (var r:String in DK_ROLES)
+                for each (var r2:String in DK_ROLES)
                 {
-                    elegyRun[r] = 0;
-                    critReversed[r] = false;
-                    hasteStacks[r] = 0;
+                    hasteStacks[r2] = 0;
+                    growUntil[r2] = 0;
+                    critReversed[r2] = false;
                 }
-                lastElegyHolder = "";
-                host2.bossAnim("Idle", false);
-                // the next block on the old beat
-                var next:Number = blockStart + BLOCK_MS;
-                while (next < t + 500)
-                {
-                    next += BLOCK_MS;
-                }
-                scheduleBlock(next);
+                nextPattern = SWAP;
+                scheduleRun(t + 1500);
             });
         }
 
         // ------------------------------------------------------------------ the pattern
-        /** the attacks of block n: [kind, offset in ms] */
-        private function blockPlan(n:int):Array
+        /** one run of a pattern (A auto, N nuke, E Elegy); the next run is scheduled when this one is over */
+        private function scheduleRun(start:Number):void
         {
-            if (n == 0)
+            var pat:String = nextPattern;
+            nextPattern = (phase == 1) ? LOOP : SWAP;
+            for (var i:int = 0; i < pat.length; i++)
             {
-                return [["auto", 500], ["auto", 2750]];
-            }
-            if (n == 1)
-            {
-                return [["auto", 500], ["auto", 2750], ["nuke", 5000]];
-            }
-            return (n % 2 == 0) ? [["auto", 500], ["auto", 2750]] : [["auto", 500], ["nuke", 2750]];
-        }
-
-        private function scheduleBlock(start:Number):void
-        {
-            blockStart = start;
-            var plan:Array = blockPlan(blockIdx);
-            for each (var a:Array in plan)
-            {
-                var kind:String = a[0];
-                laterAt(start + a[1], makeAttack(kind), kind);
-            }
-            laterAt(start + ELEGY_CHARGE_AT, function():void { elegyStart(); }, "elegy");
-            laterAt(start + ELEGY_HIT_AT, function():void { elegyHit(); }, "x");
-            blockIdx++;
-            laterAt(start + BLOCK_MS - 200, function():void {
-                if (!transforming && !over)
+                var kind:String = pat.charAt(i);
+                var at:Number = start + i * SLOT;
+                if (kind == "A")
                 {
-                    scheduleBlock(start + BLOCK_MS);
+                    laterAt(at, auto, "auto");
                 }
-            }, "blk");
-        }
-
-        private function makeAttack(kind:String):Function
-        {
-            return function():void {
-                if (transforming)
+                else if (kind == "N")
                 {
-                    return;
-                }
-                if (kind == "auto")
-                {
-                    auto();
+                    laterAt(at, nuke, "nuke");
                 }
                 else
                 {
-                    nuke();
+                    scheduleElegy(at);
                 }
-            };
+            }
+            var end:Number = start + pat.length * SLOT;
+            laterAt(end - 100, function():void {
+                if (!transforming && !over)
+                {
+                    scheduleRun(end);
+                }
+            }, "seq");
+        }
+
+        /** the Elegy at `at`; the Revenant takes the even ones and you the odd ones, the taunts are scheduled to match */
+        private function scheduleElegy(at:Number):void
+        {
+            var hitAt:Number = at + ELEGY_HIT_AFTER;
+            var mine:Boolean = elegyCount % 2 == 1;
+            elegyCount++;
+            laterAt(at, elegyOpen, "elegy");
+            laterAt(hitAt, elegyLand, "x");
+            if (mine)
+            {
+                laterAt(hitAt - LOO_CUE_BEFORE, function():void { host2.mechanic("loo", "taunt", 0, 0); }, "tn");
+            }
+            else
+            {
+                laterAt(hitAt - LR_TAUNT_BEFORE, function():void { if (alive("lr")) { doSkill("taunt", "lr", false); } }, "tn");
+            }
         }
 
         private var autoSwing:int = 0;
 
+        /** how hard his autos hit: P1 each nuke aura adds to it, P2 the Recitative and Child of the Empress, P3 C Major for 50 s (then 0) */
         private function autoPower():Number
         {
-            if (phase == 3 && t - phaseStart < 50000)
+            if (phase == 1)
             {
-                return 1.3; // "auto attacks hit harder until 50 s into the phase"
+                return 1 + 0.12 * nukeCount;
             }
-            return phase == 2 ? 1.2 : 1;
+            if (phase == 2)
+            {
+                return 1.3 + 0.04 * Math.min(22, nukeCount);
+            }
+            return (t - phaseStart < IMMUNE_MS) ? 1.35 : 0;
         }
 
         private function takenBy(r:String, base:Number):Number
@@ -479,76 +565,108 @@ package sim
         {
             casts.missedTaunt++;
             host2.floater(playerClass, "Missed Taunt", "bad");
-            finish("lose", "Missed Taunt (" + what + ": nobody held Darkon)");
+            finish("lose", "Missed Taunt (" + what + ": nobody held Darkon, so everybody was hit)");
         }
 
+        /** autos hit all four players and ignore Focus */
         private function auto():void
-        {
-            host2.bossAnim((autoSwing++ % 2 == 0) ? "Attack1" : "Attack2", false);
-            later(450, function():void {
-                var h:String = holder();
-                if (h == null)
-                {
-                    missedTaunt("auto attack");
-                    return;
-                }
-                casts.taunted++;
-                hit(h, takenBy(h, AUTO * rnd(0.9, 1.1) * autoPower()), "Darkon's auto attack");
-                if (over)
-                {
-                    return;
-                }
-                if (phase == 2)
-                {
-                    hasteStacks[h] = Math.min(22, hasteStacks[h] + 1); // -6 % haste, stacking
-                }
-                if (phase == 3)
-                {
-                    healDebuffUntil[h] = t + 8000; // -80 % healing
-                }
-            });
-            later(1200, function():void { host2.bossAnim("Idle", false); });
-        }
-
-        private function nuke():void
-        {
-            host2.bossAnim("Attack3", false);
-            later(800, function():void {
-                var h:String = holder();
-                if (h == null)
-                {
-                    missedTaunt("nuke");
-                    return;
-                }
-                casts.taunted++;
-                hit(h, takenBy(h, AUTO * 2.3 * rnd(0.9, 1.1) * (phase == 3 ? 1.15 : 1)), "Darkon's nuke");
-                if (!over && phase == 3)
-                {
-                    dotUntil[h] = t + 8000; // the nukes add a damage over time for 8 s
-                }
-            });
-            later(1500, function():void { host2.bossAnim("Idle", false); });
-        }
-
-        private function elegyStart():void
         {
             if (transforming)
             {
                 return;
             }
-            host2.log("Darkon opens his mouth: Elegy (taunt it, it lands in 4 s)", "");
-            host2.bossAnim("Charge", false);
-            later(900, function():void { host2.bossAnim("Chargeloop", true); });
+            anim((autoSwing++ % 2 == 0) ? ANIM.auto1 : ANIM.auto2, false, ANIM_MS.auto);
+            later(HIT_AT.auto, function():void {
+                var power:Number = autoPower();
+                for each (var r:String in DK_ROLES)
+                {
+                    if (power > 0)
+                    {
+                        hit(r, takenBy(r, AUTO * rnd(0.9, 1.1) * power), "Darkon's auto attack");
+                    }
+                    if (over)
+                    {
+                        return;
+                    }
+                    if (phase == 2)
+                    {
+                        hasteStacks[r] = Math.min(22, hasteStacks[r] + 1); // Realm of the Arcana: -6 % haste per auto
+                    }
+                    if (phase == 3)
+                    {
+                        healDebuffUntil[r] = t + 8000; // Requiem for the Wicked: -80 % healing
+                    }
+                }
+            });
         }
 
-        private function elegyHit():void
+        /** 90 % of the current HP of the player who holds the taunt (any player if nobody does) */
+        private function nuke():void
+        {
+            if (transforming)
+            {
+                return;
+            }
+            anim(ANIM.nuke, false, ANIM_MS.nuke);
+            later(HIT_AT.nuke, function():void {
+                var h:String = holder();
+                if (h == null)
+                {
+                    var live:Array = [];
+                    for each (var q:String in DK_ROLES)
+                    {
+                        if (alive(q))
+                        {
+                            live.push(q);
+                        }
+                    }
+                    h = live[int(Math.random() * live.length)];
+                }
+                nukeCount++;
+                var victim:String = h;
+                hit(victim, 0.9 * hp[victim], "Darkon's nuke");
+                if (over)
+                {
+                    return;
+                }
+                if (phase == 3)
+                {
+                    dotUntil[victim] = t + 8000; // The Last Symphony
+                }
+                // the raid's healer follows the auto counting: the nuked player is healed right after (not reduced by Phase 3's debuff)
+                later(1000, function():void {
+                    if (alive(victim))
+                    {
+                        var real:Number = Math.min(maxHp(victim) - hp[victim], 0.45 * maxHp(victim));
+                        hp[victim] += real;
+                        if (victim == playerRole && real > 0)
+                        {
+                            host2.floater(victim, "+" + Fight.fmt(real), "heal");
+                        }
+                    }
+                });
+            });
+        }
+
+        private function elegyOpen():void
+        {
+            if (transforming)
+            {
+                return;
+            }
+            host2.log("Darkon opens his mouth: Elegy (taunt it, it lands in 2 s)", "");
+            anim(ANIM.elegyOpen, false);
+            var mine:int = animToken;
+            later(ANIM_MS.elegyHold, function():void { if (mine == animToken) { anim(ANIM.elegyHold, true); } });
+        }
+
+        private function elegyLand():void
         {
             if (transforming || over)
             {
                 return;
             }
-            host2.bossAnim("ChargeAttack", false);
-            later(1500, function():void { host2.bossAnim("Idle", false); });
+            anim(ANIM.elegyHit, false, ANIM_MS.elegyHit);
             var h:String = holder();
             if (h == null)
             {
@@ -556,42 +674,45 @@ package sim
                 return;
             }
             casts.taunted++;
-            var run:int = (h == lastElegyHolder) ? elegyRun[h] + 1 : 1;
-            for each (var r:String in DK_ROLES)
-            {
-                elegyRun[r] = r == h ? run : 0;
-            }
-            lastElegyHolder = h;
-            hit(h, takenBy(h, AUTO * (phase == 1 ? 1.9 : (phase == 2 ? 2.3 : 2.7))), "Elegy");
+            var again:Boolean = t < elegyDebuffUntil[h];  // the same character twice within 8 s
+            var third:Boolean = t < growUntil[h] && again;
+            hit(h, takenBy(h, AUTO * (phase == 1 ? 1.9 : (phase == 2 ? 2.3 : (t - phaseStart < IMMUNE_MS ? 2.7 : 0.8)))), "Elegy");
             if (over)
             {
                 return;
             }
             if (phase == 1)
             {
-                if (run >= 2)
+                if (again)
                 {
-                    host2.log(DK_NAMES[h] + " was hit by two Elegies: stunned", "bad");
-                    finish("lose", DK_NAMES[h] + " was hit by two Elegies in a row and got stunned (taunt them in turn)");
+                    host2.log(DK_NAMES[h] + " was hit by two Elegies: Captive Audience, stunned", "bad");
+                    finish("lose", DK_NAMES[h] + " was hit by two Elegies within 8 s and got stunned (take them in turn)");
+                    return;
                 }
+                elegyDebuffUntil[h] = t + DEBUFF_MS;
             }
             else if (phase == 2)
             {
-                hasteStacks[h] = 0; // taunting the mouth removes the haste debuff
-                if (run == 2)
+                hasteStacks[h] = 0; // Seed Planted removes the haste debuff
+                if (third)
                 {
-                    critReversed[h] = true;
-                    host2.log(DK_NAMES[h] + " taunted two Elegies in a row: crits are reversed (they heal Darkon) - stop taunting", "bad");
+                    host2.log(DK_NAMES[h] + " was harvested: three Elegies in a row", "bad");
+                    finish("lose", DK_NAMES[h] + " taunted three Elegies in a row (Harvested)");
+                    return;
                 }
-                else if (run >= 3)
+                if (again)
                 {
-                    host2.log(DK_NAMES[h] + " taunted three Elegies in a row", "bad");
-                    finish("lose", DK_NAMES[h] + " taunted three Elegies in a row");
+                    growUntil[h] = t + DEBUFF_MS;
+                    critReversed[h] = true; // Grown: crits reversed
+                    host2.log(DK_NAMES[h] + " has Grown: crits are reversed (they heal Darkon) - stop taunting", "bad");
+                    later(DEBUFF_MS, function():void { critReversed[h] = t < growUntil[h]; });
                 }
+                elegyDebuffUntil[h] = t + DEBUFF_MS;
             }
-            else if (h == playerRole)
+            else
             {
-                manaDebuffUntil = t + 20000; // taunting the mouth in Phase 3 costs mana
+                dirgeStacks[h] = Math.min(22, dirgeNow(h) + 1); // Dirge of Astravia: +25 % mana costs per stack, 12 s
+                dirgeUntil[h] = t + 12000;
             }
         }
 
@@ -632,7 +753,8 @@ package sim
             {
                 started = true;
                 phaseStart = 0;
-                scheduleBlock(FIRST_BLOCK);
+                host2.announce("The curtain rises on our final performance.");
+                scheduleRun(FIRST_SLOT);
             }
             cd[n] = t + skillCdMs(name);
             if (name == "quix")
@@ -735,14 +857,7 @@ package sim
         // ------------------------------------------------------ the sim's own characters
         private function npcPlay():void
         {
-            // the Legion Revenant takes the taunt first and then every time its 10 s cooldown is up
-            if (alive("lr") && t >= npcLrAt)
-            {
-                npcLrAt = t + LR_LOOP_MS;
-                npcLrLast = t;
-                doSkill("taunt", "lr", false);
-                laterAt(t + LOO_CUE_AFTER, function():void { host2.mechanic("loo", "taunt", 0, 0); });
-            }
+            // (the Revenant's taunts and your taunt cues are scheduled with the Elegies: see scheduleElegy)
             if (alive("lr") && t >= npcDepravedAt)
             {
                 npcDepravedAt = t + 6000;
@@ -798,6 +913,25 @@ package sim
                 finish("lose", "Phase 1 took longer than 72 s: Darkon one-shots everybody");
                 return;
             }
+            if (t >= cycleAt)
+            {
+                cycleAt += CYCLE_MS;
+                cycleStacks = Math.min(10, cycleStacks + 1);
+                host2.announce("Darkon's defenses decrease as The Fool leaves his body.");
+                host2.log("The Cycle's End: Darkon takes +" + (10 * cycleStacks) + " % damage", "");
+            }
+            if (curtainAt < 0 && t >= CURTAIN_MS)
+            {
+                curtainAt = t + CURTAIN_CHARGE;
+                host2.announce("The time has come for the curtain to rise upon a new dawn. May you finally rest.");
+                anim(ANIM.transform, false);
+            }
+            if (curtainAt >= 0 && t >= curtainAt)
+            {
+                host2.log("Curtain Call: 100 000 337 true damage to everybody", "bad");
+                finish("lose", "Curtain Call: the fight took longer than 4:30");
+                return;
+            }
             npcPlay();
             if (t >= tickAt)
             {
@@ -835,9 +969,9 @@ package sim
                         d += Dmg.taken(perHit, 1, CAP) * hits;
                     }
                 }
+                d *= takenMult();
                 if (d > 0)
                 {
-                    d *= PHASE_DAMAGE[phase];
                     bossHp = Math.max(0, bossHp - d);
                     host2.bossDamage(int(d), false, "party");
                     checkThresholds();

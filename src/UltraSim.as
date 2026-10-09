@@ -6,6 +6,7 @@ package
     import flash.display.Bitmap;
     import flash.display.BitmapData;
     import flash.display.DisplayObject;
+    import flash.display.FrameLabel;
     import flash.display.InteractiveObject;
     import flash.display.Loader;
     import flash.display.MovieClip;
@@ -470,6 +471,19 @@ package
                     ExternalInterface.addCallback("setPaused", function(p:Boolean):void { paused = p; });
                     ExternalInterface.addCallback("startClass", function(r:String):void { newFight(r); });
                     ExternalInterface.addCallback("play", playGame);
+                    // animation tools (README "Fixing animations"): list the boss' frame labels, play one of them
+                    ExternalInterface.addCallback("bossLabels", function():String {
+                        var out:Array = [];
+                        if (bossMC)
+                        {
+                            for each (var fl:FrameLabel in bossMC.currentLabels)
+                            {
+                                out.push(fl.name + "@" + fl.frame);
+                            }
+                        }
+                        return out.join(", ");
+                    });
+                    ExternalInterface.addCallback("playAnim", function(label:String, loop:Boolean):void { bossAnim(label, loop); });
                     ExternalInterface.addCallback("mapChildren", function():String {
                         var out:Array = [];
                         for (var mi:int = 0; mi < mapMC.numChildren; mi++)
@@ -696,6 +710,10 @@ package
             plateId = "";
             bossAnim("Idle", false);
             newFight(role);
+            if (loaderInfo.parameters["anim"] && !fight.started)
+            {
+                bossAnim(String(loaderInfo.parameters["anim"]), false); // ?anim=<label>: preview an animation without starting the fight
+            }
         }
 
         private function onBossChargeSpell(on:Boolean):void
