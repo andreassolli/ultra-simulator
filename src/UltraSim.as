@@ -140,7 +140,7 @@ package
             // Ultra Darkon: the Lord of Order's fight (Legion Revenant taunts first, the sim plays it with StoneCrusher and Chrono ShadowSlayer)
             {id: "darkon", name: "Ultra Darkon", classes: ["loo"], mapFrame: "r2", idleStop: true, dieLabel: "Die",
                 mapSwf: "runtime/town-ultradarkon.swf", bossSwf: "runtime/monster-UltraDarkon.swf", bossClass: "DarkonTheConductor", headClass: "mcHeadDarkonTheConductor",
-                roles: ["loo", "lr", "sc", "cs"], pad: new Point(480, 292), home: new Point(480, 405), scale: 0.95, charScale: 0.85,
+                roles: ["loo", "lr", "sc", "cs"], pad: new Point(801, 369), home: new Point(480, 405), scale: 1.0, charScale: 0.85, flip: true,
                 loops: {Chargeloop: [236, 246]}}
         ];
         // centre / size of the portrait ring in the local coordinates of the status box's mcHead
