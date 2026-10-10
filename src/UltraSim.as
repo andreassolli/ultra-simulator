@@ -262,6 +262,8 @@ package
         private var glowText:Boolean = true; // FlashVars fx=0: plain combat text (cheaper to draw)
         private var stamina:Number = 100;      // the green bar: a sprint (Space + click) costs SPRINT_COST, standing still refills it
         private var spaceHeld:Boolean = false;
+        private var moveHeld:Object = {up: false, down: false, left: false, right: false}; // WASD (rebindable)
+        private var keyMoving:Boolean = false;
         private static const SPRINT_COST:Number = 50;
         private static const STAMINA_REGEN:Number = 20; // per second while standing still
         private static const WALK_SPEED:Number = 250;
@@ -454,6 +456,7 @@ package
             stage.addEventListener(KeyboardEvent.KEY_DOWN, onActivity);
             stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
             stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp);
+            stage.addEventListener(Event.DEACTIVATE, function(ev:Event):void { releaseAllMoves(); spaceHeld = false; });
             stage.focus = stage; // keys work from the first frame
             lastTime = getTimer();
             startTime = lastTime;
@@ -1460,7 +1463,7 @@ package
 
         public function menuHelpLine():String
         {
-            return "Left-click: move / target   |   " + Keys.name(Keys.code("s1")) + "-" + Keys.name(Keys.code("s6")) + ": skills   |   " + Keys.name(Keys.code("hints")) + ": hints   |   " + Keys.name(Keys.code("fullscreen")) + ": fullscreen";
+            return "Click or WASD: move   |   " + Keys.name(Keys.code("s1")) + "-" + Keys.name(Keys.code("s6")) + ": skills   |   " + Keys.name(Keys.code("hints")) + ": hints   |   " + Keys.name(Keys.code("fullscreen")) + ": fullscreen";
         }
 
         /** the Visuals row: how wide the page draws the game (LOW 960, MED 1280, HIGH 1920 px; the GPU's work follows) */
@@ -2831,10 +2834,7 @@ package
         {
             if (!down)
             {
-                if (code == Keys.code("sprint"))
-                {
-                    spaceHeld = false;
-                }
+                releaseKey(code);
                 return;
             }
             if (keyLog["k" + code] !== undefined && getTimer() - keyLog["k" + code] < 800)
@@ -2939,6 +2939,11 @@ package
                 spaceHeld = true;
                 return;
             }
+            if (moveHeld[act] !== undefined)
+            {
+                moveHeld[act] = true;
+                return;
+            }
             var k:int = act.length == 2 && act.charAt(0) == "s" ? int(act.charAt(1)) : 0; // the skill keys
             if (code >= 97 && code <= 102)
             {
@@ -2989,10 +2994,25 @@ package
 
         private function onKeyUp(e:KeyboardEvent):void
         {
-            if (e.keyCode == Keys.code("sprint"))
+            releaseKey(e.keyCode);
+        }
+
+        private function releaseKey(code:int):void
+        {
+            if (code == Keys.code("sprint"))
             {
                 spaceHeld = false;
             }
+            var act:String = Keys.actionFor(code);
+            if (moveHeld[act] !== undefined)
+            {
+                moveHeld[act] = false;
+            }
+        }
+
+        private function releaseAllMoves():void
+        {
+            moveHeld.up = moveHeld.down = moveHeld.left = moveHeld.right = false;
         }
 
         private function forceSprint(ok:Boolean):void
@@ -3009,8 +3029,18 @@ package
         {
             targeted = true;
             var sprintable:Boolean = stamina >= SPRINT_COST; // key 1 moves at the speed of Space + click
+            var me:MovieClip = actors[role].mc;
+            if (!bossDef.multi && Math.abs((targetBlade && bladeMC ? bossDef.bladePad.x : bossPad.x) - me.x) <= 260
+                && Math.abs((targetBlade && bladeMC ? bossDef.bladePad.y : bossPad.y) - me.y) <= 130)
+            {
+                return; // already in range: key 1 only targets, it does not move the character
+            }
             if (bossDef.multi)
             {
+                if (inPlace(role))
+                {
+                    return;
+                }
                 actors[role].follow = true; // walk next to the current target (crystal or Gramiel)
                 if (sprintable && !actors[role].sprint)
                 {
@@ -3164,6 +3194,34 @@ package
                 else
                 {
                     goal = spot(homeAt, r);
+                }
+                if (isMe && !f.over && !(chatField && stage.focus == chatField))
+                {
+                    var kx:int = (moveHeld.right ? 1 : 0) - (moveHeld.left ? 1 : 0);
+                    var ky:int = (moveHeld.down ? 1 : 0) - (moveHeld.up ? 1 : 0);
+                    if (kx != 0 || ky != 0)
+                    {
+                        // WASD walks in that direction until the keys are released (it replaces a click-walk)
+                        var len:Number = Math.sqrt(kx * kx + ky * ky);
+                        a.moveTo = null;
+                        a.follow = false;
+                        if (!keyMoving)
+                        {
+                            keyMoving = true;
+                            a.sprint = false;
+                            if (spaceHeld && stamina >= SPRINT_COST)
+                            {
+                                stamina -= SPRINT_COST;
+                                a.sprint = true;
+                            }
+                        }
+                        goal = new Point(clamp(mc.x + kx / len * 80, WALK.x0, WALK.x1), clamp(mc.y + ky / len * 80, WALK.y0, WALK.y1));
+                    }
+                    else if (keyMoving)
+                    {
+                        keyMoving = false;
+                        goal = null;
+                    }
                 }
                 stepActor(a, goal, dt, isMe ? (a.sprint ? SPRINT_SPEED : WALK_SPEED) : 300);
                 if (isMe)

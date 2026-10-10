@@ -14,7 +14,9 @@ package ui
             {id: "sprint", label: "Sprint (hold, then click)", key: 32}, {id: "target", label: "Next target", key: 9},
             {id: "hints", label: "Hints on / off", key: 72}, {id: "party", label: "Party HP on / off", key: 71},
             {id: "chart", label: "Show / hide chart", key: 67}, {id: "music", label: "Music on / off", key: 77},
-            {id: "fullscreen", label: "Fullscreen", key: 70}, {id: "pause", label: "Pause", key: 80}
+            {id: "fullscreen", label: "Fullscreen", key: 70}, {id: "pause", label: "Pause", key: 80},
+            {id: "up", label: "Move up", key: 87}, {id: "left", label: "Move left", key: 65},
+            {id: "down", label: "Move down", key: 83}, {id: "right", label: "Move right", key: 68}
         ];
 
         private static var map:Object = null;

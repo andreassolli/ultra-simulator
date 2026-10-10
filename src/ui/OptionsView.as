@@ -140,28 +140,28 @@ package ui
             keysWin.y = win.y;
             addChild(keysWin);
             keyButtons = {};
-            var y:Number = 46;
+            var y:Number = 42;
             for each (var a:Object in Keys.ACTIONS)
             {
-                var r:Sprite = Aqw.row(a.label, 314, 23);
+                var r:Sprite = Aqw.row(a.label, 314, 18);
                 r.x = 18;
                 r.y = y;
                 keysWin.addChild(r);
                 var kb:Sprite = Aqw.redButton(Keys.name(Keys.code(a.id)), 96, makeCapture(a.id));
-                kb.scaleY = 0.78;
+                kb.scaleY = 0.62;
                 kb.x = 314 - 100 + 18;
-                kb.y = y + 2;
+                kb.y = y + 1;
                 keysWin.addChild(kb);
                 keyButtons[a.id] = kb;
-                y += 24;
+                y += 19;
             }
             var reset:Sprite = Aqw.redButton("Reset keys", 130, function():void { Keys.reset(); capturing = ""; renameKeys(); });
             reset.x = 18;
-            reset.y = 386;
+            reset.y = 392;
             keysWin.addChild(reset);
             var hint:TextField = Hud.label("Click a key, then press the new one (Esc: cancel)", 10, 0x9BA6BD, false, "left", 190);
             hint.x = 154;
-            hint.y = 386;
+            hint.y = 392;
             hint.wordWrap = true;
             hint.multiline = true;
             hint.height = 30;
